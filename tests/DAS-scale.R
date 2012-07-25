@@ -10,6 +10,13 @@ updateSigma <- robustlmm:::updateSigma
 getX <- robustlmm:::getX
 .s <- robustlmm:::.s
 .fixef <- robustlmm:::.fixef
+Lambda <- robustlmm:::Lambda
+u <- robustlmm:::u
+b <- robustlmm:::b
+u.lmerMod <- robustlmm:::u.lmerMod
+u.rlmerMod <- robustlmm:::u.rlmerMod
+b.lmerMod <- robustlmm:::b.lmerMod
+b.rlmerMod <- robustlmm:::b.rlmerMod
 ## lme4
 update.merMod <- lme4:::update.merMod
 nobars <- lme4:::nobars

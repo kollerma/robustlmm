@@ -77,7 +77,6 @@ theta <- function(object) {
 ##'
 ##' @title Get Lambda
 ##' @param object merMod object
-##' @export
 Lambda <- function(object) {
     ## FIXME: which theta?
     if (class(object)[1] == "lmerMod") t(object@pp$Lambdat) else t(object@pp$Lambdat())
@@ -87,7 +86,6 @@ Lambda <- function(object) {
 ##'
 ##' @title Get U_b
 ##' @param object merMod object
-##' @export
 U_b <- function(object) {
    if (class(object)[1] == "lmerMod") t(object@pp$Lambdat) else object@pp$U_b 
 }
@@ -96,7 +94,6 @@ U_b <- function(object) {
 ##'
 ##' @title Get Lind
 ##' @param object merMod object
-##' @export
 Lind <- function(object) {
     object@pp$Lind
 }
@@ -105,7 +102,6 @@ Lind <- function(object) {
 ##'
 ##' @title Get lower
 ##' @param object merMod object
-##' @export
 lower <- function(object) {
     object@lower
 }
@@ -119,15 +115,16 @@ getZeroU <- function(object) object@pp$zeroB
 
 ##' Get various numbers of parameters / lengths of vectors.
 ##'
-##' b, u: length of random effects vector
-##' beta, coef: number of fixed effects
-##' theta: length of vector theta
-##' r, e: number of observations
+##' \itemize{
+##' \item b, u: length of random effects vector
+##' \item beta, coef: number of fixed effects
+##' \item theta: length of vector theta
+##' \item r, e: number of observations
+##' }
 ##' 
 ##' @title length
 ##' @param x merMod object
 ##' @param what length is requested
-##' @export
 len <- function(x, what) switch(what,
                                 u=,
                                 b=nrow(x@pp$Zt),

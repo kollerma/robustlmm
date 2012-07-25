@@ -4,6 +4,7 @@ require(robustlmm)
 .calcEchi <- robustlmm:::.calcEchi
 .calcE.D.re <- robustlmm:::.calcE.D.re
 setTheta <- robustlmm:::setTheta
+len <- robustlmm:::len
 
 ## old variants
 ## (basically a concatenation of initMatrices and

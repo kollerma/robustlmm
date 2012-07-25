@@ -13,6 +13,14 @@ std.b <- robustlmm:::std.b
 std.e <- robustlmm:::std.e
 sumRho.b <- robustlmm:::sumRho.b
 sumRho.e <- robustlmm:::sumRho.e
+len <- robustlmm:::len
+Lambda <- robustlmm:::Lambda
+u <- robustlmm:::u
+b <- robustlmm:::b
+u.lmerMod <- robustlmm:::u.lmerMod
+u.rlmerMod <- robustlmm:::u.rlmerMod
+b.lmerMod <- robustlmm:::b.lmerMod
+b.rlmerMod <- robustlmm:::b.rlmerMod
 
 t.solve.omit.zeroes <- function(A, B) {
     ## omit zero rows of A
@@ -132,7 +140,7 @@ t.fun <- function(rfm, fm) {
         robustlmm:::fixef(rfm.tmp) <- par[1:p]
         robustlmm:::robll(rfm.tmp, norm.only=TRUE) ## calculate norm only
     }
-    stopifnot(all.equal(unname(robustlmm:::gradient(rfm.tmp)),
+    stopifnot(all.equal(unname(robustlmm:::gradient.rlmerMod(rfm.tmp)),
                         grad(opt.effects, c(rep(1, p), u.tmp))))
     
     return("Test passed")

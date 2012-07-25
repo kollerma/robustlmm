@@ -12,7 +12,6 @@
 ##' @param drop apply drop to result?
 ##' @param t transpose result
 ##' @rdname std
-##' @export
 std.b <- function(object, sigma = object@pp$sigma, matrix, drop=TRUE, t=FALSE) 
     object@pp$stdB(sigma, matrix, drop, t)
 
@@ -20,7 +19,6 @@ std.b <- function(object, sigma = object@pp$sigma, matrix, drop=TRUE, t=FALSE)
 ##'   "Standardize" the Matrix sigma: \eqn{R^{-1} matrix / \sigma}{R^-1 matrix / sigma}
 ##'
 ##' @rdname std
-##' @export
 std.e <- function(object, sigma = object@pp$sigma, matrix, drop=TRUE) {
     if (missing(matrix)) return(object@resp$wtres / sigma)
     ## for the moment: just divide by sigma
@@ -36,7 +34,6 @@ std.e <- function(object, sigma = object@pp$sigma, matrix, drop=TRUE) {
 ##' @param lambda apply normalization by lambda
 ##' @param ... ignored
 ##' @rdname sumRho
-##' @export
 sumRho.b <- function(object, sigma = object@pp$sigma, lambda = FALSE, ...) {
     ret <- sum(object@rho.b@rho(dist.b(object, sigma))) ## dist instead of std
     if (lambda) ret/object@rho.b@EDpsi() else ret
@@ -45,7 +42,6 @@ sumRho.b <- function(object, sigma = object@pp$sigma, lambda = FALSE, ...) {
 ##' sumRho.e: Calculate sum of rho of residuals
 ##'
 ##' @rdname sumRho
-##' @export
 sumRho.e <- function(object, sigma = object@pp$sigma, lambda = FALSE, ...) {
     ret <- sum(object@rho.e@rho(dist.e(object, sigma))) ## dist instead of std
     if (lambda) ret/object@rho.e@EDpsi() else ret
@@ -143,7 +139,6 @@ wgt.e <- function(object, sigma = object@pp$sigma, use.c.sigma = FALSE)
 ##' @param wExp wExp parameter
 ##' @param use.c.sigma use rho.b or rho.sigma.b
 ##' @rdname wgtSum
-##' @export
 wgtSum.b <- function(object, sigma, lambda = FALSE, wExp = 0, use.c.sigma = FALSE) {
     rho <- if (use.c.sigma) object@rho.sigma.b else object@rho.b
     ret <- sum(.wgtxy2(rho, dist.b(object, sigma), std.b(object, sigma), wExp))
@@ -153,7 +148,6 @@ wgtSum.b <- function(object, sigma, lambda = FALSE, wExp = 0, use.c.sigma = FALS
 ##' wgtSum.e: Calculate \eqn{\sum(\psi(r/\sigma))}{sum(psi(r/sigma)}
 ##'
 ##' @rdname wgtSum
-##' @export
 wgtSum.e <- function(object, sigma, lambda = FALSE, wExp = 0, use.c.sigma = FALSE) {
     rho <- if (use.c.sigma) object@rho.sigma.e else object@rho.e
     ret <- sum(.wgtxy2(rho, dist.e(object, sigma), std.e(object, sigma), wExp))

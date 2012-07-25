@@ -21,7 +21,7 @@ fit <- function(formula, data, methods =  c("DASexp", "DAStau"),
                      "\n")
                  fits[[method]][[method.effects]] <- m
                  print(m)
-                 print(u(m), 4)
+                 print(robustlmm:::u.rlmerMod(m), 4)
                  if (classic) {
                      ## compare with lmer fit
                      cat("#### Checking equality with lmer... ####\n")

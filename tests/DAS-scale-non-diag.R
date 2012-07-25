@@ -9,6 +9,7 @@ G <- robustlmm:::G
 .S <- robustlmm:::.S
 .Gnd <- robustlmm:::.Gnd
 getZeroU <- robustlmm:::getZeroU
+len <- robustlmm:::len
 
 ## test functions for classical case
 .S.classic <- function(object) {

@@ -1,0 +1,1740 @@
+
+R version 2.15.1 (2012-06-22) -- "Roasted Marshmallows"
+Copyright (C) 2012 The R Foundation for Statistical Computing
+ISBN 3-900051-07-0
+Platform: x86_64-unknown-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> ## test that should make sure that the results remain constant
+> require(robustlmm)
+Loading required package: robustlmm
+Loading required package: lme4
+Loading required package: lattice
+Loading required package: Matrix
+Loading required package: MatrixModels
+
+Attaching package: 'MatrixModels'
+
+The following object(s) are masked from 'package:lme4':
+
+    mkRespMod
+
+Loading required package: robustbase
+Loading required package: stats4
+Loading required package: minqa
+Loading required package: Rcpp
+Loading required package: rootSolve
+Loading required package: numDeriv
+
+Attaching package: 'numDeriv'
+
+The following object(s) are masked from 'package:rootSolve':
+
+    hessian
+
+Loading required package: Rcgmin
+Loading required package: cubature
+
+Attaching package: 'robustlmm'
+
+The following object(s) are masked from 'package:rootSolve':
+
+    gradient
+
+The following object(s) are masked from 'package:robustbase':
+
+    huberPsi
+
+> 
+> fit <- function(formula, data, methods =  c("DASexp", "DAStau"),
++                 methods.effects = c("IRWLS"), rho.e = cPsi, rho.b = cPsi,
++                 wExp.b = 0, wExp.e = 0, ...) {
++     fits <- list()
++     ## compare with result of lmer if rho arguments are not given
++     classic <- ! any(c("rho.e", "rho.b") %in% names(match.call())[-1])
++     if (classic) fm <- lmer(formula, data, ...)
++     for (method in methods) {
++         fits[[method]] <- list()
++         if (classic) fits[[method]][["lmer"]] <- fm
++         for (method.effects in methods.effects) {
++             cat("\n########", method, method.effects, "########\n")
++             try({cat("Time elapsed:",
++                      system.time(m <- rlmer(formula, data, method=method,
++                                             method.effects=method.effects,
++                                             rho.e = rho.e, rho.b = rho.b,
++                                             wExp.b = wExp.b, wExp.e = wExp.e, ...)),
++                      "\n")
++                  fits[[method]][[method.effects]] <- m
++                  print(m)
++                  print(u(m), 4)
++                  if (classic) {
++                      ## compare with lmer fit
++                      cat("#### Checking equality with lmer... ####\n")
++                      cat("Fixed effects: ", all.equal(fixef(fm), fixef(m), tol = 1e-4), "\n")
++                      cat("Random effects:", all.equal(ranef(fm), ranef(m), tol = 1e-4), "\n")
++                      cat("Theta:         ", all.equal(theta(fm), theta(m), tol = 1e-4), "\n")
++                      cat("Sigma:         ", all.equal(sigma(fm), sigma(m), 1e-4), "\n")
++                      cat("Deviance:      ", all.equal(deviance(m),
++                             unname(fm@devcomp$cmp[ifelse(isREML(m), "REML", "dev")])), "\n")
++                      cat("Unsc:          ", all.equal(fm@pp$unsc(),
++                                                       unname(m@pp$unsc()), tol = 1e-4), "\n")
++                  }
++              })
++         }
++         fits[[method]][["dnames"]] <- names(fits[[method]])
++     }
++     cat("\n################################################\n")
++     cat("################################################\n")
++     cat("################################################\n")
++     for (method in methods) {
++         cat("\n################ results for",method," ##############\n")
++         cmp <- do.call(compare, fits[[method]])
++         cmp <- cmp[!rownames(cmp) %in% c("rho.e", "wExp.e", "rho.b", "wExp.b"), ]
++         print.default(cmp, quote="FALSE")
++     }
++ }
+> 
+> ## classic (REML)
+> fit(Yield ~ (1 | Batch), Dyestuff)
+
+######## DASexp IRWLS ########
+Note: Method with signature "diagonalMatrix#Matrix" chosen for function "solve",
+ target signature "ddiMatrix#ddiMatrix".
+ "Matrix#diagonalMatrix" would also be valid
+Time elapsed: 0.84 0.002 0.854 0 0 
+Note: Method with signature "dsyMatrix#dgeMatrix" chosen for function "coerce",
+ target signature "dpoMatrix#dgeMatrix".
+ "ddenseMatrix#dgeMatrix" would also be valid
+Linear mixed model fit by DASexp ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 319.6543 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept) 1764     42.00   
+ Residual             2451     49.51   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  1527.50      19.38    78.8
+
+Rho functions used for fitting:
+   Residuals:  classic (x^2/2) 
+      w exp.:  0 
+ Random Eff.:  classic (x^2/2) 
+      w exp.:  0 
+[1] -20.7549   0.4612  33.6690 -27.2119  66.8768 -53.0402
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+Deviance:       TRUE 
+Unsc:           TRUE 
+
+######## DAStau IRWLS ########
+Time elapsed: 0.311 0 0.313 0 0 
+Linear mixed model fit by DAStau ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 319.6543 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept) 1764     42.00   
+ Residual             2451     49.51   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  1527.50      19.38    78.8
+
+Rho functions used for fitting:
+   Residuals:  classic (x^2/2) 
+      w exp.:  0 
+ Random Eff.:  classic (x^2/2) 
+      w exp.:  0 
+[1] -20.7549   0.4612  33.6690 -27.2119  66.8768 -53.0402
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+Deviance:       TRUE 
+Unsc:           TRUE 
+
+################################################
+################################################
+################################################
+
+################ results for DASexp  ##############
+                  lmer IRWLS
+Coef                        
+(Intercept)       1527 1528 
+                            
+VarComp                     
+Batch (Intercept) 42   42   
+                            
+sigma             49.5 49.5 
+REML              320  320  
+
+################ results for DAStau  ##############
+                  lmer IRWLS
+Coef                        
+(Intercept)       1527 1528 
+                            
+VarComp                     
+Batch (Intercept) 42   42   
+                            
+sigma             49.5 49.5 
+REML              320  320  
+> fit(Yield ~ (1 | Batch), Dyestuff2)
+
+######## DASexp IRWLS ########
+Time elapsed: 2.817 0.004 2.839 0 0 
+Linear mixed model fit by DASexp ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 161.8283 
+
+Random effects:
+ Groups   Name        Variance  Std.Dev. 
+ Batch    (Intercept) 9.975e-07 0.0009988
+ Residual             1.381e+01 3.7157142
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)   5.6656     0.6784   8.351
+
+Rho functions used for fitting:
+   Residuals:  classic (x^2/2) 
+      w exp.:  0 
+ Random Eff.:  classic (x^2/2) 
+      w exp.:  0 
+[1]  0.0007542 -0.0013569  0.0024939  0.0000258  0.0005564 -0.0024734
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          Mean absolute difference: 0.0002687936 
+Sigma:          TRUE 
+Deviance:       TRUE 
+Unsc:           TRUE 
+
+######## DAStau IRWLS ########
+Time elapsed: 3.663 0.005 3.695 0 0 
+Linear mixed model fit by DAStau ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 161.8283 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept)  0.00    0.000   
+ Residual             13.81    3.716   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)   5.6656     0.6784   8.351
+
+Rho functions used for fitting:
+   Residuals:  classic (x^2/2) 
+      w exp.:  0 
+ Random Eff.:  classic (x^2/2) 
+      w exp.:  0 
+[1] 0 0 0 0 0 0
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+Deviance:       TRUE 
+Unsc:           TRUE 
+
+################################################
+################################################
+################################################
+
+################ results for DASexp  ##############
+                  lmer     IRWLS   
+Coef                               
+(Intercept)       5.67     5.67    
+                                   
+VarComp                            
+Batch (Intercept) 0.000000 0.000999
+                                   
+sigma             3.72     3.72    
+REML              162      162     
+
+################ results for DAStau  ##############
+                  lmer IRWLS
+Coef                        
+(Intercept)       5.67 5.67 
+                            
+VarComp                     
+Batch (Intercept) 0    0    
+                            
+sigma             3.72 3.72 
+REML              162  162  
+> fit(diameter ~ (1|plate) + (1|sample), Penicillin)
+
+######## DASexp IRWLS ########
+Time elapsed: 0.658 0.005 0.666 0 0 
+Linear mixed model fit by DASexp ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 330.8606 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ plate    (Intercept) 0.7169   0.8467  
+ sample   (Intercept) 3.7310   1.9316  
+ Residual             0.3024   0.5499  
+Number of obs: 144, groups: plate, 24; sample, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  22.9722     0.8086   28.41
+
+Rho functions used for fitting:
+   Residuals:  classic (x^2/2) 
+      w exp.:  0 
+ Random Eff.:  classic (x^2/2) 
+      w exp.:  0 
+ [1]  0.522543  0.522543  0.117993  0.219131  0.016856 -0.286556 -0.893379
+ [8]  0.522543 -0.488830 -0.488830  0.623680  0.320268  0.927092  0.320268
+[15]  0.623680  0.016856 -0.185418 -0.185418 -0.893379  0.623680 -0.589967
+[22] -0.185418 -0.387693 -0.792242  0.622665 -0.287687  0.551728 -0.027586
+[29] -0.003941 -0.855179
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+Deviance:       TRUE 
+Unsc:           TRUE 
+
+######## DAStau IRWLS ########
+Time elapsed: 0.462 0.001 0.466 0 0 
+Linear mixed model fit by DAStau ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 330.8606 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ plate    (Intercept) 0.7169   0.8467  
+ sample   (Intercept) 3.7310   1.9316  
+ Residual             0.3024   0.5499  
+Number of obs: 144, groups: plate, 24; sample, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  22.9722     0.8086   28.41
+
+Rho functions used for fitting:
+   Residuals:  classic (x^2/2) 
+      w exp.:  0 
+ Random Eff.:  classic (x^2/2) 
+      w exp.:  0 
+ [1]  0.522543  0.522543  0.117993  0.219131  0.016856 -0.286556 -0.893379
+ [8]  0.522543 -0.488830 -0.488830  0.623680  0.320268  0.927092  0.320268
+[15]  0.623680  0.016856 -0.185418 -0.185418 -0.893379  0.623680 -0.589967
+[22] -0.185418 -0.387693 -0.792242  0.622665 -0.287687  0.551728 -0.027586
+[29] -0.003941 -0.855179
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+Deviance:       TRUE 
+Unsc:           TRUE 
+
+################################################
+################################################
+################################################
+
+################ results for DASexp  ##############
+                   lmer  IRWLS
+Coef                          
+(Intercept)        23    23   
+                              
+VarComp                       
+plate (Intercept)  0.847 0.847
+sample (Intercept) 1.932 1.932
+                              
+sigma              0.55  0.55 
+REML               331   331  
+
+################ results for DAStau  ##############
+                   lmer  IRWLS
+Coef                          
+(Intercept)        23    23   
+                              
+VarComp                       
+plate (Intercept)  0.847 0.847
+sample (Intercept) 1.932 1.932
+                              
+sigma              0.55  0.55 
+REML               331   331  
+> 
+> ## classic (ML)
+> fit(Yield ~ (1 | Batch), Dyestuff, REML=FALSE, methods = c("Opt"))
+
+######## Opt IRWLS ########
+Time elapsed: 1.296 0 1.31 0 0 
+Linear mixed model fit by Opt ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+      AIC       BIC    logLik  deviance 
+ 333.3271  337.5307 -163.6635  327.3271 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept) 1388     37.26   
+ Residual             2451     49.51   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  1527.50      17.69   86.33
+
+Rho functions used for fitting:
+   Residuals:  classic (x^2/2) 
+      w exp.:  0 
+ Random Eff.:  classic (x^2/2) 
+      w exp.:  0 
+[1] -22.095   0.491  35.843 -28.969  71.195 -56.465
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+Deviance:       TRUE 
+Unsc:           TRUE 
+
+################################################
+################################################
+################################################
+
+################ results for Opt  ##############
+                  lmer IRWLS
+Coef                        
+(Intercept)       1527 1527 
+                            
+VarComp                     
+Batch (Intercept) 37.3 37.3 
+                            
+sigma             49.5 49.5 
+deviance          327  327  
+> fit(Yield ~ (1 | Batch), Dyestuff2, REML=FALSE, methods = c("Opt"))
+
+######## Opt IRWLS ########
+Time elapsed: 0.804 0 0.809 0 0 
+Linear mixed model fit by Opt ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+     AIC      BIC   logLik deviance 
+168.8730 173.0766 -81.4365 162.8730 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept)  0.00    0.000   
+ Residual             13.35    3.653   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)    5.666      0.667   8.494
+
+Rho functions used for fitting:
+   Residuals:  classic (x^2/2) 
+      w exp.:  0 
+ Random Eff.:  classic (x^2/2) 
+      w exp.:  0 
+[1] 0 0 0 0 0 0
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+Deviance:       TRUE 
+Unsc:           TRUE 
+
+################################################
+################################################
+################################################
+
+################ results for Opt  ##############
+                  lmer IRWLS
+Coef                        
+(Intercept)       5.67 5.67 
+                            
+VarComp                     
+Batch (Intercept) 0    0    
+                            
+sigma             3.65 3.65 
+deviance          163  163  
+> fit(diameter ~ (1|plate) + (1|sample), Penicillin, REML=FALSE, methods = c("Opt"))
+
+######## Opt IRWLS ########
+Time elapsed: 1.218 0.001 1.227 0 0 
+Linear mixed model fit by Opt ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+      AIC       BIC    logLik  deviance 
+ 340.1883  352.0676 -166.0942  332.1883 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ plate    (Intercept) 0.7150   0.8456  
+ sample   (Intercept) 3.1352   1.7706  
+ Residual             0.3024   0.5499  
+Number of obs: 144, groups: plate, 24; sample, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  22.9722     0.7446   30.85
+
+Rho functions used for fitting:
+   Residuals:  classic (x^2/2) 
+      w exp.:  0 
+ Random Eff.:  classic (x^2/2) 
+      w exp.:  0 
+ [1]  0.523158  0.523158  0.118132  0.219389  0.016876 -0.286893 -0.894431
+ [8]  0.523158 -0.489406 -0.489406  0.624414  0.320645  0.928183  0.320645
+[15]  0.624414  0.016876 -0.185637 -0.185637 -0.894431  0.624414 -0.590662
+[22] -0.185637 -0.388149 -0.793174  0.678827 -0.313635  0.601492 -0.030075
+[29] -0.004296 -0.932313
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+Deviance:       TRUE 
+Unsc:           TRUE 
+
+################################################
+################################################
+################################################
+
+################ results for Opt  ##############
+                   lmer  IRWLS
+Coef                          
+(Intercept)        23    23   
+                              
+VarComp                       
+plate (Intercept)  0.846 0.846
+sample (Intercept) 1.771 1.771
+                              
+sigma              0.55  0.55 
+deviance           332   332  
+> 
+> ## classic (no init)
+> fit(Yield ~ (1 | Batch), Dyestuff,
++     methods.effects = c("IRWLS", "Rcgmin"), init = lmerNoFit)
+
+######## DASexp IRWLS ########
+Time elapsed: 1.235 0 1.245 0 0 
+Linear mixed model fit by DASexp ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 319.6543 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept) 1764     42.00   
+ Residual             2451     49.51   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  1527.50      19.38    78.8
+
+Rho functions used for fitting:
+   Residuals:  classic (x^2/2) 
+      w exp.:  0 
+ Random Eff.:  classic (x^2/2) 
+      w exp.:  0 
+[1] -20.7549   0.4612  33.6690 -27.2119  66.8768 -53.0402
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+Deviance:       TRUE 
+Unsc:           TRUE 
+
+######## DASexp Rcgmin ########
+Time elapsed: 1.175 0 1.186 0 0 
+Linear mixed model fit by DASexp ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 319.6543 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept) 1764     42.00   
+ Residual             2451     49.51   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  1527.50      19.38    78.8
+
+Rho functions used for fitting:
+   Residuals:  classic (x^2/2) 
+      w exp.:  0 
+ Random Eff.:  classic (x^2/2) 
+      w exp.:  0 
+       A        B        C        D        E        F 
+-20.7549   0.4612  33.6690 -27.2119  66.8768 -53.0402 
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+Deviance:       TRUE 
+Unsc:           TRUE 
+
+######## DAStau IRWLS ########
+Time elapsed: 0.722 0 0.727 0 0 
+Linear mixed model fit by DAStau ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 319.6543 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept) 1764     42.00   
+ Residual             2451     49.51   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  1527.50      19.38    78.8
+
+Rho functions used for fitting:
+   Residuals:  classic (x^2/2) 
+      w exp.:  0 
+ Random Eff.:  classic (x^2/2) 
+      w exp.:  0 
+[1] -20.7549   0.4612  33.6690 -27.2119  66.8768 -53.0402
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+Deviance:       TRUE 
+Unsc:           TRUE 
+
+######## DAStau Rcgmin ########
+Time elapsed: 0.815 0 0.82 0 0 
+Linear mixed model fit by DAStau ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 319.6543 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept) 1764     42.00   
+ Residual             2451     49.51   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  1527.50      19.38    78.8
+
+Rho functions used for fitting:
+   Residuals:  classic (x^2/2) 
+      w exp.:  0 
+ Random Eff.:  classic (x^2/2) 
+      w exp.:  0 
+       A        B        C        D        E        F 
+-20.7549   0.4612  33.6691 -27.2120  66.8769 -53.0403 
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+Deviance:       TRUE 
+Unsc:           TRUE 
+
+################################################
+################################################
+################################################
+
+################ results for DASexp  ##############
+                  lmer IRWLS Rcgmin
+Coef                               
+(Intercept)       1527 1528  1528  
+                                   
+VarComp                            
+Batch (Intercept) 42   42    42    
+                                   
+sigma             49.5 49.5  49.5  
+REML              320  320   320   
+
+################ results for DAStau  ##############
+                  lmer IRWLS Rcgmin
+Coef                               
+(Intercept)       1527 1528  1528  
+                                   
+VarComp                            
+Batch (Intercept) 42   42    42    
+                                   
+sigma             49.5 49.5  49.5  
+REML              320  320   320   
+Warning message:
+In lmer(formula, data, ...) : extra argument(s) 'init' disregarded
+> fit(Yield ~ (1 | Batch), Dyestuff2,
++     methods.effects = c("IRWLS", "Rcgmin"), init = lmerNoFit)
+
+######## DASexp IRWLS ########
+Time elapsed: 2.776 0.001 2.8 0 0 
+Linear mixed model fit by DASexp ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 161.8283 
+
+Random effects:
+ Groups   Name        Variance  Std.Dev. 
+ Batch    (Intercept) 9.975e-07 0.0009988
+ Residual             1.381e+01 3.7157142
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)   5.6656     0.6784   8.351
+
+Rho functions used for fitting:
+   Residuals:  classic (x^2/2) 
+      w exp.:  0 
+ Random Eff.:  classic (x^2/2) 
+      w exp.:  0 
+[1]  0.0007542 -0.0013569  0.0024939  0.0000258  0.0005564 -0.0024734
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          Mean absolute difference: 0.0002687936 
+Sigma:          TRUE 
+Deviance:       TRUE 
+Unsc:           TRUE 
+
+######## DASexp Rcgmin ########
+Time elapsed: 2.689 0 2.704 0 0 
+Linear mixed model fit by DASexp ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 161.8283 
+
+Random effects:
+ Groups   Name        Variance  Std.Dev. 
+ Batch    (Intercept) 9.975e-07 0.0009988
+ Residual             1.381e+01 3.7157142
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)   5.6656     0.6784   8.351
+
+Rho functions used for fitting:
+   Residuals:  classic (x^2/2) 
+      w exp.:  0 
+ Random Eff.:  classic (x^2/2) 
+      w exp.:  0 
+         A          B          C          D          E          F 
+ 0.0007542 -0.0013569  0.0024939  0.0000258  0.0005564 -0.0024734 
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          Mean absolute difference: 0.0002687936 
+Sigma:          TRUE 
+Deviance:       TRUE 
+Unsc:           TRUE 
+
+######## DAStau IRWLS ########
+Time elapsed: 3.491 0 3.509 0 0 
+Linear mixed model fit by DAStau ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 161.8283 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept)  0.00    0.000   
+ Residual             13.81    3.716   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)   5.6656     0.6784   8.351
+
+Rho functions used for fitting:
+   Residuals:  classic (x^2/2) 
+      w exp.:  0 
+ Random Eff.:  classic (x^2/2) 
+      w exp.:  0 
+[1] 0 0 0 0 0 0
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+Deviance:       TRUE 
+Unsc:           TRUE 
+
+######## DAStau Rcgmin ########
+Time elapsed: 3.26 0.015 3.331 0 0 
+Linear mixed model fit by DAStau ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 161.8283 
+
+Random effects:
+ Groups   Name        Variance  Std.Dev. 
+ Batch    (Intercept) 1.467e-10 1.211e-05
+ Residual             1.381e+01 3.716e+00
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)   5.6656     0.6784   8.351
+
+Rho functions used for fitting:
+   Residuals:  classic (x^2/2) 
+      w exp.:  0 
+ Random Eff.:  classic (x^2/2) 
+      w exp.:  0 
+         A          B          C          D          E          F 
+ 1.177e-05 -2.118e-05  3.892e-05  4.027e-07  8.684e-06 -3.860e-05 
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+Deviance:       TRUE 
+Unsc:           TRUE 
+
+################################################
+################################################
+################################################
+
+################ results for DASexp  ##############
+                  lmer     IRWLS    Rcgmin  
+Coef                                        
+(Intercept)       5.67     5.67     5.67    
+                                            
+VarComp                                     
+Batch (Intercept) 0.000000 0.000999 0.000999
+                                            
+sigma             3.72     3.72     3.72    
+REML              162      162      162     
+
+################ results for DAStau  ##############
+                  lmer     IRWLS    Rcgmin  
+Coef                                        
+(Intercept)       5.67     5.67     5.67    
+                                            
+VarComp                                     
+Batch (Intercept) 0.00e+00 0.00e+00 1.21e-05
+                                            
+sigma             3.72     3.72     3.72    
+REML              162      162      162     
+Warning message:
+In lmer(formula, data, ...) : extra argument(s) 'init' disregarded
+> fit(diameter ~ (1|plate) + (1|sample), Penicillin,
++     methods.effects = c("IRWLS", "Rcgmin"), init = lmerNoFit)
+
+######## DASexp IRWLS ########
+Time elapsed: 2.868 0.005 2.9 0 0 
+Linear mixed model fit by DASexp ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 330.8606 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ plate    (Intercept) 0.7169   0.8467  
+ sample   (Intercept) 3.7310   1.9316  
+ Residual             0.3024   0.5499  
+Number of obs: 144, groups: plate, 24; sample, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  22.9722     0.8086   28.41
+
+Rho functions used for fitting:
+   Residuals:  classic (x^2/2) 
+      w exp.:  0 
+ Random Eff.:  classic (x^2/2) 
+      w exp.:  0 
+ [1]  0.522543  0.522543  0.117993  0.219131  0.016856 -0.286556 -0.893379
+ [8]  0.522543 -0.488830 -0.488830  0.623680  0.320268  0.927092  0.320268
+[15]  0.623680  0.016856 -0.185418 -0.185418 -0.893379  0.623680 -0.589967
+[22] -0.185418 -0.387693 -0.792242  0.622665 -0.287687  0.551728 -0.027586
+[29] -0.003941 -0.855179
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+Deviance:       TRUE 
+Unsc:           TRUE 
+
+######## DASexp Rcgmin ########
+Time elapsed: 3.451 0.002 3.481 0 0 
+Linear mixed model fit by DASexp ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 330.8606 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ plate    (Intercept) 0.7169   0.8467  
+ sample   (Intercept) 3.7310   1.9316  
+ Residual             0.3024   0.5499  
+Number of obs: 144, groups: plate, 24; sample, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  22.9722     0.8086   28.41
+
+Rho functions used for fitting:
+   Residuals:  classic (x^2/2) 
+      w exp.:  0 
+ Random Eff.:  classic (x^2/2) 
+      w exp.:  0 
+        a         b         c         d         e         f         g         h 
+ 0.522543  0.522543  0.117993  0.219131  0.016856 -0.286556 -0.893379  0.522543 
+        i         j         k         l         m         n         o         p 
+-0.488830 -0.488830  0.623680  0.320268  0.927092  0.320268  0.623680  0.016856 
+        q         r         s         t         u         v         w         x 
+-0.185418 -0.185418 -0.893379  0.623680 -0.589967 -0.185418 -0.387693 -0.792242 
+        A         B         C         D         E         F 
+ 0.622665 -0.287687  0.551728 -0.027586 -0.003941 -0.855179 
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+Deviance:       TRUE 
+Unsc:           TRUE 
+
+######## DAStau IRWLS ########
+Time elapsed: 0.942 0 0.949 0 0 
+Linear mixed model fit by DAStau ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 330.8606 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ plate    (Intercept) 0.7169   0.8467  
+ sample   (Intercept) 3.7310   1.9316  
+ Residual             0.3024   0.5499  
+Number of obs: 144, groups: plate, 24; sample, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  22.9722     0.8086   28.41
+
+Rho functions used for fitting:
+   Residuals:  classic (x^2/2) 
+      w exp.:  0 
+ Random Eff.:  classic (x^2/2) 
+      w exp.:  0 
+ [1]  0.522543  0.522543  0.117993  0.219131  0.016856 -0.286556 -0.893379
+ [8]  0.522543 -0.488830 -0.488830  0.623680  0.320268  0.927092  0.320268
+[15]  0.623680  0.016856 -0.185418 -0.185418 -0.893379  0.623680 -0.589967
+[22] -0.185418 -0.387693 -0.792242  0.622665 -0.287687  0.551728 -0.027586
+[29] -0.003941 -0.855179
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+Deviance:       TRUE 
+Unsc:           TRUE 
+
+######## DAStau Rcgmin ########
+Time elapsed: 1.42 0 1.45 0 0 
+Linear mixed model fit by DAStau ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 330.8606 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ plate    (Intercept) 0.7169   0.8467  
+ sample   (Intercept) 3.7310   1.9316  
+ Residual             0.3024   0.5499  
+Number of obs: 144, groups: plate, 24; sample, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  22.9722     0.8086   28.41
+
+Rho functions used for fitting:
+   Residuals:  classic (x^2/2) 
+      w exp.:  0 
+ Random Eff.:  classic (x^2/2) 
+      w exp.:  0 
+        a         b         c         d         e         f         g         h 
+ 0.522543  0.522543  0.117993  0.219131  0.016856 -0.286556 -0.893379  0.522543 
+        i         j         k         l         m         n         o         p 
+-0.488830 -0.488830  0.623680  0.320268  0.927092  0.320268  0.623680  0.016856 
+        q         r         s         t         u         v         w         x 
+-0.185418 -0.185418 -0.893379  0.623680 -0.589967 -0.185418 -0.387693 -0.792242 
+        A         B         C         D         E         F 
+ 0.622665 -0.287687  0.551728 -0.027586 -0.003941 -0.855179 
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+Deviance:       TRUE 
+Unsc:           TRUE 
+
+################################################
+################################################
+################################################
+
+################ results for DASexp  ##############
+                   lmer  IRWLS Rcgmin
+Coef                                 
+(Intercept)        23    23    23    
+                                     
+VarComp                              
+plate (Intercept)  0.847 0.847 0.847 
+sample (Intercept) 1.932 1.932 1.932 
+                                     
+sigma              0.55  0.55  0.55  
+REML               331   331   331   
+
+################ results for DAStau  ##############
+                   lmer  IRWLS Rcgmin
+Coef                                 
+(Intercept)        23    23    23    
+                                     
+VarComp                              
+plate (Intercept)  0.847 0.847 0.847 
+sample (Intercept) 1.932 1.932 1.932 
+                                     
+sigma              0.55  0.55  0.55  
+REML               331   331   331   
+Warning message:
+In lmer(formula, data, ...) : extra argument(s) 'init' disregarded
+> 
+> ## smoothPsi
+> fit(Yield ~ (1 | Batch), Dyestuff, rho.e = smoothPsi, rho.b = smoothPsi)
+
+######## DASexp IRWLS ########
+Time elapsed: 2.219 0 2.239 0 0 
+Linear mixed model fit by DASexp ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 325.5003 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept) 1923     43.85   
+ Residual             2540     50.40   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  1526.48      20.25   75.39
+
+Rho functions used for fitting:
+   Residuals:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  0 
+ Random Eff.:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  0 
+[1] -18.737   1.378  34.106 -30.938  68.237 -51.350
+
+######## DAStau IRWLS ########
+Time elapsed: 0.958 0 0.966 0 0 
+Linear mixed model fit by DAStau ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 325.4797 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept) 1969     44.37   
+ Residual             2546     50.46   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  1526.53      20.45   74.65
+
+Rho functions used for fitting:
+   Residuals:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  0 
+ Random Eff.:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  0 
+[1] -18.720   1.327  33.852 -30.794  67.701 -51.074
+
+################################################
+################################################
+################################################
+
+################ results for DASexp  ##############
+             Coef       (Intercept)                             VarComp 
+                               1526                                     
+Batch (Intercept)                               sigma              REML 
+             43.9                                50.4               326 
+
+################ results for DAStau  ##############
+             Coef       (Intercept)                             VarComp 
+                               1527                                     
+Batch (Intercept)                               sigma              REML 
+             44.4                                50.5               325 
+> fit(Yield ~ (1 | Batch), Dyestuff2, rho.e = smoothPsi, rho.b = smoothPsi)
+
+######## DASexp IRWLS ########
+Time elapsed: 2.22 0 2.247 0 0 
+Linear mixed model fit by DASexp ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 167.0615 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept)  0.00    0.000   
+ Residual             14.38    3.792   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)   5.6195     0.6422   8.751
+
+Rho functions used for fitting:
+   Residuals:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  0 
+ Random Eff.:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  0 
+[1] 0 0 0 0 0 0
+
+######## DAStau IRWLS ########
+Time elapsed: 1.259 0 1.269 0 0 
+Linear mixed model fit by DAStau ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 167.0678 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept)  0.00    0.000   
+ Residual             14.32    3.784   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)   5.6201     0.6408   8.771
+
+Rho functions used for fitting:
+   Residuals:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  0 
+ Random Eff.:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  0 
+[1] 0 0 0 0 0 0
+
+################################################
+################################################
+################################################
+
+################ results for DASexp  ##############
+             Coef       (Intercept)                             VarComp 
+                               5.62                                     
+Batch (Intercept)                               sigma              REML 
+                0                                3.79               167 
+
+################ results for DAStau  ##############
+             Coef       (Intercept)                             VarComp 
+                               5.62                                     
+Batch (Intercept)                               sigma              REML 
+                0                                3.78               167 
+> fit(diameter ~ (1|plate) + (1|sample), Penicillin, rho.e = smoothPsi, rho.b = smoothPsi)
+
+######## DASexp IRWLS ########
+Time elapsed: 3.113 0.004 3.163 0 0 
+Linear mixed model fit by DASexp ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 354.2103 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ plate    (Intercept) 0.7613   0.8725  
+ sample   (Intercept) 3.8613   1.9650  
+ Residual             0.3010   0.5487  
+Number of obs: 144, groups: plate, 24; sample, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  23.0433     0.8439   27.31
+
+Rho functions used for fitting:
+   Residuals:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  0 
+ Random Eff.:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  0 
+ [1]  0.473264  0.473264  0.130315  0.214775 -0.003436 -0.276271 -0.875602
+ [8]  0.518759 -0.479506 -0.490013  0.608074  0.313100  0.914133  0.313100
+[15]  0.583570  0.018126 -0.177347 -0.178120 -0.875602  0.608074 -0.534548
+[22] -0.178524 -0.484975 -0.766943  0.585107 -0.292560  0.521293 -0.046474
+[29] -0.035391 -0.855999
+
+######## DAStau IRWLS ########
+Time elapsed: 0.958 0.002 0.969 0 0 
+Linear mixed model fit by DAStau ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 354.2069 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ plate    (Intercept) 0.7598   0.8717  
+ sample   (Intercept) 3.8696   1.9671  
+ Residual             0.3013   0.5490  
+Number of obs: 144, groups: plate, 24; sample, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  23.0429     0.8447   27.28
+
+Rho functions used for fitting:
+   Residuals:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  0 
+ Random Eff.:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  0 
+ [1]  0.473854  0.473854  0.130471  0.214999 -0.003487 -0.276688 -0.876846
+ [8]  0.519316 -0.480129 -0.490637  0.608804  0.313451  0.915323  0.313451
+[15]  0.584228  0.018097 -0.177647 -0.178412 -0.876846  0.608804 -0.535285
+[22] -0.178806 -0.485586 -0.768047  0.584929 -0.292270  0.521139 -0.046299
+[29] -0.035219 -0.855373
+
+################################################
+################################################
+################################################
+
+################ results for DASexp  ##############
+              Coef        (Intercept)                               VarComp 
+                                   23                                       
+ plate (Intercept) sample (Intercept)                                 sigma 
+             0.873              1.965                                 0.549 
+              REML 
+               354 
+
+################ results for DAStau  ##############
+              Coef        (Intercept)                               VarComp 
+                                   23                                       
+ plate (Intercept) sample (Intercept)                                 sigma 
+             0.872              1.967                                 0.549 
+              REML 
+               354 
+> 
+> ## smoothPsi Proposal II for estimating sigma
+> fit(Yield ~ (1 | Batch), Dyestuff, rho.e = smoothPsi, rho.b = smoothPsi,
++     wExp.e = 2, wExp.b = 0)
+
+######## DASexp IRWLS ########
+Time elapsed: 3.016 0 3.068 0 0 
+Linear mixed model fit by DASexp ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 325.5403 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept) 1693     41.15   
+ Residual             3233     56.86   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  1526.89      19.74   77.36
+
+Rho functions used for fitting:
+   Residuals:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  2 
+ Random Eff.:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  0 
+[1] -21.810   1.112  37.110 -31.929  73.378 -56.886
+
+######## DAStau IRWLS ########
+Time elapsed: 1.49 0 1.518 0 0 
+Linear mixed model fit by DAStau ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 325.4842 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept) 1770     42.07   
+ Residual             3189     56.47   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  1526.89      20.04   76.18
+
+Rho functions used for fitting:
+   Residuals:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  2 
+ Random Eff.:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  0 
+[1] -21.50   1.10  36.62 -31.70  72.34 -56.13
+
+################################################
+################################################
+################################################
+
+################ results for DASexp  ##############
+             Coef       (Intercept)                             VarComp 
+                               1527                                     
+Batch (Intercept)                               sigma              REML 
+             41.1                                56.9               326 
+
+################ results for DAStau  ##############
+             Coef       (Intercept)                             VarComp 
+                               1527                                     
+Batch (Intercept)                               sigma              REML 
+             42.1                                56.5               325 
+> fit(Yield ~ (1 | Batch), Dyestuff2, rho.e = smoothPsi, rho.b = smoothPsi,
++     wExp.e = 2, wExp.b = 0)
+
+######## DASexp IRWLS ########
+Time elapsed: 3.174 0 3.205 0 0 
+Linear mixed model fit by DASexp ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 167.1139 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept)  0.00    0.000   
+ Residual             16.78    4.096   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)   5.6071     0.6936   8.084
+
+Rho functions used for fitting:
+   Residuals:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  2 
+ Random Eff.:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  0 
+[1] 0 0 0 0 0 0
+
+######## DAStau IRWLS ########
+Time elapsed: 1.654 0 1.669 0 0 
+Linear mixed model fit by DAStau ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 167.054 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept)  0.00    0.000   
+ Residual             16.19    4.023   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)   5.6082     0.6813   8.232
+
+Rho functions used for fitting:
+   Residuals:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  2 
+ Random Eff.:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  0 
+[1] 0 0 0 0 0 0
+
+################################################
+################################################
+################################################
+
+################ results for DASexp  ##############
+             Coef       (Intercept)                             VarComp 
+                               5.61                                     
+Batch (Intercept)                               sigma              REML 
+                0                                 4.1               167 
+
+################ results for DAStau  ##############
+             Coef       (Intercept)                             VarComp 
+                               5.61                                     
+Batch (Intercept)                               sigma              REML 
+                0                                4.02               167 
+> fit(diameter ~ (1|plate) + (1|sample), Penicillin, rho.e = smoothPsi, rho.b = smoothPsi,
++     wExp.e = 2, wExp.b = 0)
+
+######## DASexp IRWLS ########
+Time elapsed: 3.721 0.004 3.775 0 0 
+Linear mixed model fit by DASexp ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 354.0672 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ plate    (Intercept) 0.7593   0.8714  
+ sample   (Intercept) 3.8627   1.9654  
+ Residual             0.3133   0.5597  
+Number of obs: 144, groups: plate, 24; sample, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)   23.044      0.844    27.3
+
+Rho functions used for fitting:
+   Residuals:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  2 
+ Random Eff.:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  0 
+ [1]  0.483514  0.483514  0.134588  0.218577 -0.003569 -0.282044 -0.892564
+ [8]  0.526396 -0.487232 -0.497462  0.619243  0.318743  0.931444  0.318743
+[15]  0.593768  0.018244 -0.181568 -0.182002 -0.892564  0.619243 -0.545505
+[22] -0.182090 -0.492140 -0.782933  0.597014 -0.298893  0.531500 -0.047189
+[29] -0.035752 -0.873027
+
+######## DAStau IRWLS ########
+Time elapsed: 1.296 0 1.308 0 0 
+Linear mixed model fit by DAStau ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 354.0577 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ plate    (Intercept) 0.7576   0.8704  
+ sample   (Intercept) 3.8714   1.9676  
+ Residual             0.3159   0.5621  
+Number of obs: 144, groups: plate, 24; sample, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  23.0432     0.8449   27.27
+
+Rho functions used for fitting:
+   Residuals:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  2 
+ Random Eff.:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  0 
+ [1]  0.48603  0.48603  0.13555  0.21951 -0.00364 -0.28352 -0.89698  0.52838
+ [9] -0.48930 -0.49946  0.62206  0.32015  0.93587  0.32015  0.59634  0.01824
+[17] -0.18263 -0.18299 -0.89698  0.62206 -0.54834 -0.18304 -0.49407 -0.78699
+[25]  0.59909 -0.29980  0.53328 -0.04715 -0.03564 -0.87563
+
+################################################
+################################################
+################################################
+
+################ results for DASexp  ##############
+              Coef        (Intercept)                               VarComp 
+                                   23                                       
+ plate (Intercept) sample (Intercept)                                 sigma 
+             0.871              1.965                                  0.56 
+              REML 
+               354 
+
+################ results for DAStau  ##############
+              Coef        (Intercept)                               VarComp 
+                                   23                                       
+ plate (Intercept) sample (Intercept)                                 sigma 
+              0.87               1.97                                 0.562 
+              REML 
+               354 
+> 
+> ## smoothPsi Proposal II
+> fit(Yield ~ (1 | Batch), Dyestuff, rho.e = smoothPsi, rho.b = smoothPsi,
++     wExp.e = 2, wExp.b = 2)
+
+######## DASexp IRWLS ########
+Time elapsed: 1.998 0 2.024 0 0 
+Linear mixed model fit by DASexp ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 325.3948 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept) 2244     47.37   
+ Residual             3143     56.07   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  1526.89      21.99   69.43
+
+Rho functions used for fitting:
+   Residuals:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  2 
+ Random Eff.:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  2 
+[1] -20.23   1.03  34.31 -30.12  67.60 -52.59
+
+######## DAStau IRWLS ########
+Time elapsed: 1.252 0 1.263 0 0 
+Linear mixed model fit by DAStau ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 325.3732 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept) 2400     48.99   
+ Residual             3084     55.54   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  1526.85      22.57   67.66
+
+Rho functions used for fitting:
+   Residuals:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  2 
+ Random Eff.:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  2 
+[1] -19.73   1.04  33.50 -29.59  66.03 -51.26
+
+################################################
+################################################
+################################################
+
+################ results for DASexp  ##############
+             Coef       (Intercept)                             VarComp 
+                               1527                                     
+Batch (Intercept)                               sigma              REML 
+             47.4                                56.1               325 
+
+################ results for DAStau  ##############
+             Coef       (Intercept)                             VarComp 
+                               1527                                     
+Batch (Intercept)                               sigma              REML 
+               49                                55.5               325 
+> fit(Yield ~ (1 | Batch), Dyestuff2, rho.e = smoothPsi, rho.b = smoothPsi,
++     wExp.e = 2, wExp.b = 2)
+
+######## DASexp IRWLS ########
+Time elapsed: 3.069 0 3.1 0 0 
+Linear mixed model fit by DASexp ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 167.1139 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept)  0.00    0.000   
+ Residual             16.78    4.096   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)   5.6071     0.6936   8.084
+
+Rho functions used for fitting:
+   Residuals:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  2 
+ Random Eff.:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  2 
+[1] 0 0 0 0 0 0
+
+######## DAStau IRWLS ########
+Time elapsed: 1.593 0 1.614 0 0 
+Linear mixed model fit by DAStau ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 167.054 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept)  0.00    0.000   
+ Residual             16.19    4.023   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)   5.6082     0.6813   8.232
+
+Rho functions used for fitting:
+   Residuals:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  2 
+ Random Eff.:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  2 
+[1] 0 0 0 0 0 0
+
+################################################
+################################################
+################################################
+
+################ results for DASexp  ##############
+             Coef       (Intercept)                             VarComp 
+                               5.61                                     
+Batch (Intercept)                               sigma              REML 
+                0                                 4.1               167 
+
+################ results for DAStau  ##############
+             Coef       (Intercept)                             VarComp 
+                               5.61                                     
+Batch (Intercept)                               sigma              REML 
+                0                                4.02               167 
+> fit(diameter ~ (1|plate) + (1|sample), Penicillin, rho.e = smoothPsi, rho.b = smoothPsi,
++     wExp.e = 2, wExp.b = 2)
+
+######## DASexp IRWLS ########
+Time elapsed: 4.094 0.004 4.161 0 0 
+Linear mixed model fit by DASexp ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 354.0978 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ plate    (Intercept) 0.9415   0.9703  
+ sample   (Intercept) 4.7183   2.1722  
+ Residual             0.3121   0.5586  
+Number of obs: 144, groups: plate, 24; sample, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  22.9908     0.9329   24.64
+
+Rho functions used for fitting:
+   Residuals:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  2 
+ Random Eff.:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  2 
+ [1]  0.444343  0.444343  0.127173  0.202799  0.001143 -0.251714 -0.800753
+ [8]  0.483264 -0.439030 -0.448485  0.566518  0.293729  0.844626  0.293729
+[15]  0.546128  0.020940 -0.160537 -0.160894 -0.800753  0.566518 -0.492693
+[22] -0.160919 -0.443730 -0.704684  0.551141 -0.258428  0.491948 -0.031282
+[29] -0.020977 -0.777378
+
+######## DAStau IRWLS ########
+Time elapsed: 1.117 0.001 1.136 0 0 
+Linear mixed model fit by DAStau ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 354.0148 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ plate    (Intercept) 0.9070   0.9523  
+ sample   (Intercept) 4.5788   2.1398  
+ Residual             0.3148   0.5611  
+Number of obs: 144, groups: plate, 24; sample, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  22.9981     0.9189   25.03
+
+Rho functions used for fitting:
+   Residuals:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  2 
+ Random Eff.:  smoothed Huber psi function (k = 1.345, s = 10) 
+      w exp.:  2 
+ [1]  0.4530631  0.4530631  0.1294167  0.2063490  0.0005221 -0.2576516
+ [7] -0.8188371  0.4921252 -0.4483651 -0.4579113  0.5776313  0.2991696
+[13]  0.8623728  0.2991696  0.5562834  0.0207079 -0.1646225 -0.1649212
+[19] -0.8188371  0.5776313 -0.5034306 -0.1649332 -0.4530075 -0.7202625
+[25]  0.5602816 -0.2652055  0.4998462 -0.0334560 -0.0229158 -0.7941237
+
+################################################
+################################################
+################################################
+
+################ results for DASexp  ##############
+              Coef        (Intercept)                               VarComp 
+                                   23                                       
+ plate (Intercept) sample (Intercept)                                 sigma 
+              0.97               2.17                                 0.559 
+              REML 
+               354 
+
+################ results for DAStau  ##############
+              Coef        (Intercept)                               VarComp 
+                                   23                                       
+ plate (Intercept) sample (Intercept)                                 sigma 
+             0.952              2.140                                 0.561 
+              REML 
+               354 
+> 
+> ## correlated random effects
+> ## omitting tests to speed up R CMD check...
+> ## fit(Reaction ~ Days + (Days|Subject), sleepstudy,
+> ##     wExp.e = 2, wExp.b = 2, methods = c("DASexp"), methods.effects = c("IRWLS"))
+> ## fit(Reaction ~ Days + (Days|Subject), sleepstudy,
+> ##     wExp.e = 2, wExp.b = 2, methods = c("DASexp"), methods.effects = c("IRWLS"),
+> ##     init = lmerNoFit)
+> ## including a 0 variance compontent
+> ## sleepstudy2 <- within(sleepstudy, Group <- letters[1:4])
+> ## fit(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2,
+> ##     wExp.e = 2, wExp.b = 2, methods = c("DASexp"), methods.effects = c("IRWLS"))
+> ## fit(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2,
+> ##     wExp.e = 2, wExp.b = 2, methods = c("DASexp"), methods.effects = c("IRWLS"),
+> ##     init = lmerNoFit)
+> 
+> cat('Time elapsed: ', proc.time(),'\n') # for ``statistical reasons''
+Time elapsed:  85.56 0.183 88.064 0 0.001 
+> 
+> proc.time()
+   user  system elapsed 
+ 85.560   0.184  88.066 

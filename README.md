@@ -28,7 +28,7 @@ Once you have installed the newest version of `lme4`, you can install
 `robustlmm` directly from github using `install_github` of the R-package
 `devtools`:
 
-   install.packages("devtools") ## if not already installed
-   require(devtools)
-   install_github("robustlmm", "kollerma")
-   require(robustlmm)
+    install.packages("devtools") ## if not already installed
+    require(devtools)
+    install_github("robustlmm", "kollerma")
+    require(robustlmm)

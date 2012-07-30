@@ -233,15 +233,13 @@ setRefClass("rlmerPredD",
                          for (s_k in object@dim) {
                              if (s_k == 1) {
                                  tmp <- Matrix(Epsi2_b)
-                             } else if (s_k == 2) {
-                                 wgt <- .wgtTau(object@rho.b, object@wExp.b)
-                                 A <- gh.int2d(function(b) wgt(sqrt((b[1]*b[1]+b[2]*b[2])/2))*b[1]*b[1])
-                                 B <- gh.int2d(function(b) wgt(sqrt((b[1]*b[1]+b[2]*b[2])/2))*b[1]*b[2])
-                                 tmp <- Matrix(c(A, B, B, A), 2)
                              } else {
-                                 stop("block size > 2 not implemented yet")
-                                 ## FIXME: like s_k == 2 but with third term of
-                                 ##        chi^2 distribution with s_k - 2 df
+                                 wgt <- .wgtTau(object@rho.b, object@wExp.b)
+                                 fun <- function(b, v) wgt(sqrt((b*b+v)/s_k))*b*b*
+                                     dnorm(b)*dchisq(v, s_k-1)
+                                 tmp <- integrate(Vectorize(function(v) integrate(fun, -Inf, Inf, v=v)$value),
+                                                  0, Inf)$value
+                                 tmp <- Diagonal(x=rep(tmp, s_k))
                              }
                              Eblks <- c(Eblks, tmp)
                          }

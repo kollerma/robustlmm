@@ -1,7 +1,7 @@
 Package: robustlmm
 Type: Package
 Title: Robust Linear Mixed Effects Models
-Version: 0.4
+Version: 0.5
 Date: 2012-07-25
 Author: Manuel Koller
 Maintainer: Manuel Koller <koller@stat.math.ethz.ch>
@@ -17,7 +17,7 @@ Depends:
     lme4 (>= 0.99999911-0),
     Matrix,
     MatrixModels,
-    robustbase,
+    robustbase (>= 0.9.5),
     stats4,
     minqa,
     rootSolve,

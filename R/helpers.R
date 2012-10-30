@@ -53,10 +53,11 @@ sumRho.e <- function(object, sigma = object@pp$sigma, lambda = FALSE, ...) {
 ##' @param object rlmerMod object
 ##' @param sigma to use for standardization
 ##' @param k group indicator vector
+##' @param b.s spherical random effects
 ##' @param ... ignored
-.dk <- function(object, sigma, k = object@k, ...) {
+.dk <- function(object, sigma, k = object@k, bs = u(object), ...) {
     ## aggregate and rescale by size of group
-    sqrt(aggregate(u(object)^2, list(k), mean)$x) / sigma ## mean instead of sum
+    sqrt(aggregate(bs^2, list(k), mean)$x) / sigma ## mean instead of sum
     
 }
 
@@ -69,9 +70,9 @@ sumRho.e <- function(object, sigma = object@pp$sigma, lambda = FALSE, ...) {
 ##' @param object object to use
 ##' @param sigma scale for standardization
 ##' @rdname dist
-dist.b <- function(object, sigma = object@pp$sigma) {
+dist.b <- function(object, sigma = object@pp$sigma, ...) {
     k <- object@k
-    .dk(object, sigma, k)[k]
+    .dk(object, sigma, k, ...)[k]
 }
 
 ##' dist.e: Calculate dist for residuals
@@ -428,13 +429,13 @@ findBlocks <- function(obj) {
                           x@method, class(x))
     cat(out, sep="\n")
     cat("\nRho functions used for fitting:\n")
-    cat("   Residuals: ", .sprintPsiFunc2(x@rho.e), "\n")
+    cat("   Residuals: ", robustbase:::.sprintPsiFunc(x@rho.e), "\n")
     cat("      w exp.: ", x@wExp.e, "\n")
     if (!isTRUE(all.equal(x@rho.e@tDefs, x@rho.sigma.e@tDefs)))
         cat("     c.sigma: ", paste(names(x@rho.sigma.e@tDefs), round(x@rho.sigma.e@tDefs, 3),
                                     sep=" = ", collapse=", "), "\n")
     
-    cat(" Random Eff.: ", .sprintPsiFunc2(x@rho.b), "\n")
+    cat(" Random Eff.: ", robustbase:::.sprintPsiFunc(x@rho.b), "\n")
     cat("      w exp.: ", x@wExp.b, "\n")
     if (!isTRUE(all.equal(x@rho.b@tDefs, x@rho.sigma.b@tDefs)))
         cat("     c.sigma: ", paste(names(x@rho.sigma.b@tDefs), round(x@rho.sigma.b@tDefs, 3),
@@ -499,9 +500,9 @@ getInfo.lmerMod <- function(object, ...) {
 ##' @S3method getInfo rlmerMod
 getInfo.rlmerMod <- function(object, ...) {
     linfo <- getInfo(as(object, "lmerMod"))
-    linfo$rho.e <- .sprintPsiFunc2(object@rho.e, TRUE)
+    linfo$rho.e <- robustbase:::.sprintPsiFunc(object@rho.e, TRUE)
     linfo$wExp.e <- object@wExp.e
-    linfo$rho.b <- .sprintPsiFunc2(object@rho.b, TRUE)
+    linfo$rho.b <- robustbase:::.sprintPsiFunc(object@rho.b, TRUE)
     linfo$wExp.b <- object@wExp.b
     linfo
 }

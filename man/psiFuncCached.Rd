@@ -1,8 +1,8 @@
-\name{psiFunc2Cached}
-\alias{psiFunc2Cached}
+\name{psiFuncCached}
+\alias{psiFuncCached}
 \title{psiFuncCached constructor}
 \usage{
-  psiFunc2Cached(rho, psi, wgt, Dpsi,
+  psiFuncCached(rho, psi, wgt, Dwgt, Dpsi,
     name = NULL, ...)
 }
 \arguments{
@@ -12,6 +12,8 @@
 
   \item{wgt}{wgt-function}
 
+  \item{Dwgt}{derivative of wgt}
+
   \item{Dpsi}{derivative of psi}
 
   \item{name}{descriptor of this function family}
@@ -19,10 +21,10 @@
   \item{...}{default values for tuning constants}
 }
 \value{
-  psi_func2_cached-class object
+  psi_func_cached-class object
 }
 \description{
-  Create psi_func2_cached object using cached numerical
+  Create psi_func_cached object using cached numerical
   integration for E... slots.
 }
 \details{

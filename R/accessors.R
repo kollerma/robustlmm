@@ -217,5 +217,5 @@ b.lmerMod <- function(object, ...) drop(crossprod(object@pp$Lambdat, object@u))
 
 ### Get ranef
 ##' @S3method ranef rlmerMod
-ranef.rlmerMod <- function(object)
-    ranef(as(object, "lmerMod"))
+ranef.rlmerMod <- function(object, ...)
+    ranef(as(object, "lmerMod"), ...)

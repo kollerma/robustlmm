@@ -46,7 +46,7 @@ G2 <- Vectorize(function(tau=1, a, s, rho, rho.sigma, wExp = 0,
     ## inner integration over z
     inner <- {
         if (wExp == 0) function(e) 
-            sum(rho.sigma@rho((e - a*rho@psi(e) - s*ghz)/tau)*ghw)
+            sum(2*rho.sigma@rho((e - a*rho@psi(e) - s*ghz)/tau)*ghw)
         else
             function(e) {
                 x <- (e - a*rho@psi(e) - s*ghz)/tau
@@ -61,7 +61,7 @@ G.int <- Vectorize(function(tau=1, a, s, rho, rho.sigma, wExp) {
     fun <- {
         if (wExp == 0)
             function(z, e)
-                rho.sigma@rho((e - a*rho@psi(e) - s*z)/tau)*dnorm(e)*dnorm(z)
+                2*rho.sigma@rho((e - a*rho@psi(e) - s*z)/tau)*dnorm(e)*dnorm(z)
         else
             function(z, e) {
                 x <- (e - a*rho@psi(e) - s*z)/tau

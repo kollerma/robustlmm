@@ -2,7 +2,7 @@
 \name{cPsi}
 \alias{cPsi}
 \title{Classical psi function}
-\format{Formal class 'psi_func2' [package "rlmer"] with 11 slots}
+\format{Formal class 'psi_func' [package "rlmer"] with 12 slots}
 \usage{
   cPsi
 }

@@ -89,18 +89,34 @@ fit(diameter ~ (1|plate) + (1|sample), Penicillin, rho.e = smoothPsi, rho.b = sm
     wExp.e = 2, wExp.b = 2)
 
 ## correlated random effects
-## omitting tests to speed up R CMD check...
 ## fit(Reaction ~ Days + (Days|Subject), sleepstudy,
-##     wExp.e = 2, wExp.b = 2, methods = c("DASexp"), methods.effects = c("IRWLS"))
+##     methods = c("DAStau"), methods.effects = c("IRWLS"))
 ## fit(Reaction ~ Days + (Days|Subject), sleepstudy,
-##     wExp.e = 2, wExp.b = 2, methods = c("DASexp"), methods.effects = c("IRWLS"),
+##     methods = c("DAStau"), methods.effects = c("IRWLS"),
 ##     init = lmerNoFit)
-## including a 0 variance compontent
-## sleepstudy2 <- within(sleepstudy, Group <- letters[1:4])
+## robust
+## fit(Reaction ~ Days + (Days|Subject), sleepstudy,
+##     methods = c("DAStau"), methods.effects = c("IRWLS"),
+##     rho.e = smoothPsi, rho.b = smoothPsi, wExp.e = 2, wExp.b = 2)
+## fit(Reaction ~ Days + (Days|Subject), sleepstudy,
+##     methods = c("DAStau"), methods.effects = c("IRWLS"),
+##     init = lmerNoFit, rho.e = smoothPsi, rho.b = smoothPsi,
+##     wExp.e = 2, wExp.b = 2)
+
+## ## including a 0 variance compontent
+sleepstudy2 <- within(sleepstudy, Group <- letters[1:4])
+fit(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2,
+    methods = c("DAStau"), methods.effects = c("IRWLS"))
 ## fit(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2,
-##     wExp.e = 2, wExp.b = 2, methods = c("DASexp"), methods.effects = c("IRWLS"))
-## fit(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2,
-##     wExp.e = 2, wExp.b = 2, methods = c("DASexp"), methods.effects = c("IRWLS"),
+##     methods = c("DAStau"), methods.effects = c("IRWLS"),
 ##     init = lmerNoFit)
+## ## robust
+## fit(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2,
+##     methods = c("DAStau"), methods.effects = c("IRWLS"),
+##     rho.e = smoothPsi, rho.b = smoothPsi, wExp.e = 2, wExp.b = 2)
+## fit(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2,
+##     methods = c("DAStau"), methods.effects = c("IRWLS"),
+##     init = lmerNoFit, rho.e = smoothPsi, rho.b = smoothPsi,
+##     wExp.e = 2, wExp.b = 2)
 
 cat('Time elapsed: ', proc.time(),'\n') # for ``statistical reasons''

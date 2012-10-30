@@ -4,9 +4,8 @@
     ## calculate first part
     tfun <- function(u, v) {
         uv <- u^2 + v
-        sqrtuv <- sqrt(uv)
-        ret <- (rho@Dpsi(sqrtuv)/uv - rho@psi(sqrtuv)/uv/sqrtuv)*u^2*
-            dnorm(u)*dchisq(v, q-1)
+        dk <- sqrt(uv/q)
+        ret <- (rho@Dwgt(dk))/(q*dk)*u^2*dnorm(u)*dchisq(v, q-1)
         ##ret[uv == 0 | is.infinite(uv)] <- 0
         ret
     }
@@ -15,20 +14,10 @@
     ## calculate the second part
     ## tfun3 <- function(s) rho@psi(s)*2^(1-q/2)*s^(q-2)*exp(-s^2/2)/gamma(q/2)
     ## the above makes problems for large q
-    tfun3 <- function(s) rho@psi(sqrt(s))/sqrt(s)*dchisq(s, q)
+    tfun3 <- function(s) rho@wgt(sqrt(s/q))*dchisq(s, q)
     ret + integrate(tfun3, 0, Inf)$value
 }
 
-### calculate Echi() used in var(g) (s, resp.)
-.calcEchi <- function(q, rho) {
-    if (q == 1) return(rho@Epsi2())
-    tfun <- function(u, v) {
-        uv <- (u^2 + v)
-        rho@psi(sqrt(uv))^2/uv*u^2*dnorm(u)*dchisq(v, q-1)
-    }
-    tfun2 <- function(v) integrate(tfun, -Inf, Inf, v=v)$value
-    integrate(function(v) sapply(v, tfun2), 0, Inf)$value
-}
 
 ##' Calculate the two dimensional integral G
 ##'
@@ -73,22 +62,22 @@ G <- function(tau = rep(1, length(a)), a, s, rho, rho.sigma, wExp, pp) {
 ##' @param object rlmerMod object
 ##' @param theta logical if s is required for theta or sigma_e
 ##' @return vector of s
-.s <- function(object, theta = FALSE) {
+.s <- function(object, theta = FALSE, pp = object@pp) {
     if (theta) {
-        M1 <- object@pp$K()
-        M2 <- object@pp$L
+        M1 <- pp$K()
+        M2 <- pp$L
         diag(M2) <- 0
     } else {
-        M1 <- object@pp$A
+        M1 <- pp$A
         diag(M1) <- 0
-        M2 <- object@pp$B()
+        M2 <- pp$B()
     }
     ## setting NA to 0 (they come from 0 variance components)
     M1[is.na(M1)] <- 0
     M2[is.na(M2)] <- 0
     ## calculate s:
-    ret <- object@rho.e@Epsi2() * rowSums(M1^2)
-    if (any(!object@pp$zeroB)) ret <- ret + drop(M2^2 %*% object@pp$Echi)
+    ret <- pp$rho_e@Epsi2() * rowSums(M1^2)
+    if (any(!pp$zeroB)) ret <- ret + drop(M2^2 %*% diag(pp$Epsi_bpsi_bt))
     sqrt(ret)
 }
 
@@ -177,7 +166,7 @@ G <- function(tau = rep(1, length(a)), a, s, rho, rho.sigma, wExp, pp) {
         if (all(idx[ind])) {
             ## Ltmp <- object@pp$L[ind, !ind, drop=FALSE]
             ## use symmpart to calm chol()
-            ret <- c(ret, list(chol(symmpart(
+            ret <- c(ret, list(drop(chol(symmpart(
                 ## Matrix K_{\theta,k} consists of the
                 ## rows belonging block k and all columns
                 object@rho.e@Epsi2() * tcrossprod(object@pp$K()[ind, , drop=FALSE]) +
@@ -188,7 +177,7 @@ G <- function(tau = rep(1, length(a)), a, s, rho, rho.sigma, wExp, pp) {
                            tmpEL[ind, !ind, drop=FALSE])
                 ## tcrossprod(Ltmp, Ltmp %*%
                 ##            object@pp$Epsi_bpsi_bt[!ind, !ind, drop=FALSE])
-                ))))
+                )))))
         } else {
             ## check if whole block is zero 
             if (!all((!idx)[ind]))
@@ -200,15 +189,11 @@ G <- function(tau = rep(1, length(a)), a, s, rho, rho.sigma, wExp, pp) {
     ret
 }
 
-.wgtTau <- function(rho, wExp)
-    switch(wExp + 1, ## wExp == 0:
-           function(x) ifelse(x == 0, rho@Dpsi(0), rho@rho(x)/(x*x)*2),
-           rho@wgt, ## wExp == 1
-           function(x) { ## wExp == 2
-               x <- rho@wgt(x)
-               x*x
-           })
-
+##' Calculate kappa for DASvar and DAStau method.
+##'
+##' @title Kappa for scale estimates
+##' @param rho rho-function to be used
+##' @param wExp exponent
 ##' @rdname calcKappa
 calcKappaTau <- function(rho, wExp) {
     ## function to calculate the expectation
@@ -218,6 +203,39 @@ calcKappaTau <- function(rho, wExp) {
            rho@EDpsi() / integrate(function(x) wgt(x)*dnorm(x), -Inf, Inf)$value,
            rho@Epsi2() / integrate(function(x) wgt(x)*dnorm(x), -Inf, Inf)$value)
 }
+##' @param object rlmerMod object
+##' @rdname calcKappa
+calcKappaTauB <- function(object) {
+    kappas <- rep(1, length(object@blocks))
+    rho.sigma <- object@rho.sigma.b
+    wExp <- object@wExp.b
+    wgt <- .wgtTau(rho.sigma, wExp)
+    for(type in seq_along(object@blocks)) {
+        s <- nrow(object@idx[[type]])
+        kappas[type] <- if (s==1) {
+            calcKappaTau(rho.sigma, wExp)
+        } else {
+            tfun <- function(u, v) {
+                ret <- wgt(sqrt((u^2 + v)/s))*u^2*dnorm(u)*dchisq(v, s-1)
+                ret
+            }
+            tfun2 <- function(v) integrate(tfun, -Inf, Inf, v=v)$value
+            tfun3 <- function(v) wgt(sqrt(v/s))*dchisq(v, s)
+            integrate(function(v) sapply(v, tfun2), 0, Inf)$value /
+                integrate(tfun3, 0, Inf)$value
+        }
+    }
+    kappas
+}
+
+.wgtTau <- function(rho, wExp)
+    switch(wExp + 1, ## wExp == 0:
+           function(x) ifelse(x == 0, rho@Dpsi(0), rho@rho(x)/(x*x)*2),
+           rho@wgt, ## wExp == 1
+           function(x) { ## wExp == 2
+               x <- rho@wgt(x)
+               x*x
+           })
 
 ##' Calculate tau for DAS estimate
 ##'
@@ -229,13 +247,21 @@ calcKappaTau <- function(rho, wExp) {
 ##' @param wExp.e exponent used in scale estimation
 ##' @param pp rlmerPredD object
 ##' @param kappa kappa tuning parameter
+##' @param tau initial values for tau
+##' @param method method to compute tau with
 ##' @param rel.tol relative tolerance for calculating tau
 ##' @param max.it maximum number of iterations allowed
 calcTau <- function(a, s, rho.e, rho.sigma.e, wExp.e, pp,
-                    kappa = calcKappaTau(rho.e, wExp.e),
+                    kappa, tau = rep(1, length(a)), method="DAStau",
                     rel.tol = 1e-6, max.it = 200) {
     stopifnot(length(a) == length(s))
-    tau <- rep(1, length(a))
+    if (method == "DASvar" || !is.numeric(tau) || length(tau) != length(a)) {
+        ## FIXME: this always returns tau_e irrespective of a and s...
+        Tau <- with(pp, V_e - EDpsi_e * (t(A) + A) + Epsi2_e * tcrossprod(A) +
+                             B() %*% tcrossprod(Epsi_bpsi_bt, B()))
+        tau <- sqrt(diag(Tau))
+        if (method == "DASvar") return(tau)
+    }
     psi <- rho.e@psi
     psiZ <- psi(pp$ghZ)
     ## function to find root from
@@ -289,6 +315,100 @@ calcTau <- function(a, s, rho.e, rho.sigma.e, wExp.e, pp,
     
     tau
 }
+
+calcTau.nondiag <- function(object, ghZ, ghw, skbs, kappas, max.iter) {
+    ## define 4d integration function
+    int4d <- function(fun) drop(apply(ghZ, 1, fun) %*% ghw)
+    ## initial values
+    T <- object@pp$T()
+    ## move into list
+    TkbsI <- list()
+    ## cycle blocks
+    for (type in seq_along(object@blocks)) {
+        bidx <- object@idx[[type]]
+        for (k in 1:ncol(bidx)) ## 1:K
+            TkbsI <- c(TkbsI, list(T[bidx[,k],bidx[,k]]))
+    }
+
+    ## Compute Taus
+    Tbks <- list()
+    wgt <- .wgtTau(object@rho.sigma.b, object@wExp.b)
+    ## cycle block types
+    for (type in seq_along(object@blocks)) {
+        bidx <- object@idx[[type]]
+        s <- nrow(bidx)
+        ind <- which(object@ind == type) ## (in terms of blocks on diagonal)
+        idx <- !object@pp$zeroB
+        if (!all(idx[bidx])) { ## block has been dropped
+            ## check if the whole block is zero
+            if (!all((!idx)[bidx]))
+                stop("result of getZeroU is ambiguous: either the whole block is zero or not")
+            Tbks <- c(Tbks, rep(list(matrix(0, s, s)), length(ind)))
+            next
+        }
+        ## block has not been dropped: calculate Tbk
+        ## catch 1d case
+        if (s == 1) {
+            bidx <- drop(bidx) ## is a vector (in terms of items of b.s)
+            tmp <- calcTau(diag(object@pp$L)[bidx], unlist(skbs[ind]),
+                           object@rho.b, object@rho.sigma.b, object@wExp.b, object@pp, kappas[type])
+            Tbks <- c(Tbks, as.list(tmp))
+        } else if (s == 2) { ## 2d case
+            f <- sqrt(kappas[type]) ## normalizing constant
+            lastSk <- lastkk <- matrix()
+            lastRet <- NA
+            ## cycle blocks
+            for (k in 1:ncol(bidx)) { ## 1:K
+                lTbk <- as.matrix(TkbsI[[ind[k]]])
+                lbidx <- bidx[,k]
+                Lkk <- as.matrix(object@pp$L[lbidx, lbidx])
+                Sk <- as.matrix(skbs[[ind[k]]])
+                ## check for almost equal blocks
+                if (!(isTRUE(all.equal(lastSk, Sk)) && isTRUE(all.equal(lastLkk, Lkk)))) {
+                    ## Find Tbk for this new block...
+                    lastSk <- Sk
+                    lastLkk <- Lkk
+                    ##cat("TbkI:", lTbk, "\n")
+                    conv <- FALSE
+                    iter <- 0
+                    while (!conv && (iter <- iter + 1) < max.iter) {
+                        qrlTbk <- qr(lTbk)
+                        if (qrlTbk$rank < s) {
+                            warning("Tbk not of full rank (iter=", iter, "!!\nlTbk =", as.vector(lTbk), ", setting it to Tb()\n")
+                            conv <- TRUE
+                            lTbk <- as.matrix(TkbsI[[ind[k]]])
+                        } else {
+                            funA <- function(u) {
+                                btilde <- u[1:2] - wgt(sqrt(mean(u[1:2]^2))) * Lkk %*% u[1:2] - crossprod(Sk, u[3:4])
+                                wgt(sqrt(mean(qr.solve(qrlTbk, btilde)^2))) ## not needed: *prod(dnorm(c(u1,u2,u3,u4))) 
+                            }
+                            a <- int4d(funA)
+                            funB <- function(u) {
+                                btilde <- u[1:2] - wgt(sqrt(mean(u[1:2]^2))) * Lkk %*% u[1:2] - crossprod(Sk, u[3:4])
+                                wgt(sqrt(mean(qr.solve(qrlTbk, btilde)^2)))*tcrossprod(btilde)
+                            }
+                            B <- matrix(int4d(funB), s)
+                            lTbk1 <- B/(f*a)
+                            conv <- isTRUE(all.equal(lTbk, lTbk1)) ## rel.tol default 1e-8
+                            ##cat(sprintf("k=%i, iter=%i, conv=%s\n", k, iter, conv))
+                            ##cat("Tbk:", lTbk1, "\n")
+                            lTbk <- lTbk1
+                        }
+                    }
+                    lastRet <- lTbk
+                }
+                ## add to result
+                Tbks <- c(Tbks, list(lastRet))
+            }
+        } else {
+            warning("DAStau for blocks of dimension > 2 not defined, falling back to DASvar")
+            stop("yes, do as promised")
+        }    
+    }
+
+    ## combine into Matrix
+    bdiag(Tbks)    
+}
     
 ##' Update sigma: calculate averaged DAS scale
 ##'
@@ -303,10 +423,10 @@ updateSigma <- function(object, max.iter = 100, rel.tol = 1e-6, fit.effects = TR
     wExp.e <- object@wExp.e
     
     switch(object@method,
-           DAStau = { ## DAStau variant
-               kappa <- calcKappaTau(rho.sigma.e, wExp.e)
-               tau <- calcTau(diag(object@pp$A), .s(object, theta = FALSE),
-                              object@rho.e, rho.sigma.e, wExp.e, object@pp, kappa)
+           DASvar =,
+           DAStau = { ## DAStau and DASvar variant (depending on class type)
+               kappa <- object@pp$kappa_e
+               tau <- object@pp$tau_e()
            }, { ## otherwise
                ## get matrices for r part
                a <- diag(object@pp$A)
@@ -340,7 +460,7 @@ updateSigma <- function(object, max.iter = 100, rel.tol = 1e-6, fit.effects = TR
     ## scale <- exp(res$root)
     
     ## new iterative reweighting
-    fun <- if (object@method == "DAStau") {
+    fun <- if (object@method %in% c("DAStau", "DASvar")) {
         wgt <- .wgtTau(rho.sigma.e, wExp.e)
         tau2 <- tau*tau
         function(scale, r) {
@@ -497,10 +617,16 @@ updateTheta <- function(object, max.iter = 100, rel.tol = 1e-6, verbose = 0) {
 ##' @return rlmerMod-object
 updateThetaTau <- function(object, max.iter = 100, rel.tol = 1e-6, verbose = 0) {
     ## FIXME: non-diag case?
-    kappa <- calcKappaTau(object@rho.sigma.b, object@wExp.b)
-    tau <- calcTau(diag(object@pp$L), .s(object, theta = TRUE),
-                   object@rho.b, object@rho.sigma.b, object@wExp.b,
-                   object@pp, kappa)
+    kappa <- object@pp$kappa_b[1]
+    tau <- switch(object@method,
+                  DAStau = {
+                      Tbk <- object@pp$T()
+                      calcTau(diag(object@pp$L), .s(object, theta = TRUE),
+                              object@rho.b, object@rho.sigma.b, object@wExp.b,
+                              object@pp, kappa, sqrt(diag(Tbk)))
+                  },
+                  DASvar = sqrt(diag(object@pp$Tb())),
+                  stop("method not supported by updateThetaTau:", object@method))
 
     deltatheta <- rep(0, length(theta(object)))
     sigmae <- object@pp$sigma
@@ -550,6 +676,8 @@ updateThetaTau <- function(object, max.iter = 100, rel.tol = 1e-6, verbose = 0) 
              update.sigma = FALSE, update.deviance = FALSE)
     ## update sigma without refitting effects
     updateSigma(object, fit.effects = FALSE)
-
+    ## set Tbk cache
+    object@pp$setT(Diagonal(x=tau2))
+    
     invisible(object)
 }

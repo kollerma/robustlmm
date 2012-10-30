@@ -1,7 +1,7 @@
 ## test calculation of matrices for the classes
 ## rlmerPredD and rlmerPred_...
 require(robustlmm)
-.calcEchi <- robustlmm:::.calcEchi
+##.calcEchi <- robustlmm:::.calcEchi
 .calcE.D.re <- robustlmm:::.calcE.D.re
 setTheta <- robustlmm:::setTheta
 len <- robustlmm:::len
@@ -11,7 +11,7 @@ len <- robustlmm:::len
 ##  updateMatrices)
 ## should produce the same matrices A, B, K, L as
 ## the rlmerPred_DAS class
-calcMatrices <- function(object, numpoints=13, envir=new.env()) {
+calcMatricesDiagOnly <- function(object, numpoints=13, envir=new.env()) {
     evalq({
         object <- get("object", envir = parent.frame(2))
         numpoints <- get("numpoints", envir = parent.frame(2))
@@ -35,12 +35,6 @@ calcMatrices <- function(object, numpoints=13, envir=new.env()) {
         }
         D_b <- Diagonal(x=tmp)
         
-        ## Echi is used in .s for calculating var(g)
-        Echi <- if (object@wExp.b == 0) rep(object@rho.e@Epsi2(), q) else {
-            exps <- sapply(object@dim, .calcEchi, rho = object@rho.b)
-            Echi <- exps[object@ind[object@k]]
-        }
-
         ## Matrices we need for calculating the Jacobian
         DX <- D_e %*% X
         ZtD <- Zt %*% D_e
@@ -105,7 +99,7 @@ calcMatrices <- function(object, numpoints=13, envir=new.env()) {
             ## A = H - T - T\tr P + Z L Ms L\tr Z\tr
             A <- H - T - crossprod(T, P) + crossprod(MsLtZt, LtZt)
             ## B = lambda_e / lambda_b *(S - Z L Ms) 
-            B <- object@pp$lfrac * t(K)
+            B <- lfrac * t(K)
 
             ## Complete Jacobian
             J <- J0
@@ -113,10 +107,13 @@ calcMatrices <- function(object, numpoints=13, envir=new.env()) {
             t.idx <- (p+(1:q))[idx]
             J[t.idx, t.idx] <- crossprod(La[idx, idx], ZtDZ[idx, idx] %*% La[idx, idx]) + laD.re[idx, idx]
         } else {
+            Ms <- solve(lfrac * D_b)
             A <- H
+            ## Fixing Dimnames slot
+            A@Dimnames <- list(A@Dimnames[[1]], NULL)
             B <- Matrix(0, object@pp$n, object@pp$q)
             K <- Matrix(0, object@pp$q, object@pp$n)
-            L <- Matrix(0, object@pp$q, object@pp$q)
+            L <- lfrac * Ms
             J <- J0
             if (method == "DASe2")
                 expZero <- numeric(len(object, "theta"))
@@ -124,7 +121,6 @@ calcMatrices <- function(object, numpoints=13, envir=new.env()) {
         
         ## cat("    rho.resp:", rho.resp@name, "\n")
         ## cat("    rho.re:", rho.re@name, "\n")
-        ## cat("      Echi:", Echi, " vs. ", object@pp$Echi, "\n")
         ## cat("   D_e[1,1]:", D_e[1,1], " vs. ", object@pp$D_e[1,1], "\n")
         ## cat("   D_b[1,1]:", D_b[1,1], " vs. ", object@pp$D_b[1,1], "\n")
         ## cat("      XtDX:", XtDX[1,1], " vs. ", object@pp$M_XX[1,1], "\n")
@@ -135,15 +131,135 @@ calcMatrices <- function(object, numpoints=13, envir=new.env()) {
         ## cat("    B[1,1]:", B[1,1], " vs. ", object@pp$B()[1,1], "\n")
 
         return(list(A = A, B = B, K = K, L = L, J = J,
-                    D_e = D_e, D_b = D_b, lfrac = lfrac))
+                    D_e = D_e, D_b = D_b, Lambda_b = Diagonal(x=rep(lfrac, q)),
+                    laD.re = laD.re))
     }, envir)
 }
 
+calcMatrices <- function(object, numpoints=13, envir=new.env()) {
+    evalq({
+        object <- get("object", envir = parent.frame(2))
+        numpoints <- get("numpoints", envir = parent.frame(2))
+        
+        X <- object@pp$X
+        Zt <- object@pp$Zt
+        rho.resp <- object@rho.e
+        rho.re <- object@rho.b
+        method <- object@method
+
+        p <- object@pp$p
+        q <- object@pp$q
+        n <- object@pp$n
+
+        ## D_e and D_b matrices
+        D_e <- Diagonal(x=rep(object@rho.e@EDpsi(), n))
+        tmp <- if (object@wExp.b == 0) rep(object@rho.b@EDpsi(),q) else {
+            exps <- sapply(object@dim, .calcE.D.re, rho = object@rho.b)
+            exps[object@ind[object@k]]
+        }
+        D_b <- Diagonal(x=tmp)
+        Lambda_b <- solve(D_b) * object@rho.e@EDpsi()
+
+        ## Matrices we need for calculating the Jacobian
+        DX <- D_e %*% X
+        ZtD <- Zt %*% D_e
+        XtDX <- crossprod(X, DX)
+        ZtDX <- ZtD %*% X
+        ZtDZ <- tcrossprod(ZtD, Zt)
+
+        ## Initialize Jacobian Matrix (complete for given theta)
+        J0 <- Matrix(0, p + q, p + q)
+        J0[1:p, 1:p] <- XtDX
+        
+        ## CXt = C X\tr = solve(X\tr D.resp X, X\tr)
+        CXt <- solve(XtDX, t(X))
+        ## H = X CXt
+        H <- X %*% CXt
+        
+        ## lfrac = la = \lambda_e / \lambda_b
+        laD.re <- Lambda_b %*% D_b
+        
+        I <- Matrix(diag(n))
+        ## P = I - D.resp H
+        P <- I - D_e %*% H
+        
+        ZtPDZ <- tcrossprod(Zt %*% P, ZtD)
+        CXtD <- CXt %*% D_e 
+        
+        ## Now we can assume that there are the matrices
+        ## CXt, H, I, P, ZtPDZ, CXtD are in the environment
+
+        ## get index of non-zero U
+        idx <- !object@pp$zeroB
+        
+        if (any(idx)) {
+            ## La = \Lambda_\theta
+            Lat <- t(La <- object@pp$U_b)
+            LtZt <- Lat %*% Zt
+            
+            ## Ms = M_\theta^* = solve(L\tr Z\tr D_resp P Z L + lD)
+            ## Mst = Ms since D_resp is diagonal
+            ## MsLtZt = solve(L\tr Z\tr P D_resp Z L + lD), L\tr Z\tr)
+            ## LZMs = MsLtZt\tr
+            Ms <- solve(Lat %*% ZtPDZ %*% La +
+                        laD.re)
+            MsLtZt <- Ms %*% LtZt
+            
+            ## Q = Q_\theta = CXt D.resp Z L Ms
+            Qt <- tcrossprod(MsLtZt, CXtD)
+            ## S = S_\theta = X Q
+            St <- tcrossprod(Qt, X)
+            ## T = Z L S\tr
+            T <- crossprod(LtZt, St)
+
+            ## K = K_\theta = Q\tr X\tr - Ms Z\tr
+            K <- St - MsLtZt
+            ## L = L_\theta = object@pp$lfrac * Ms
+            L <- Ms %*% Lambda_b
+            
+            ## A = H - T - T\tr P + Z L Ms L\tr Z\tr
+            A <- H - T - crossprod(T, P) + crossprod(MsLtZt, LtZt)
+            ## B = lambda_e / lambda_b *(S - Z L Ms) 
+            B <- t(K) %*% Lambda_b
+
+            ## Complete Jacobian
+            J <- J0
+            J[p+(1:q), 1:p] <- t(J[1:p, p+(1:q)] <- crossprod(ZtDX, object@pp$U_b))
+            t.idx <- (p+(1:q))[idx]
+            J[t.idx, t.idx] <- crossprod(La[idx, idx], ZtDZ[idx, idx] %*% La[idx, idx]) + laD.re[idx, idx]
+        } else {
+            Ms <- solve(laD.re)
+            A <- H
+            ## Fixing Dimnames slot
+            A@Dimnames <- list(A@Dimnames[[1]], NULL)
+            B <- Matrix(0, object@pp$n, object@pp$q)
+            K <- Matrix(0, object@pp$q, object@pp$n)
+            L <- Ms %*% Lambda_b
+            J <- J0
+            if (method == "DASe2")
+                expZero <- numeric(len(object, "theta"))
+        }
+
+        return(list(A = A, B = B, K = K, L = L, J = J,
+                    D_e = D_e, D_b = D_b, Lambda_b = Lambda_b,
+                    laD.re = laD.re))
+    }, envir)
+}
+
+
 cmp <- function(rfm) {
     las <- calcMatrices(rfm)
+    if (Matrix:::isDiagonal(rfm@pp$U_b)) {
+        las2 <- calcMatricesDiagOnly(rfm)
+        res <- all.equal(las, las2)
+        if (!isTRUE(res)) {
+            print(res)
+            stop("Diagonal Test failed")
+        }
+    }
     res <- c(all.equal(las$D_e, rfm@pp$D_e),
              all.equal(las$D_b, rfm@pp$D_b),
-             all.equal(las$lfrac, rfm@pp$lfrac),
+             all.equal(las$Lambda_b, rfm@pp$Lambda_b),
              all.equal(las$A, rfm@pp$A),
              all.equal(las$B, rfm@pp$B()),
              all.equal(las$K, rfm@pp$K()),

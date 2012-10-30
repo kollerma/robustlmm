@@ -6,7 +6,9 @@
 }
 \arguments{
   \item{...}{passed to lmer()}
-  \item{initTheta}{parameter to initialize theta with (optional)}
+
+  \item{initTheta}{parameter to initialize theta with
+  (optional)}
 }
 \value{
   lmerMod object

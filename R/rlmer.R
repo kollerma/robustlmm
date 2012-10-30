@@ -144,12 +144,8 @@ rlmer <- function(formula, data, REML = TRUE, ..., method = "DAStau",
     if (any(lobj@resp$offset != 0))
         warning("Argument offset is untested.")
 
-    ## change default method for non diagonal U_b
-    ## only DASexp can deal with non diagonal U_b at the moment.
-    if (missing(method) && !isDiagonal(lobj@pp$U_b)) method <- "DASexp"
-
-    ## DASexp and Opt methods can only deal with diagonal V_b(theta) at the moment
-    if (!(method %in% c("Opt", "DASexp")) && !isDiagonal(lobj@pp$U_b))
+    ## DAStau, DASexp and Opt methods can only deal with diagonal V_b(theta) at the moment
+    if (!(method %in% c("Opt", "DASexp", "DAStau")) && !isDiagonal(lobj@pp$U_b))
         stop("Method ", method, " can only deal with diagonal V_b at the moment")
     
     ## if wExp.b > 0 warn if sigma is not estimated via DAS
@@ -202,6 +198,7 @@ rlmer <- function(formula, data, REML = TRUE, ..., method = "DAStau",
     lobj@method.effects <- method.effects
     if (substr(method, 1, 3) == "DAS") {
         lobj@pp <- as(lobj@pp, "rlmerPredD_DAS")
+        lobj@pp$method <- method
     }
     lobj@pp$initRho(lobj)
     lobj@pp$initMatrices(lobj)
@@ -264,10 +261,155 @@ rlmer <- function(formula, data, REML = TRUE, ..., method = "DAStau",
 }
 
 ## DAS method
+rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@method) {
+    if (!.isREML(lobj))
+        stop("can only do REML when using averaged DAS-estimate for sigma")
+
+    ## Prepare for DAStau
+    if (method == "DAStau") {
+        ## 4d int
+        ## vectorize it!
+        ghZ <- as.matrix(expand.grid(lobj@pp$ghz, lobj@pp$ghz, lobj@pp$ghz, lobj@pp$ghz))
+        ghw <- apply(as.matrix(expand.grid(lobj@pp$ghw, lobj@pp$ghw, lobj@pp$ghw, lobj@pp$ghw)), 1, prod)
+        skbs <- .S(lobj)
+    }
+    
+    ## fit model using EM algorithm
+    conv <- FALSE
+    convBlks <- rep(FALSE, length(lobj@blocks))
+    iter <- 0
+    rel.tol <- sqrt(rel.tol)
+    ## compute kappa
+    kappas <- lobj@pp$kappa_b
+    wgt <- .wgtTau(lobj@rho.sigma.b, lobj@wExp.b)
+    ## zero pattern for T matrix
+    nzT <- crossprod(bdiag(lobj@blocks[lobj@ind])) == 0
+    q <- lobj@pp$q
+    ## iterate
+    while(!conv && (iter <- iter + 1) < max.iter) {
+        if (verbose > 0) cat("---- Iteration", iter, " ----\n")
+        thetatilde <- theta(lobj)
+        
+        ## get expected value of cov(\tvbs)
+        q <- len(lobj, "b")
+        T <- switch(method,
+                    DASvar=lobj@pp$Tb(),
+                    DAStau=calcTau.nondiag(lobj, ghZ, ghw, skbs, kappas, max.iter),
+                    stop("Non-diagonal case only implemented for DASvar"))
+        ## compute robustness weights and add to t and bs
+        T[nzT] <- 0
+        ## symmetrize T to avoid non symmetric warning, then apply chol
+        T <- symmpart(T)
+        ## save to cache
+        lobj@pp$setT(T)
+        ## apply chol to non-zero part only
+        idx <- !lobj@pp$zeroB
+        L <- t(chol(T[idx,idx]))
+        T.bs <- numeric(q) ## set the others to zero
+        T.bs[idx] <- forwardsolve(L, lobj@pp$b.s[idx])
+        Wb <- Diagonal(x=wgt(dist.b(lobj, bs = T.bs)))
+        ## if (verbose > 2) {
+        ##     tau2 <- diag(T)
+        ##     ds <- .dk(lobj, .sigma(lobj))[lobj@k] / sqrt(tau2)
+        ##     w <- wgt(ds)
+        ##     cat("diag(L):", diag(L), "\n")
+        ##     cat("tau:", sqrt(tau2), "\n")
+        ##     cat("dist.b(...):", dist.b(lobj, b.s = T.bs), "\n")
+        ##     cat("ds:", ds, "\n")
+        ##     cat("w:", w, "\n")
+        ##     cat("diag(Wb):", diag(Wb), "\n")
+        ## }
+        T <- Wb %*% T
+        bs <- sqrt(Wb) %*% lobj@pp$b.s
+        
+        ## cycle block types
+        for(type in seq_along(lobj@blocks)) {
+            if (convBlks[type]) next
+            bidx <- lobj@idx[[type]]
+            s <- nrow(bidx)
+            K <- ncol(bidx)
+            kappa <- kappas[type]
+            ## sum over blocks
+            rhs <- matrix(0, s, s)
+            for (k in 1:K) {
+                ## add weights
+                rhs <- rhs + T[bidx[,k],bidx[,k]]
+            }
+            lbs <- matrix(bs[bidx], ncol(bidx), nrow(bidx), byrow=TRUE)
+            ## add weights
+            tmp <- crossprod(lbs / .sigma(lobj)) / K
+            ## FIXME better dropping behaviour?
+            if (isTRUE(all.equal(rhs/K, tmp, attributes=FALSE, rel.tol = rel.tol^2))) {
+                convBlks[type] <- TRUE
+                next
+            }
+            ## if (verbose > 2) {
+            ##     lind <- lobj@ind[lobj@k] == type
+            ##     us <- lobj@pp$b.s[lind] / .sigma(lobj)
+            ##     cat("lhs:", tmp, mean(w[lind]*us*us), "\n")
+            ##     cat("rhs:", rhs / K, mean(w[lind]*tau2[lind]), "\n")
+            ## }
+            deltaT <- as(solve(chol(rhs / K), chol(tmp)) / sqrt(kappa), "sparseMatrix")
+            if (verbose > 1) cat("deltaT:", deltaT@x, "\n")
+            ## get old parameter estimates for this block
+            Ubtilde <- as(lobj@blocks[[type]], "sparseMatrix")
+            Lind <- Ubtilde@x
+            diagLind <- diag(Ubtilde)
+            Ubtilde@x[] <- thetatilde[Lind]
+            ## update Ubtilde by deltaT
+            thetatilde[Lind] <- tcrossprod(Ubtilde, deltaT)@x
+            ## FIXME: check boundary conditions?
+            ## check if varcomp is dropped
+            if (all(thetatilde[diagLind] < 1e-7)) {
+                thetatilde[Lind] <- 0
+                convBlks[type] <- TRUE
+                next
+            }
+            ## check if this block is converged
+            diff <- abs(thetatilde[Lind] - theta(lobj)[Lind])
+            if (sum(diff) < rel.tol * max(c(diff, rel.tol))) {
+                convBlks[type] <- TRUE
+                next
+            }
+        }
+        if (verbose > 1) {
+            cat("difference:", thetatilde - theta(lobj), "\n")
+            cat("new theta:", thetatilde, "\n")
+        }
+        ## set theta
+        setTheta(lobj, thetatilde, fit.effects = TRUE,
+                 update.sigma = FALSE, update.deviance = FALSE)
+        ## update sigma without refitting effects
+        updateSigma(lobj, fit.effects = FALSE)
+        if (all(convBlks)) conv <- TRUE
+    }
+    
+    ## update deviance
+    updateDeviance(lobj)
+
+    if (iter == max.iter) 
+        warning("iterations did not converge, returning unconverged estimate.")
+        
+    lobj
+}
+
+## DAS method
 rlmer.fit.DAS <- function(lobj, verbose, max.iter, rel.tol) {
     if (!.isREML(lobj))
         stop("can only do REML when using averaged DAS-estimate for sigma")
 
+    ## catch non diag case
+    if (!isDiagonal(lobj@pp$U_b)) {
+        if (lobj@method != "DAStau")
+            stop("Non-diagonal case only supported by DAStau and DASexp")
+        ## fit (crudely) using DASvar method first
+        lobj <- rlmer.fit.DAS.nondiag(lobj, verbose, max.iter, 1e-3, method="DASvar")
+        ## now do DAStau fit
+        lobj <- rlmer.fit.DAS.nondiag(lobj, verbose, max.iter, rel.tol, method="DAStau")
+        return(lobj)
+    }
+    
+    ## diagonal only case    
     lupdateTheta <- switch(lobj@method,
                            DAStau=updateThetaTau,
                            stop("method not supported by rlmer.fit.DAS:", lobj@method))
@@ -287,7 +429,7 @@ rlmer.fit.DAS <- function(lobj, verbose, max.iter, rel.tol) {
         ## fit theta
         lupdateTheta(lobj, max.iter, rel.tol/10, verbose)
         theta1 <- theta(lobj)
-
+        
         if (verbose > 0) {
             cat(sprintf("delta theta: %.12f\n", sum(abs(theta0 - theta1))))
             if (verbose > 1) {
@@ -305,16 +447,17 @@ rlmer.fit.DAS <- function(lobj, verbose, max.iter, rel.tol) {
                 }
             }
         }
-
+        
         ## all zero or change smaller than relative tolerance
         ## all zero: we can't get out of this anyway, so we have to stop.
-        converged <- all(theta1 == 0) || sum(abs(theta0 - theta1)) < 200*rel.tol*sum(abs(theta0)) 
+        converged <- all(theta1 == 0) || sum(abs(theta0 - theta1)) <
+            200*rel.tol*sum(abs(theta0)) 
         if (verbose > 1)
             cat(sprintf("Criterion: %.12f, %.12f", sum(abs(theta0 - theta1)),
-                sum(abs(theta0 - theta1)) / rel.tol / sum(abs(theta0)) / 200), "\n")
+                        sum(abs(theta0 - theta1)) / rel.tol / sum(abs(theta0)) / 200), "\n")
         theta0 <- theta1
     }
-
+    
     ## update deviance
     updateDeviance(lobj)
 

@@ -1,14 +1,6 @@
-##' define new class psi_func2 which is basically
-##' just psi_func with added slot name
-##'
-##' @title psi_func2 class
-##' @exportClass psi_func2 
-setClass("psi_func2", contains = c("psi_func"),
-         representation(name = "character"))
 
-##' @rdname psi_func2
-##' @exportClass psi_func2_cached
-setClass("psi_func2_cached", contains = c("psi_func2"))
+##' @exportClass psi_func_cached
+setClass("psi_func_cached", contains = c("psi_func"))
 
 
 ##' This is basically a copy of the merPredD-class
@@ -23,6 +15,7 @@ setClass("psi_func2_cached", contains = c("psi_func2"))
 setRefClass("rlmerPredD",
             fields =
                 list(U_e     = "ddiMatrix",
+                     V_e     = "ddiMatrix",        ## crossprod(U_e)
                      U_b     = "sparseMatrix",
                      .Lambdat = "dgCMatrix",
                      .Lind    = "integer", ## for .Lambdat
@@ -47,13 +40,13 @@ setRefClass("rlmerPredD",
                      ghW     = "matrix",
                      D_e     = "ddiMatrix",    ## Diagonal Matrix D_e
                      D_b     = "ddiMatrix",    ## Diagonal Matrix D_b
-                     lfrac   = "numeric",      ## \lambda_e / \lambda_b
+                     Lambda_b = "ddiMatrix",   ## solve(D_b) lambda_e
+                     Lambda_bD_b = "ddiMatrix", ## lambda_e I
                      sqrtD_e = "ddiMatrix",    ## sqrt(D_e)
                      .U_eX   = "Matrix",       ## U_e\inv X
                      .U_eZ   = "Matrix",       ## U_e\inv Z
                      M_XX    = "Matrix",       ## M_XX
                      U_btZt.U_et = "Matrix",   ## U_b\tr Z\tr U_e\inv\tr
-                     Echi    = "numeric",      ## used in .s for calculating var(g)
                      ## remlK   = "Matrix",       ## used to calculate deviance in REML case
                      ## remlKcorr = "numeric",    ## ditto
                      RZX     = "matrix",       ## used to calculate deviance in REML case
@@ -62,9 +55,16 @@ setRefClass("rlmerPredD",
                      M_ZZ0   = "Matrix",       ## M_ZZ = U_b\tr %*% M_ZZ0 %*% U_b
                      M_XX.M_ZZ0 = "Matrix",    ## M_XX^-1 %*% M_XZ0
                      M_ZX0M_XX.M_ZZ0 = "Matrix", ## crossprod(M_XZ0, M_XX^M_ZZ0)
+                     rho_e   = "psi_func",
+                     rho_sigma_e = "psi_func",
+                     wExp_e  = "numeric",
+                     rho_b   = "psi_func",
+                     rho_sigma_b = "psi_func",
+                     wExp_b  = "numeric",
                      Epsi2_e = "numeric",      ## \Erw[\psi^2_e]
                      Epsi2_b = "numeric",      ## \Erw[\psi^2_b]
-                     Epsi_bpsi_bt = "Matrix",   ## \Erw[\psi_b(u)\psi_b(u)\tr]
+                     Epsi_bbt = "Matrix",      ## \Erw[\psi_b(u)u\tr]
+                     Epsi_bpsi_bt = "Matrix",  ## \Erw[\psi_b(u)\psi_b(u)\tr]
                      set.M   = "logical",      ## cache
                      cache.M = "list",         ## cache
                      set.unsc = "logical",     ## cache
@@ -74,7 +74,7 @@ setRefClass("rlmerPredD",
                 list(
                      initialize =
                      function(X, Zt, RZX, Lambdat, Lind, theta, beta, b.s, lower,
-                              sigma, deviance, u_e, ...) {
+                              sigma, deviance, v_e, ...) {
                          set.unsc <<- set.M <<- calledInit <<- FALSE
                          initGH(...)
                          if (!nargs()) return()
@@ -93,9 +93,10 @@ setRefClass("rlmerPredD",
                                    sigma > 0,
                                    length(deviance) == 1,
                                    length(lower) == length(theta),
-                                   length(u_e) == n
+                                   length(v_e) == n
                                    )
-                         U_e <<- Diagonal(x=if (is(u_e, "numeric")) u_e else diag(u_e))
+                         U_e <<- Diagonal(x=sqrt(if (is(v_e, "numeric")) v_e else diag(v_e)))
+                         V_e <<- Diagonal(x=if (is(v_e, "numeric")) v_e else diag(v_e))
                          beta <<- beta
                          b.s <<- b.s
                          b <<- as(U_b %*% b.s, "numeric")
@@ -197,45 +198,68 @@ setRefClass("rlmerPredD",
                          if (any(!zeroB)) {
                              ## M_bb. := M_bb\inv
                              cache.M$M_bb. <<- crossprod(U_b,(M_ZZ0 - M_ZX0M_XX.M_ZZ0)) %*% U_b +
-                                 lfrac * D_b
+                                 Lambda_bD_b
                              cache.M$M_XZ <<- M_XZ <- M_XZ0 %*% U_b
                              M_ZX.M_XX <- t(solve(M_XX, M_XZ))
                              cache.M$M_bB <<- -1*solve(cache.M$M_bb., M_ZX.M_XX)
-                             cache.M$M_BB <<- solve(M_XX, Diagonal(p) - M_XZ %*% cache.M$M_bB)
-                             cache.M$M_bb <<- solve(cache.M$M_bb.)
+                         } else { ## all random effects dropped
+                             cache.M$M_bb. <<- Lambda_bD_b
+                             cache.M$M_XZ <<- M_XZ <- Matrix(0, p, q)
+                             cache.M$M_bB <<- Matrix(0, q, p)
                          }
+                         cache.M$M_BB <<- solve(M_XX, Diagonal(p) - M_XZ %*% cache.M$M_bB)
+                         cache.M$M_bb <<- solve(cache.M$M_bb.)
                          set.M <<- TRUE
                          return(cache.M)
                      },
                      initRho = function(object) {
-                         D_e <<- Diagonal(x=rep(object@rho.e@EDpsi(), n))
-                         tmp <- if (object@wExp.b == 0) rep(object@rho.b@EDpsi(),q) else {
-                             exps <- sapply(object@dim, .calcE.D.re, rho = object@rho.b)
+                         rho_e <<- object@rho.e
+                         rho_sigma_e <<- object@rho.sigma.e
+                         rho_b <<- object@rho.b
+                         rho_sigma_b <<- object@rho.sigma.b
+                         wExp_e <<- object@wExp.e
+                         wExp_b <<- object@wExp.b
+                         D_e <<- Diagonal(x=rep(rho_e@EDpsi(), n))
+                         tmp <- if (wExp_b == 0) rep(rho_b@EDpsi(),q) else {
+                             exps <- sapply(object@dim, .calcE.D.re, rho = rho_b)
                              exps[object@ind[object@k]]
                          }
                          D_b <<- Diagonal(x=tmp)
-                         lfrac <<- object@rho.e@EDpsi() / object@rho.b@EDpsi()
+                         Lambda_b <<- Diagonal(x=rho_e@EDpsi() / tmp)
+                         Lambda_bD_b <<- Diagonal(x=rep(rho_e@EDpsi(), q))
                          sqrtD_e <<- Diagonal(x=sqrt(D_e@x))
-                         Echi <<- if (object@wExp.b == 0) rep(object@rho.b@Epsi2(), q) else {
-                             exps <- sapply(object@dim, .calcEchi, rho = object@rho.b)
-                             exps[object@ind[object@k]]
-                         }
                          M_XX <<- crossprod(sqrtD_e %*% .U_eX)
                          tmp1 <- sqrtD_e %*% .U_eZ
                          M_XZ0 <<- crossprod(sqrtD_e %*% .U_eX, tmp1)
                          M_ZZ0 <<- crossprod(tmp1)
                          M_XX.M_ZZ0 <<- solve(M_XX, M_XZ0)
                          M_ZX0M_XX.M_ZZ0 <<- crossprod(M_XZ0, M_XX.M_ZZ0)
-                         Epsi2_e <<- object@rho.e@Epsi2()
-                         Epsi2_b <<- object@rho.b@Epsi2()
+                         Epsi2_e <<- rho_e@Epsi2()
+                         Epsi2_b <<- rho_b@Epsi2()
+                         ## calculate Epsi_bbt
+                         Eblks <- list()
+                         for (s_k in object@dim) {
+                             if (s_k == 1) {
+                                 tmp <- Matrix(rho_b@EDpsi())
+                             } else {
+                                 wgt <- .wgtTau(rho_b, wExp_b)
+                                 fun <- function(b, v) wgt(sqrt((b*b+v)/s_k))*b*b*
+                                     dnorm(b)*dchisq(v, s_k-1)
+                                 tmp <- integrate(Vectorize(function(v) integrate(fun, -Inf, Inf, v=v)$value),
+                                                  0, Inf)$value
+                                 tmp <- Diagonal(x=rep(tmp, s_k))
+                             }
+                             Eblks <- c(Eblks, tmp)
+                         }
+                         Epsi_bbt <<- bdiag(Eblks[object@ind])
                          ## calculate Epsi_bpsi_bt
                          Eblks <- list()
                          for (s_k in object@dim) {
                              if (s_k == 1) {
                                  tmp <- Matrix(Epsi2_b)
                              } else {
-                                 wgt <- .wgtTau(object@rho.b, object@wExp.b)
-                                 fun <- function(b, v) wgt(sqrt((b*b+v)/s_k))*b*b*
+                                 wgt <- .wgtTau(rho_b, wExp_b)
+                                 fun <- function(b, v) wgt(sqrt((b*b+v)/s_k))^2*b*b*
                                      dnorm(b)*dchisq(v, s_k-1)
                                  tmp <- integrate(Vectorize(function(v) integrate(fun, -Inf, Inf, v=v)$value),
                                                   0, Inf)$value
@@ -266,7 +290,7 @@ setRefClass("rlmerPredD",
                              La <- U_b[idx, idx]
                              J[t.idx, t.idx] <-
                                  crossprod(La, M_ZZ0[idx, idx] %*% La) +
-                                     lfrac * D_b[idx, idx]
+                                     Lambda_bD_b[idx, idx]
                          }
                          return(J)
                      },
@@ -298,15 +322,15 @@ setRefClass("rlmerPredD",
                          'the unscaled variance-covariance matrix of the fixed-effects parameters'
                          if (set.unsc) return(cache.unsc)
                          r <- M()
-                         tmp <- if (is.null(r$M_bb)) { ## all theta == 0
+                         tmp <- if (all(zeroB)) { ## all theta == 0
                              Epsi2_e * tcrossprod(solve(M_XX, t(sqrtD_e %*% .U_eX)))
                          } else {
-                             Epsi2_e * with(r, M_BB - crossprod(M_bB, lfrac * D_b %*% M_bB)) +
-                                 lfrac^2 * 
+                             Epsi2_e * with(r, M_BB - crossprod(M_bB, Lambda_bD_b %*% M_bB)) +
                                  if (isDiagonal(U_b)) {
-                                     Epsi2_b * crossprod(r$M_bB)
+                                     Epsi2_b * crossprod(Lambda_b %*% r$M_bB)
                                  } else {
-                                     with(r, crossprod(M_bB, Epsi_bpsi_bt %*% M_bB))
+                                     with(r, crossprod(Lambda_b %*% M_bB,
+                                                       Epsi_bpsi_bt %*% Lambda_b %*% M_bB))
                                  }
                          }
                          cache.unsc <<- as.matrix(tmp)
@@ -332,25 +356,56 @@ setRefClass("rlmerPredD_DAS",
             fields =
             list(A       = "Matrix",        ## Matrix A
                  Kt      = "Matrix",        ## Matrix B = lfrac * Kt, K = t(Kt)
-                 L       = "Matrix"         ## Matrix L
+                 L       = "Matrix",        ## Matrix L
+                 kappa_e = "numeric",       ## kappa_e^(sigma) (only required for DASvar and DAStau)
+                 kappa_b = "numeric",       ## kappa_b^(sigma) (-------------- " ------------------)
+                 EDpsi_e = "numeric",
+                 method  = "character",
+                 .setTau_e = "logical",     ## check whether we already have computed tau_e
+                 .tau_e  = "numeric",       ## tau_e used in updateSigma
+                 .setTbk = "logical",
+                 .Tbk     = "Matrix"         ## cache for T_{b,k}
                  ),
             contains = "rlmerPredD",
             methods =
             list(
                  initialize = function(...) {
                      callSuper(...)
+                     .setTau_e <<- FALSE
+                     .tau_e <<- 0
+                     .setTbk <<- FALSE
+                     .Tbk <<- Matrix(0, 0, 0)
                      ## the other slots are initialized in initMatrices()
+                 },
+                 initRho = function(object) {
+                     callSuper(object)
+                     EDpsi_e <<- rho_e@EDpsi()
+                     kappa_e <<- calcKappaTau(rho_sigma_e, wExp_e)
+                     kappa_b <<- calcKappaTauB(object)
                  },
                  setTheta = function(value) {
                      callSuper(value)                     
                      ## update Matrices
                      updateMatrices()
+                     ## need to recompute tau and co.
+                     .setTau_e <<- FALSE
                  },
                  B = function() {
-                     lfrac * Kt
+                     Kt %*% Lambda_b
                  },
                  K = function() {
                      t(Kt)
+                 },
+                 Tb = function() {
+                     tmp <- L %*% Epsi_bbt
+                     diag(q) - tmp - t(tmp) + Epsi2_b * crossprod(Kt) + L %*% crossprod(Epsi_bpsi_bt, L)
+                 },
+                 setT = function(T) {
+                     .Tbk <<- T
+                     .setTbk <<- TRUE
+                 },
+                 T = function() {
+                     if (.setTbk) .Tbk else Tb() ## fallback to Tb()
                  },
                  updateMatrices = function() {
                      if (!isTRUE(calledInit)) initMatrices()
@@ -363,15 +418,25 @@ setRefClass("rlmerPredD_DAS",
                          A <<- tcrossprod(.U_eX %*% r$M_BB, .U_eX) +
                              tmp2 + t(tmp2) + tmp3 %*% U_btZt.U_et
                          Kt <<- -1*(tcrossprod(.U_eX, r$M_bB) + tmp3)
-                         L <<- lfrac * r$M_bb
+                         L <<- r$M_bb %*% Lambda_b
                      } else {
                          ## no random effects
                          A <<- .U_eX %*% solve(M_XX, t(.U_eX)) ## just the hat matrix
                          Kt <<- Matrix(0, n, q)
-                         L <<- Matrix(0, q, q) ## FIXME: shouldn't it be a diag 1 matrix?
+                         L <<- solve(D_b)
                      }
-                 })
+                 },
+                 tau_e = function() {
+                     if (isTRUE(.setTau_e)) return(.tau_e)
+                     .tau_e <<- calcTau(diag(A), .s(theta=FALSE, pp=.self),
+                                        rho_e, rho_sigma_e, wExp_e, .self, kappa_e,
+                                        .tau_e, method)
+                     .setTau_e <<- TRUE
+                     return(.tau_e)
+                 }
+                )
             )
+                 
 
 ##' This is similar to lmerMod from lme4
 ##'
@@ -395,16 +460,16 @@ setClass("rlmerMod",
                         pp      = "rlmerPredD",
                         cache   = "environment",
                         ## from rlmerResp:
-                        rho.e   = "psi_func2",
+                        rho.e   = "psi_func",
                         wExp.e  = "numeric",
-                        rho.sigma.e = "psi_func2",
+                        rho.sigma.e = "psi_func",
                         use.laplace = "logical",
                         method  = "character",
                         method.effects = "character",
                         ## from rreTrms:
                         b       = "numeric",
-                        rho.b   = "psi_func2",
-                        rho.sigma.b = "psi_func2",
+                        rho.b   = "psi_func",
+                        rho.sigma.b = "psi_func",
                         wExp.b  = "numeric",
                         blocks  = "list",
                         ind     = "numeric",
@@ -520,7 +585,7 @@ setIs(class1 = "rlmerMod", class2 = "lmerMod",
                              X=value@pp$X,Zt=value@pp$Zt, RZX=value@pp$RZX,
                              Lambdat=value@pp$Lambdat, Lind=value@pp$Lind,
                              theta=value@theta, beta=value@beta, b.s=value@u,
-                             lower=value@lower, u_e=value@resp$weights,
+                             lower=value@lower, v_e=value@resp$weights,
                              sigma=cmp[[ifelse(dd["REML"], "sigmaREML", "sigmaML")]],
                              deviance=cmp[[ifelse(dd["REML"], "REML", "dev")]],
                              numpoints = 13)

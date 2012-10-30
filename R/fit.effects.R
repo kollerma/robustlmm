@@ -27,7 +27,7 @@ fit.effects <- function(par, object, method.effects = object@method.effects,
                MAT1 <- Matrix(0, n+q, p+q)
                MAT1[1:n,1:p] <- object@pp$.U_eX
                MAT1[1:n,p+1:q] <- t(LtZt)
-               MAT1[n+1:q,p+1:q] <- diag(rep(sqrt(object@pp$lfrac), q))
+               MAT1[n+1:q,p+1:q] <- sqrt(object@pp$Lambda_b)
                MAT2 <- Matrix(0, p+q, n)
                MAT2[1:p,] <- t(object@pp$.U_eX)
                MAT2[p+1:q,] <- LtZt

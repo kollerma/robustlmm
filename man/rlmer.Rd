@@ -38,11 +38,11 @@
   \item{method.effects}{method to be used for estimation of
   the fixed and random effects.}
 
-  \item{rho.e}{object of class psi_func2, specifying the
+  \item{rho.e}{object of class psi_func, specifying the
   functions to use for robustifying the residuals part of
   the likelihood.}
 
-  \item{rho.b}{object of class psi_func2, specifying the
+  \item{rho.b}{object of class psi_func, specifying the
   functions to use for robustifying the random effects part
   of the likelihood.}
 

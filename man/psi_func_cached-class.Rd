@@ -1,12 +1,12 @@
-\name{psi_func2_cached-class}
+\name{psi_func_cached-class}
 \Rdversion{1.1}
 \docType{class}
-\alias{psi_func2_cached-class}
-\alias{chgDefaults,psi_func2_cached-method}
+\alias{psi_func_cached-class}
+\alias{chgDefaults,psi_func_cached-method}
 
-\title{Class \code{"psi_func2_cached"}}
+\title{Class \code{"psi_func_cached"}}
 \description{
-  The class \code{"psi_func2_cached"} is used to store \eqn{\psi \ (psi)}{psi}
+  The class \code{"psi_func_cached"} is used to store \eqn{\psi \ (psi)}{psi}
   functions for M-estimation.  In particular, an object of the class
   contains \eqn{\rho(x) \ (\code{rho})}{rho(x)}, its derivative
   \eqn{\psi(x) \ (psi)}{psi(x)}, the weight function \eqn{\psi(x)/x}, and
@@ -18,8 +18,8 @@
   arguments.
 }
 \section{Objects from the Class}{
-Objects can be created by calls of the form \code{new("psi_func2_cached", ...)}
-but preferably by \code{\link{psiFunc2Cached}(...)}.
+Objects can be created by calls of the form \code{new("psi_func_cached", ...)}
+but preferably by \code{\link{psiFuncCached}(...)}.
 }
 \section{Slots}{
   \describe{
@@ -28,21 +28,22 @@ but preferably by \code{\link{psiFunc2Cached}(...)}.
     \item{\code{rho}:}{Object of class \code{"functionX"}, see \code{"\linkS4class{psi_func}"} }
     \item{\code{psi}:}{Object of class \code{"functionX"}, see \code{"\linkS4class{psi_func}"} }
     \item{\code{wgt}:}{Object of class \code{"functionX"}, see \code{"\linkS4class{psi_func}"} }
+    \item{\code{Dwgt}:}{Object of class \code{"functionX"}, derivative of wgt}
     \item{\code{Dpsi}:}{Object of class \code{"functionX"}, see \code{"\linkS4class{psi_func}"} }
     \item{\code{tDefs}:}{Object of class \code{"numeric"}, see \code{"\linkS4class{psi_func}"} }
     \item{\code{Erho}:}{Object of class \code{"functionXal"}, see \code{"\linkS4class{psi_func}"} }
     \item{\code{Epsi2}:}{Object of class \code{"functionXal"}, see \code{"\linkS4class{psi_func}"} }
     \item{\code{EDpsi}:}{Object of class \code{"functionXal"}, see \code{"\linkS4class{psi_func}"} }
+    \item{\code{name}:}{Object of class \code{"character"}, see \code{"\linkS4class{psi_func}"} }
     \item{\code{xtras}:}{Object of class \code{"list"}, see \code{"\linkS4class{psi_func}"} }
   }
 }
 \section{Extends}{
-Class \code{"\linkS4class{psi_func2}"}, directly.
-Class \code{"\linkS4class{psi_func}"}, by class "psi_func2", distance 2.
+Class \code{"\linkS4class{psi_func}"}, directly.
 }
 \section{Methods}{
   \describe{
-    \item{chgDefaults}{\code{signature(object = "psi_func2_cached")}:
+    \item{chgDefaults}{\code{signature(object = "psi_func_cached")}:
       The method is used to change the default
       values for the tuning parameters, and returns a
       \code{\link{psi_func-class}} object, a copy of input \code{object}
@@ -59,9 +60,9 @@ Class \code{"\linkS4class{psi_func}"}, by class "psi_func2", distance 2.
 }
 
 \seealso{
-  \code{\linkS4class{psi_func}}, \code{\linkS4class{psi_func2}}
+  \code{\linkS4class{psi_func}}
 }
 \examples{
-showClass("psi_func2_cached")
+showClass("psi_func_cached")
 }
 \keyword{classes}

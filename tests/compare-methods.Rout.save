@@ -45,13 +45,9 @@ The following object(s) are masked from 'package:rootSolve':
 
     hessian
 
-
-Attaching package: 'robustlmm'
-
-The following object(s) are masked from 'package:robustbase':
-
-    huberPsi
-
+Warning messages:
+1: package 'Matrix' was built under R version 2.15.2 
+2: package 'numDeriv' was built under R version 2.15.2 
 > 
 > fit <- function(formula, data, methods =  c("DASexp", "DAStau"),
 +                 methods.effects = c("IRWLS"), rho.e = cPsi, rho.b = cPsi,
@@ -108,7 +104,10 @@ The following object(s) are masked from 'package:robustbase':
 Note: Method with signature "diagonalMatrix#Matrix" chosen for function "solve",
  target signature "ddiMatrix#ddiMatrix".
  "Matrix#diagonalMatrix" would also be valid
-Time elapsed: 0.778 0.006 0.793 0 0 
+Time elapsed: 1.742 0.015 1.789 0 0 
+Note: Method with signature "dsyMatrix#generalMatrix" chosen for function "coerce",
+ target signature "dpoMatrix#generalMatrix".
+ "denseMatrix#generalMatrix" would also be valid
 Note: Method with signature "dsyMatrix#dgeMatrix" chosen for function "coerce",
  target signature "dpoMatrix#dgeMatrix".
  "ddenseMatrix#dgeMatrix" would also be valid
@@ -129,9 +128,9 @@ Fixed effects:
 (Intercept)  1527.50      19.38    78.8
 
 Rho functions used for fitting:
-   Residuals:  classic (x^2/2) 
+   Residuals:  classic (x^2/2) psi function 
       w exp.:  0 
- Random Eff.:  classic (x^2/2) 
+ Random Eff.:  classic (x^2/2) psi function 
       w exp.:  0 
 [1] -20.7549   0.4612  33.6690 -27.2119  66.8768 -53.0402
 #### Checking equality with lmer... ####
@@ -143,7 +142,10 @@ Deviance:       TRUE
 Unsc:           TRUE 
 
 ######## DAStau IRWLS ########
-Time elapsed: 0.282 0.001 0.285 0 0 
+Note: Method with signature "dsparseMatrix#dgeMatrix" chosen for function "crossprod",
+ target signature "dsCMatrix#dgeMatrix".
+ "CsparseMatrix#ddenseMatrix" would also be valid
+Time elapsed: 1.114 0.008 1.143 0 0 
 Linear mixed model fit by DAStau ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -161,9 +163,9 @@ Fixed effects:
 (Intercept)  1527.50      19.38    78.8
 
 Rho functions used for fitting:
-   Residuals:  classic (x^2/2) 
+   Residuals:  classic (x^2/2) psi function 
       w exp.:  0 
- Random Eff.:  classic (x^2/2) 
+ Random Eff.:  classic (x^2/2) psi function 
       w exp.:  0 
 [1] -20.7549   0.4612  33.6690 -27.2119  66.8768 -53.0402
 #### Checking equality with lmer... ####
@@ -202,7 +204,7 @@ REML              320  320
 > fit(Yield ~ (1 | Batch), Dyestuff2)
 
 ######## DASexp IRWLS ########
-Time elapsed: 2.588 0.007 2.614 0 0 
+Time elapsed: 5.472 0.002 5.574 0 0 
 Linear mixed model fit by DASexp ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -220,9 +222,9 @@ Fixed effects:
 (Intercept)   5.6656     0.6784   8.351
 
 Rho functions used for fitting:
-   Residuals:  classic (x^2/2) 
+   Residuals:  classic (x^2/2) psi function 
       w exp.:  0 
- Random Eff.:  classic (x^2/2) 
+ Random Eff.:  classic (x^2/2) psi function 
       w exp.:  0 
 [1]  0.0007542 -0.0013569  0.0024939  0.0000258  0.0005564 -0.0024734
 #### Checking equality with lmer... ####
@@ -234,7 +236,7 @@ Deviance:       TRUE
 Unsc:           TRUE 
 
 ######## DAStau IRWLS ########
-Time elapsed: 3.392 0.004 3.416 0 0 
+Time elapsed: 11.116 0.003 11.301 0 0 
 Linear mixed model fit by DAStau ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -252,9 +254,9 @@ Fixed effects:
 (Intercept)   5.6656     0.6784   8.351
 
 Rho functions used for fitting:
-   Residuals:  classic (x^2/2) 
+   Residuals:  classic (x^2/2) psi function 
       w exp.:  0 
- Random Eff.:  classic (x^2/2) 
+ Random Eff.:  classic (x^2/2) psi function 
       w exp.:  0 
 [1] 0 0 0 0 0 0
 #### Checking equality with lmer... ####
@@ -293,7 +295,7 @@ REML              162  162
 > fit(diameter ~ (1|plate) + (1|sample), Penicillin)
 
 ######## DASexp IRWLS ########
-Time elapsed: 0.589 0.002 0.595 0 0 
+Time elapsed: 1.595 0.003 1.623 0 0 
 Linear mixed model fit by DASexp ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -312,9 +314,9 @@ Fixed effects:
 (Intercept)  22.9722     0.8086   28.41
 
 Rho functions used for fitting:
-   Residuals:  classic (x^2/2) 
+   Residuals:  classic (x^2/2) psi function 
       w exp.:  0 
- Random Eff.:  classic (x^2/2) 
+ Random Eff.:  classic (x^2/2) psi function 
       w exp.:  0 
  [1]  0.522543  0.522543  0.117993  0.219131  0.016856 -0.286556 -0.893379
  [8]  0.522543 -0.488830 -0.488830  0.623680  0.320268  0.927092  0.320268
@@ -330,7 +332,7 @@ Deviance:       TRUE
 Unsc:           TRUE 
 
 ######## DAStau IRWLS ########
-Time elapsed: 0.423 0 0.425 0 0 
+Time elapsed: 5.581 0.003 5.664 0 0 
 Linear mixed model fit by DAStau ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -349,9 +351,9 @@ Fixed effects:
 (Intercept)  22.9722     0.8086   28.41
 
 Rho functions used for fitting:
-   Residuals:  classic (x^2/2) 
+   Residuals:  classic (x^2/2) psi function 
       w exp.:  0 
- Random Eff.:  classic (x^2/2) 
+ Random Eff.:  classic (x^2/2) psi function 
       w exp.:  0 
  [1]  0.522543  0.522543  0.117993  0.219131  0.016856 -0.286556 -0.893379
  [8]  0.522543 -0.488830 -0.488830  0.623680  0.320268  0.927092  0.320268
@@ -398,7 +400,7 @@ REML               331   331
 > fit(Yield ~ (1 | Batch), Dyestuff, REML=FALSE, methods = c("Opt"))
 
 ######## Opt IRWLS ########
-Time elapsed: 1.212 0 1.223 0 0 
+Time elapsed: 2.528 0 2.575 0 0 
 Linear mixed model fit by Opt ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -417,9 +419,9 @@ Fixed effects:
 (Intercept)  1527.50      17.69   86.33
 
 Rho functions used for fitting:
-   Residuals:  classic (x^2/2) 
+   Residuals:  classic (x^2/2) psi function 
       w exp.:  0 
- Random Eff.:  classic (x^2/2) 
+ Random Eff.:  classic (x^2/2) psi function 
       w exp.:  0 
 [1] -22.095   0.491  35.843 -28.969  71.195 -56.465
 #### Checking equality with lmer... ####
@@ -447,7 +449,7 @@ deviance          327  327
 > fit(Yield ~ (1 | Batch), Dyestuff2, REML=FALSE, methods = c("Opt"))
 
 ######## Opt IRWLS ########
-Time elapsed: 0.753 0 0.758 0 0 
+Time elapsed: 1.619 0 1.647 0 0 
 Linear mixed model fit by Opt ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -466,9 +468,9 @@ Fixed effects:
 (Intercept)    5.666      0.667   8.494
 
 Rho functions used for fitting:
-   Residuals:  classic (x^2/2) 
+   Residuals:  classic (x^2/2) psi function 
       w exp.:  0 
- Random Eff.:  classic (x^2/2) 
+ Random Eff.:  classic (x^2/2) psi function 
       w exp.:  0 
 [1] 0 0 0 0 0 0
 #### Checking equality with lmer... ####
@@ -496,7 +498,7 @@ deviance          163  163
 > fit(diameter ~ (1|plate) + (1|sample), Penicillin, REML=FALSE, methods = c("Opt"))
 
 ######## Opt IRWLS ########
-Time elapsed: 1.146 0.001 1.155 0 0 
+Time elapsed: 2.5 0 2.541 0 0 
 Linear mixed model fit by Opt ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -516,9 +518,9 @@ Fixed effects:
 (Intercept)  22.9722     0.7446   30.85
 
 Rho functions used for fitting:
-   Residuals:  classic (x^2/2) 
+   Residuals:  classic (x^2/2) psi function 
       w exp.:  0 
- Random Eff.:  classic (x^2/2) 
+ Random Eff.:  classic (x^2/2) psi function 
       w exp.:  0 
  [1]  0.523158  0.523158  0.118132  0.219389  0.016876 -0.286893 -0.894431
  [8]  0.523158 -0.489406 -0.489406  0.624414  0.320645  0.928183  0.320645
@@ -554,7 +556,7 @@ deviance           332   332
 +     methods.effects = c("IRWLS", "Rcgmin"), init = lmerNoFit)
 
 ######## DASexp IRWLS ########
-Time elapsed: 1.135 0 1.143 0 0 
+Time elapsed: 2.484 0 2.523 0 0 
 Linear mixed model fit by DASexp ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -572,9 +574,9 @@ Fixed effects:
 (Intercept)  1527.50      19.38    78.8
 
 Rho functions used for fitting:
-   Residuals:  classic (x^2/2) 
+   Residuals:  classic (x^2/2) psi function 
       w exp.:  0 
- Random Eff.:  classic (x^2/2) 
+ Random Eff.:  classic (x^2/2) psi function 
       w exp.:  0 
 [1] -20.7549   0.4612  33.6690 -27.2119  66.8768 -53.0402
 #### Checking equality with lmer... ####
@@ -586,7 +588,7 @@ Deviance:       TRUE
 Unsc:           TRUE 
 
 ######## DASexp Rcgmin ########
-Time elapsed: 1.09 0 1.099 0 0 
+Time elapsed: 2.262 0 2.302 0 0 
 Linear mixed model fit by DASexp ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -604,9 +606,9 @@ Fixed effects:
 (Intercept)  1527.50      19.38    78.8
 
 Rho functions used for fitting:
-   Residuals:  classic (x^2/2) 
+   Residuals:  classic (x^2/2) psi function 
       w exp.:  0 
- Random Eff.:  classic (x^2/2) 
+ Random Eff.:  classic (x^2/2) psi function 
       w exp.:  0 
        A        B        C        D        E        F 
 -20.7549   0.4612  33.6690 -27.2119  66.8768 -53.0402 
@@ -619,7 +621,7 @@ Deviance:       TRUE
 Unsc:           TRUE 
 
 ######## DAStau IRWLS ########
-Time elapsed: 0.669 0 0.673 0 0 
+Time elapsed: 2.255 0 2.29 0 0 
 Linear mixed model fit by DAStau ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -637,9 +639,9 @@ Fixed effects:
 (Intercept)  1527.50      19.38    78.8
 
 Rho functions used for fitting:
-   Residuals:  classic (x^2/2) 
+   Residuals:  classic (x^2/2) psi function 
       w exp.:  0 
- Random Eff.:  classic (x^2/2) 
+ Random Eff.:  classic (x^2/2) psi function 
       w exp.:  0 
 [1] -20.7549   0.4612  33.6690 -27.2119  66.8768 -53.0402
 #### Checking equality with lmer... ####
@@ -651,7 +653,7 @@ Deviance:       TRUE
 Unsc:           TRUE 
 
 ######## DAStau Rcgmin ########
-Time elapsed: 0.761 0 0.768 0 0 
+Time elapsed: 2.817 0 2.864 0 0 
 Linear mixed model fit by DAStau ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -669,12 +671,12 @@ Fixed effects:
 (Intercept)  1527.50      19.38    78.8
 
 Rho functions used for fitting:
-   Residuals:  classic (x^2/2) 
+   Residuals:  classic (x^2/2) psi function 
       w exp.:  0 
- Random Eff.:  classic (x^2/2) 
+ Random Eff.:  classic (x^2/2) psi function 
       w exp.:  0 
        A        B        C        D        E        F 
--20.7549   0.4612  33.6691 -27.2120  66.8769 -53.0403 
+-20.7549   0.4612  33.6690 -27.2119  66.8768 -53.0402 
 #### Checking equality with lmer... ####
 Fixed effects:  TRUE 
 Random effects: TRUE 
@@ -701,7 +703,7 @@ REML              320  320   320
 ################ results for DAStau  ##############
                   lmer IRWLS Rcgmin
 Coef                               
-(Intercept)       1527 1528  1528  
+(Intercept)       1527 1528  1527  
                                    
 VarComp                            
 Batch (Intercept) 42   42    42    
@@ -714,7 +716,7 @@ In lmer(formula, data, ...) : extra argument(s) 'init' disregarded
 +     methods.effects = c("IRWLS", "Rcgmin"), init = lmerNoFit)
 
 ######## DASexp IRWLS ########
-Time elapsed: 2.579 0 2.597 0 0 
+Time elapsed: 5.471 0 5.572 0 0 
 Linear mixed model fit by DASexp ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -732,9 +734,9 @@ Fixed effects:
 (Intercept)   5.6656     0.6784   8.351
 
 Rho functions used for fitting:
-   Residuals:  classic (x^2/2) 
+   Residuals:  classic (x^2/2) psi function 
       w exp.:  0 
- Random Eff.:  classic (x^2/2) 
+ Random Eff.:  classic (x^2/2) psi function 
       w exp.:  0 
 [1]  0.0007542 -0.0013569  0.0024939  0.0000258  0.0005564 -0.0024734
 #### Checking equality with lmer... ####
@@ -746,7 +748,7 @@ Deviance:       TRUE
 Unsc:           TRUE 
 
 ######## DASexp Rcgmin ########
-Time elapsed: 2.515 0 2.532 0 0 
+Time elapsed: 5.177 0 5.263 0 0 
 Linear mixed model fit by DASexp ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -764,9 +766,9 @@ Fixed effects:
 (Intercept)   5.6656     0.6784   8.351
 
 Rho functions used for fitting:
-   Residuals:  classic (x^2/2) 
+   Residuals:  classic (x^2/2) psi function 
       w exp.:  0 
- Random Eff.:  classic (x^2/2) 
+ Random Eff.:  classic (x^2/2) psi function 
       w exp.:  0 
          A          B          C          D          E          F 
  0.0007542 -0.0013569  0.0024939  0.0000258  0.0005564 -0.0024734 
@@ -779,7 +781,7 @@ Deviance:       TRUE
 Unsc:           TRUE 
 
 ######## DAStau IRWLS ########
-Time elapsed: 3.262 0 3.286 0 0 
+Time elapsed: 11.26 0 11.455 0 0 
 Linear mixed model fit by DAStau ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -797,9 +799,9 @@ Fixed effects:
 (Intercept)   5.6656     0.6784   8.351
 
 Rho functions used for fitting:
-   Residuals:  classic (x^2/2) 
+   Residuals:  classic (x^2/2) psi function 
       w exp.:  0 
- Random Eff.:  classic (x^2/2) 
+ Random Eff.:  classic (x^2/2) psi function 
       w exp.:  0 
 [1] 0 0 0 0 0 0
 #### Checking equality with lmer... ####
@@ -811,7 +813,7 @@ Deviance:       TRUE
 Unsc:           TRUE 
 
 ######## DAStau Rcgmin ########
-Time elapsed: 2.938 0 2.959 0 0 
+Time elapsed: 9.123 0 9.276 0 0 
 Linear mixed model fit by DAStau ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -820,7 +822,7 @@ REML criterion at convergence: 161.8283
 
 Random effects:
  Groups   Name        Variance  Std.Dev. 
- Batch    (Intercept) 1.467e-10 1.211e-05
+ Batch    (Intercept) 1.466e-10 1.211e-05
  Residual             1.381e+01 3.716e+00
 Number of obs: 30, groups: Batch, 6
 
@@ -829,12 +831,12 @@ Fixed effects:
 (Intercept)   5.6656     0.6784   8.351
 
 Rho functions used for fitting:
-   Residuals:  classic (x^2/2) 
+   Residuals:  classic (x^2/2) psi function 
       w exp.:  0 
- Random Eff.:  classic (x^2/2) 
+ Random Eff.:  classic (x^2/2) psi function 
       w exp.:  0 
          A          B          C          D          E          F 
- 1.177e-05 -2.118e-05  3.892e-05  4.027e-07  8.684e-06 -3.860e-05 
+ 1.177e-05 -2.117e-05  3.891e-05  4.026e-07  8.681e-06 -3.859e-05 
 #### Checking equality with lmer... ####
 Fixed effects:  TRUE 
 Random effects: TRUE 
@@ -874,7 +876,7 @@ In lmer(formula, data, ...) : extra argument(s) 'init' disregarded
 +     methods.effects = c("IRWLS", "Rcgmin"), init = lmerNoFit)
 
 ######## DASexp IRWLS ########
-Time elapsed: 2.322 0.003 2.344 0 0 
+Time elapsed: 5.34 0 5.425 0 0 
 Linear mixed model fit by DASexp ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -893,9 +895,9 @@ Fixed effects:
 (Intercept)  22.9722     0.8086   28.41
 
 Rho functions used for fitting:
-   Residuals:  classic (x^2/2) 
+   Residuals:  classic (x^2/2) psi function 
       w exp.:  0 
- Random Eff.:  classic (x^2/2) 
+ Random Eff.:  classic (x^2/2) psi function 
       w exp.:  0 
  [1]  0.522543  0.522543  0.117993  0.219131  0.016856 -0.286556 -0.893379
  [8]  0.522543 -0.488830 -0.488830  0.623680  0.320268  0.927092  0.320268
@@ -911,7 +913,7 @@ Deviance:       TRUE
 Unsc:           TRUE 
 
 ######## DASexp Rcgmin ########
-Time elapsed: 2.845 0 2.865 0 0 
+Time elapsed: 6.075 0.004 6.179 0 0 
 Linear mixed model fit by DASexp ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -930,9 +932,9 @@ Fixed effects:
 (Intercept)  22.9722     0.8086   28.41
 
 Rho functions used for fitting:
-   Residuals:  classic (x^2/2) 
+   Residuals:  classic (x^2/2) psi function 
       w exp.:  0 
- Random Eff.:  classic (x^2/2) 
+ Random Eff.:  classic (x^2/2) psi function 
       w exp.:  0 
         a         b         c         d         e         f         g         h 
  0.522543  0.522543  0.117993  0.219131  0.016856 -0.286556 -0.893379  0.522543 
@@ -951,7 +953,7 @@ Deviance:       TRUE
 Unsc:           TRUE 
 
 ######## DAStau IRWLS ########
-Time elapsed: 0.771 0 0.777 0 0 
+Time elapsed: 12.874 0.001 13.069 0 0 
 Linear mixed model fit by DAStau ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -970,9 +972,9 @@ Fixed effects:
 (Intercept)  22.9722     0.8086   28.41
 
 Rho functions used for fitting:
-   Residuals:  classic (x^2/2) 
+   Residuals:  classic (x^2/2) psi function 
       w exp.:  0 
- Random Eff.:  classic (x^2/2) 
+ Random Eff.:  classic (x^2/2) psi function 
       w exp.:  0 
  [1]  0.522543  0.522543  0.117993  0.219131  0.016856 -0.286556 -0.893379
  [8]  0.522543 -0.488830 -0.488830  0.623680  0.320268  0.927092  0.320268
@@ -988,7 +990,7 @@ Deviance:       TRUE
 Unsc:           TRUE 
 
 ######## DAStau Rcgmin ########
-Time elapsed: 1.143 0 1.152 0 0 
+Time elapsed: 13.406 0.002 13.611 0 0 
 Linear mixed model fit by DAStau ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -1007,9 +1009,9 @@ Fixed effects:
 (Intercept)  22.9722     0.8086   28.41
 
 Rho functions used for fitting:
-   Residuals:  classic (x^2/2) 
+   Residuals:  classic (x^2/2) psi function 
       w exp.:  0 
- Random Eff.:  classic (x^2/2) 
+ Random Eff.:  classic (x^2/2) psi function 
       w exp.:  0 
         a         b         c         d         e         f         g         h 
  0.522543  0.522543  0.117993  0.219131  0.016856 -0.286556 -0.893379  0.522543 
@@ -1061,7 +1063,7 @@ In lmer(formula, data, ...) : extra argument(s) 'init' disregarded
 > fit(Yield ~ (1 | Batch), Dyestuff, rho.e = smoothPsi, rho.b = smoothPsi)
 
 ######## DASexp IRWLS ########
-Time elapsed: 1.879 0.001 1.894 0 0 
+Time elapsed: 3.93 0 4 0 0 
 Linear mixed model fit by DASexp ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -1086,7 +1088,7 @@ Rho functions used for fitting:
 [1] -18.737   1.378  34.106 -30.938  68.237 -51.350
 
 ######## DAStau IRWLS ########
-Time elapsed: 0.803 0 0.808 0 0 
+Time elapsed: 2.648 0 2.693 0 0 
 Linear mixed model fit by DAStau ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -1128,7 +1130,7 @@ Batch (Intercept)                               sigma              REML
 > fit(Yield ~ (1 | Batch), Dyestuff2, rho.e = smoothPsi, rho.b = smoothPsi)
 
 ######## DASexp IRWLS ########
-Time elapsed: 1.862 0 1.875 0 0 
+Time elapsed: 3.945 0 4.013 0 0 
 Linear mixed model fit by DASexp ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -1153,7 +1155,7 @@ Rho functions used for fitting:
 [1] 0 0 0 0 0 0
 
 ######## DAStau IRWLS ########
-Time elapsed: 1.068 0 1.076 0 0 
+Time elapsed: 3.903 0 3.966 0 0 
 Linear mixed model fit by DAStau ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -1195,7 +1197,7 @@ Batch (Intercept)                               sigma              REML
 > fit(diameter ~ (1|plate) + (1|sample), Penicillin, rho.e = smoothPsi, rho.b = smoothPsi)
 
 ######## DASexp IRWLS ########
-Time elapsed: 2.569 0.003 2.592 0 0 
+Time elapsed: 5.358 0.006 5.453 0 0 
 Linear mixed model fit by DASexp ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -1225,7 +1227,7 @@ Rho functions used for fitting:
 [29] -0.035391 -0.855999
 
 ######## DAStau IRWLS ########
-Time elapsed: 0.798 0 0.803 0 0 
+Time elapsed: 10.761 0 10.933 0 0 
 Linear mixed model fit by DAStau ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -1249,8 +1251,8 @@ Rho functions used for fitting:
  Random Eff.:  smoothed Huber psi function (k = 1.345, s = 10) 
       w exp.:  0 
  [1]  0.473854  0.473854  0.130471  0.214999 -0.003487 -0.276688 -0.876846
- [8]  0.519316 -0.480129 -0.490637  0.608804  0.313451  0.915323  0.313451
-[15]  0.584228  0.018097 -0.177647 -0.178412 -0.876846  0.608804 -0.535285
+ [8]  0.519316 -0.480129 -0.490637  0.608805  0.313451  0.915323  0.313451
+[15]  0.584228  0.018097 -0.177647 -0.178412 -0.876846  0.608805 -0.535285
 [22] -0.178806 -0.485586 -0.768047  0.584929 -0.292270  0.521139 -0.046299
 [29] -0.035219 -0.855373
 
@@ -1279,7 +1281,7 @@ Rho functions used for fitting:
 +     wExp.e = 2, wExp.b = 0)
 
 ######## DASexp IRWLS ########
-Time elapsed: 2.587 0 2.606 0 0 
+Time elapsed: 5.387 0 5.478 0 0 
 Linear mixed model fit by DASexp ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -1304,12 +1306,12 @@ Rho functions used for fitting:
 [1] -21.810   1.112  37.110 -31.929  73.378 -56.886
 
 ######## DAStau IRWLS ########
-Time elapsed: 1.254 0 1.262 0 0 
+Time elapsed: 4.679 0 4.754 0 0 
 Linear mixed model fit by DAStau ['rlmerMod']
 Formula: formula 
    Data: data 
 
-REML criterion at convergence: 325.4842 
+REML criterion at convergence: 325.4843 
 
 Random effects:
  Groups   Name        Variance Std.Dev.
@@ -1347,7 +1349,7 @@ Batch (Intercept)                               sigma              REML
 +     wExp.e = 2, wExp.b = 0)
 
 ######## DASexp IRWLS ########
-Time elapsed: 2.726 0 2.745 0 0 
+Time elapsed: 5.905 0 6.014 0 0 
 Linear mixed model fit by DASexp ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -1372,7 +1374,7 @@ Rho functions used for fitting:
 [1] 0 0 0 0 0 0
 
 ######## DAStau IRWLS ########
-Time elapsed: 1.279 0 1.289 0 0 
+Time elapsed: 4.417 0 4.492 0 0 
 Linear mixed model fit by DAStau ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -1415,7 +1417,7 @@ Batch (Intercept)                               sigma              REML
 +     wExp.e = 2, wExp.b = 0)
 
 ######## DASexp IRWLS ########
-Time elapsed: 3.221 0.006 3.25 0 0 
+Time elapsed: 6.958 0.002 7.081 0 0 
 Linear mixed model fit by DASexp ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -1445,7 +1447,7 @@ Rho functions used for fitting:
 [29] -0.035752 -0.873027
 
 ######## DAStau IRWLS ########
-Time elapsed: 0.944 0 0.95 0 0 
+Time elapsed: 13.481 0 13.684 0 0 
 Linear mixed model fit by DAStau ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -1471,7 +1473,7 @@ Rho functions used for fitting:
  [1]  0.48603  0.48603  0.13555  0.21951 -0.00364 -0.28352 -0.89698  0.52838
  [9] -0.48930 -0.49946  0.62206  0.32015  0.93587  0.32015  0.59634  0.01824
 [17] -0.18263 -0.18299 -0.89698  0.62206 -0.54834 -0.18304 -0.49407 -0.78699
-[25]  0.59909 -0.29980  0.53328 -0.04715 -0.03564 -0.87563
+[25]  0.59910 -0.29980  0.53328 -0.04715 -0.03564 -0.87563
 
 ################################################
 ################################################
@@ -1498,7 +1500,7 @@ Rho functions used for fitting:
 +     wExp.e = 2, wExp.b = 2)
 
 ######## DASexp IRWLS ########
-Time elapsed: 1.69 0 1.7 0 0 
+Time elapsed: 3.551 0 3.611 0 0 
 Linear mixed model fit by DASexp ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -1523,7 +1525,7 @@ Rho functions used for fitting:
 [1] -20.23   1.03  34.31 -30.12  67.60 -52.59
 
 ######## DAStau IRWLS ########
-Time elapsed: 1.073 0 1.08 0 0 
+Time elapsed: 4.051 0 4.12 0 0 
 Linear mixed model fit by DAStau ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -1566,7 +1568,7 @@ Batch (Intercept)                               sigma              REML
 +     wExp.e = 2, wExp.b = 2)
 
 ######## DASexp IRWLS ########
-Time elapsed: 2.659 0.001 2.681 0 0 
+Time elapsed: 5.556 0.001 5.655 0 0 
 Linear mixed model fit by DASexp ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -1591,7 +1593,7 @@ Rho functions used for fitting:
 [1] 0 0 0 0 0 0
 
 ######## DAStau IRWLS ########
-Time elapsed: 1.388 0 1.397 0 0 
+Time elapsed: 5.118 0 5.197 0 0 
 Linear mixed model fit by DAStau ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -1634,7 +1636,7 @@ Batch (Intercept)                               sigma              REML
 +     wExp.e = 2, wExp.b = 2)
 
 ######## DASexp IRWLS ########
-Time elapsed: 3.477 0.004 3.508 0 0 
+Time elapsed: 7.416 0.004 7.536 0 0 
 Linear mixed model fit by DASexp ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -1664,7 +1666,7 @@ Rho functions used for fitting:
 [29] -0.020977 -0.777378
 
 ######## DAStau IRWLS ########
-Time elapsed: 0.938 0 0.944 0 0 
+Time elapsed: 13.317 0.001 13.515 0 0 
 Linear mixed model fit by DAStau ['rlmerMod']
 Formula: formula 
    Data: data 
@@ -1687,11 +1689,11 @@ Rho functions used for fitting:
       w exp.:  2 
  Random Eff.:  smoothed Huber psi function (k = 1.345, s = 10) 
       w exp.:  2 
- [1]  0.4530631  0.4530631  0.1294167  0.2063490  0.0005221 -0.2576516
- [7] -0.8188371  0.4921252 -0.4483651 -0.4579113  0.5776313  0.2991696
-[13]  0.8623728  0.2991696  0.5562834  0.0207079 -0.1646225 -0.1649212
-[19] -0.8188371  0.5776313 -0.5034306 -0.1649332 -0.4530075 -0.7202625
-[25]  0.5602816 -0.2652055  0.4998462 -0.0334560 -0.0229158 -0.7941237
+ [1]  0.4530634  0.4530634  0.1294168  0.2063491  0.0005221 -0.2576518
+ [7] -0.8188374  0.4921254 -0.4483652 -0.4579114  0.5776316  0.2991697
+[13]  0.8623732  0.2991697  0.5562836  0.0207079 -0.1646226 -0.1649213
+[19] -0.8188374  0.5776316 -0.5034309 -0.1649333 -0.4530077 -0.7202629
+[25]  0.5602819 -0.2652056  0.4998465 -0.0334559 -0.0229158 -0.7941240
 
 ################################################
 ################################################
@@ -1714,23 +1716,106 @@ Rho functions used for fitting:
                354 
 > 
 > ## correlated random effects
-> ## omitting tests to speed up R CMD check...
 > ## fit(Reaction ~ Days + (Days|Subject), sleepstudy,
-> ##     wExp.e = 2, wExp.b = 2, methods = c("DASexp"), methods.effects = c("IRWLS"))
+> ##     methods = c("DAStau"), methods.effects = c("IRWLS"))
 > ## fit(Reaction ~ Days + (Days|Subject), sleepstudy,
-> ##     wExp.e = 2, wExp.b = 2, methods = c("DASexp"), methods.effects = c("IRWLS"),
+> ##     methods = c("DAStau"), methods.effects = c("IRWLS"),
 > ##     init = lmerNoFit)
-> ## including a 0 variance compontent
-> ## sleepstudy2 <- within(sleepstudy, Group <- letters[1:4])
+> ## robust
+> ## fit(Reaction ~ Days + (Days|Subject), sleepstudy,
+> ##     methods = c("DAStau"), methods.effects = c("IRWLS"),
+> ##     rho.e = smoothPsi, rho.b = smoothPsi, wExp.e = 2, wExp.b = 2)
+> ## fit(Reaction ~ Days + (Days|Subject), sleepstudy,
+> ##     methods = c("DAStau"), methods.effects = c("IRWLS"),
+> ##     init = lmerNoFit, rho.e = smoothPsi, rho.b = smoothPsi,
+> ##     wExp.e = 2, wExp.b = 2)
+> 
+> ## ## including a 0 variance compontent
+> sleepstudy2 <- within(sleepstudy, Group <- letters[1:4])
+> fit(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2,
++     methods = c("DAStau"), methods.effects = c("IRWLS"))
+
+######## DAStau IRWLS ########
+Note: Method with signature "dsparseMatrix#dgeMatrix" chosen for function "crossprod",
+ target signature "dtCMatrix#dgeMatrix".
+ "CsparseMatrix#ddenseMatrix" would also be valid
+Time elapsed: 203.66 0.005 206.934 0 0 
+Linear mixed model fit by DAStau ['rlmerMod']
+Formula: formula 
+   Data: data 
+
+REML criterion at convergence: 1743.628 
+
+Random effects:
+ Groups   Name        Variance Std.Dev. Corr 
+ Subject  (Intercept) 612.10   24.741        
+          Days         35.07    5.922   0.066
+ Group    (Intercept)   0.00    0.000        
+ Residual             654.95   25.592        
+Number of obs: 180, groups: Subject, 18; Group, 4
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  251.405      6.825   36.84
+Days          10.467      1.546    6.77
+
+Correlation of Fixed Effects:
+     (Intr)
+Days -0.138
+
+Rho functions used for fitting:
+   Residuals:  classic (x^2/2) psi function 
+      w exp.:  0 
+ Random Eff.:  classic (x^2/2) psi function 
+      w exp.:  0 
+ [1]   2.3363  39.6845 -41.7887 -34.5841 -40.3009 -20.9500  24.5057 -22.4593
+ [9]  23.0262 -14.8074   9.3506  -1.7930  17.4199  -2.1128  -7.4815   5.1451
+[17]  -0.3452 -46.5417  36.0910  34.9956 -26.0776   6.7948 -13.5197  29.5323
+[25]   4.7354 -13.3692  21.5815  13.8957   3.3882   3.5547 -26.4942  22.6251
+[33]   0.8348  -4.3342  12.7383   4.7239   0.0000   0.0000   0.0000   0.0000
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+Deviance:       TRUE 
+Unsc:           TRUE 
+
+################################################
+################################################
+################################################
+
+################ results for DAStau  ##############
+                           lmer     IRWLS   
+Coef                                        
+(Intercept)                251.4    251.4   
+Days                        10.5     10.5   
+                                            
+VarComp                                     
+Subject (Intercept)        2.47e+01 2.47e+01
+Subject Days               5.92e+00 5.92e+00
+Group (Intercept)          1.39e-04 0.00e+00
+                                            
+Correlations                                
+Subject Days x (Intercept) 0.0656   0.0656  
+                                            
+sigma                      25.6     25.6    
+REML                       1744     1744    
 > ## fit(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2,
-> ##     wExp.e = 2, wExp.b = 2, methods = c("DASexp"), methods.effects = c("IRWLS"))
-> ## fit(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2,
-> ##     wExp.e = 2, wExp.b = 2, methods = c("DASexp"), methods.effects = c("IRWLS"),
+> ##     methods = c("DAStau"), methods.effects = c("IRWLS"),
 > ##     init = lmerNoFit)
+> ## ## robust
+> ## fit(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2,
+> ##     methods = c("DAStau"), methods.effects = c("IRWLS"),
+> ##     rho.e = smoothPsi, rho.b = smoothPsi, wExp.e = 2, wExp.b = 2)
+> ## fit(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2,
+> ##     methods = c("DAStau"), methods.effects = c("IRWLS"),
+> ##     init = lmerNoFit, rho.e = smoothPsi, rho.b = smoothPsi,
+> ##     wExp.e = 2, wExp.b = 2)
 > 
 > cat('Time elapsed: ', proc.time(),'\n') # for ``statistical reasons''
-Time elapsed:  73.915 0.191 75.792 0 0.001 
+Time elapsed:  444.738 0.337 453.701 0 0.002 
 > 
 > proc.time()
    user  system elapsed 
- 73.915   0.192  75.793 
+444.738   0.339 453.702 

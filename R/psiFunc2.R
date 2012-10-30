@@ -1,53 +1,4 @@
-##' Constructor for psiFunc2
-##'
-##' Simple constructor for psiFunc2 objects
-##' @param name name of psiFunc
-##' @param ... passed to psiFunc (psi_func constructor)
-##' @export
-psiFunc2 <- function(name = NULL, ...) {
-    do.call(chgDefaults, c(list(new("psi_func2",
-                                    t <- psiFunc(...),
-                                    name= name)),
-                           t@tDefs))  
-}
-
-##' Change the default arguments for a psi_func2 object
-##'
-##' @title Change default arguments
-##' @param ... arguments to change
-##' @export
-setMethod("chgDefaults", signature("psi_func2"),
-          function(object, ...) {
-              ##cat("~~~~ chgDefaults of psi_func2 ~~~~~\n")
-              lent <- length(dotsargs <- list(...))
-              ## '...'  must contain all tuning parameters and their defaults:
-              stopifnot(length(nt <- names(dotsargs)) == lent,
-                        all(nchar(nt)) >= 1)
-              if(lent >= 1) {
-                  ## rho "..." must conform to rho, etc:
-                  nf <- names(ff <- formals(object@rho))
-                  if(!identical(nf[-1], nt))
-                     stop("invalid tuning parameter names: ",
-                          paste(nt,    collapse=",")," instead of ",
-                          paste(nf[-1],collapse=","),".")
-
-                  for(fnam in list("rho", "psi", "wgt", "Dpsi", "Erho",
-                                   "Epsi2", "EDpsi", "lambda")) {
-                      f <- slot(object, fnam)
-                      ef <- environment(f)
-                      if (is(f, "functionXal"))
-                          formals(f) <- dotsargs else formals(f)[-1] <- dotsargs
-                      environment(f) <- ef
-                      ## lowlevel {faster than}: slot(..) <- new("functionX", f)
-                      slot(object, fnam)@.Data <- f
-                  }
-                  object@tDefs <- unlist(dotsargs)
-              }
-              object
-          })
-
-
-##' Create psi_func2_cached object using cached numerical integration for
+##' Create psi_func_cached object using cached numerical integration for
 ##' E... slots.
 ##'
 ##' The E... slots will not be fully functional: they just return the
@@ -57,12 +8,13 @@ setMethod("chgDefaults", signature("psi_func2"),
 ##' @param rho rho-function
 ##' @param psi psi-function
 ##' @param wgt wgt-function
+##' @param Dwgt derivative of weight function
 ##' @param Dpsi derivative of psi
 ##' @param name descriptor of this function family
 ##' @param ... default values for tuning constants
-##' @return psi_func2_cached-class object
+##' @return psi_func_cached-class object
 ##' @export
-psiFunc2Cached <- function(rho,psi,wgt,Dpsi,name=NULL, ...) {
+psiFuncCached <- function(rho,psi,wgt,Dwgt,Dpsi,name=NULL, ...) {
     lent <- length(dotsargs <- list(...))
     ## '...'  must contain all tuning parameters and their defaults:
     stopifnot(length(nt <- names(dotsargs)) == lent,
@@ -70,7 +22,7 @@ psiFunc2Cached <- function(rho,psi,wgt,Dpsi,name=NULL, ...) {
     if(lent >= 1) {
         ## rho, psi,... checking: must have argument names
         argn <- c("x", nt)
-        for(fnam in list("rho", "psi", "wgt", "Dpsi")) {
+        for(fnam in list("rho", "psi", "wgt", "Dwgt", "Dpsi")) {
             f <- get(fnam, inherits = FALSE)
             ef <- environment(f)
             nf <- names(ff <- formals(f)) # "x" and "k" for Huber's
@@ -92,11 +44,12 @@ psiFunc2Cached <- function(rho,psi,wgt,Dpsi,name=NULL, ...) {
     EDpsi.val <- integrate(function(x) Dpsi(x)*dnorm(x),-Inf, Inf,
                            rel.tol = .Machine$double.eps^0.5)$value
     
-    new("psi_func2_cached",
+    new("psi_func_cached",
         rho = new("functionX", rho),
         psi = new("functionX", psi),
         wgt = new("functionX", wgt),
         Dpsi= new("functionX", Dpsi),
+        Dwgt= new("functionX", Dwgt),
         ## tNams = if(lent) nt else character(0),
         tDefs = if(lent) unlist(dotsargs) else numeric(0),
         Erho= Erho <- new("functionXal", function(arg=1) rep(Erho.val, length(arg))),
@@ -111,7 +64,7 @@ psiFunc2Cached <- function(rho,psi,wgt,Dpsi,name=NULL, ...) {
 ##' @title Change default arguments
 ##' @param ... arguments to change
 ##' @export
-setMethod("chgDefaults", signature("psi_func2_cached"),
+setMethod("chgDefaults", signature("psi_func_cached"),
           function(object, ...) {
               ##cat("~~~~ chgDefaults of psi_func_cached ~~~~~\n")
               lent <- length(dotsargs <- list(...))
@@ -126,7 +79,7 @@ setMethod("chgDefaults", signature("psi_func2_cached"),
                           paste(nt,    collapse=",")," instead of ",
                           paste(nf[-1],collapse=","),".")
 
-                  for(fnam in list("rho", "psi", "wgt", "Dpsi")) {
+                  for(fnam in list("rho", "psi", "wgt", "Dwgt", "Dpsi")) {
                       f <- slot(object, fnam)
                       ef <- environment(f)
                       formals(f)[-1] <- dotsargs
@@ -150,54 +103,19 @@ setMethod("chgDefaults", signature("psi_func2_cached"),
               object
           })
 
-.sprintPsiFunc2 <- function(x, short=FALSE) {
-    v <- x@tDefs
-    n <- names(v)
-    name <- x@name
-    if (short) name <- gsub('\\s?(psi|function|\\(.*\\))', '', name)
-    if (length(v) >= 1) {
-        if (short)
-            paste(name, paste(n, round(v, 3), sep = "=", collapse = "\n"),
-                  sep = "\n")
-        else 
-            paste(name, " (",
-                  paste(n, round(v, 3), sep = " = ", collapse = ", "), ")",
-                  sep="")
-    } else name
-}
-
-##' Print a psi_func2 object
-##'
-##' @title Print
-##' @param x psi_func2 object
-##' @param ... ignored
-##' @method print psi_func2
-##' @S3method print psi_func2
-print.psi_func2 <- function(x, ...) print(.sprintPsiFunc2(x))
-##' @S3method print psi_func2_cached
-print.psi_func2_cached <- function(x, ...) print(.sprintPsiFunc2(x))
-
-##' Huber psi function (psi_func2-class)
-##'
-##' Same as huberPsi from robustbase package but psi_func2 not psi_func class.
-##' @export
-huberPsi <- new("psi_func2",
-                huberPsi,
-                name= "Huber psi function")
-                  
 ## from example(psiFunc)
-F1 <- function(x=1) rep.int(1, length(x))
-F1.2 <- function(x=1) rep.int(1/2, length(x))
+F0 <- function(x=1, .) rep.int(0, length(x))
+F1 <- function(x=1, .) rep.int(1, length(x))
+FF1 <- function(.) rep.int(1, length(.))
+FF1.2 <- function(.) rep.int(1/2, length(.))
 ##' Classical psi function
 ##'
 ##' Use this psi function to get a classical fit.
 ##' @export
-cPsi <- psiFunc2(rho = function(x) x^2 / 2, psi = function(x) x,
-                 wgt = F1, Dpsi = F1, Erho = F1.2,
-                 Epsi2 = F1, EDpsi = F1,
-                 name = "classic (x^2/2)")
-
-## TODO???: setup conversion from psiFunc to psiFunc2
+cPsi <- psiFunc(rho = function(x, .) x^2 / 2, psi = function(x, .) x,
+                 wgt = F1, Dwgt = F0, Dpsi = F1, Erho = FF1.2,
+                 Epsi2 = FF1, EDpsi = FF1,
+                 name = "classic (x^2/2)", . = Inf)
 
 ##' Smoothed Huber Function
 ##'
@@ -211,7 +129,7 @@ cPsi <- psiFunc2(rho = function(x) x^2 / 2, psi = function(x) x,
 ##'   curve(smoothPsi@@psi(x, 1.345, 10), -3, 3, col="red")
 ##'   curve(huberPsi@@psi(x, 1.345), -3, 3, add=TRUE)
 ##' @export
-smoothPsi <- psiFunc2Cached(rho = function(x, k, s) {
+smoothPsi <- psiFuncCached(rho = function(x, k, s) {
                                 a <- s^(1/(s+1))
                                 c <- k - a^(-s)
                                 d <- c - a
@@ -240,5 +158,14 @@ smoothPsi <- psiFunc2Cached(rho = function(x, k, s) {
                                 ax <- abs(x)
                                 ifelse(ax <= c, 1, (k - (ax-d)^(-s))/ax)
                             },
+                            Dwgt = function(x, k, s) {
+                                a <- s^(1/(s+1))
+                                c <- k - a^(-s)
+                                d <- c - a
+                                ax <- abs(x)
+                                ifelse(ax <= c, 0,
+                                       (ax - d)^(-s-1)*s/x -
+                                       (k - (ax-d)^(-s))/(x*ax))
+                            },
                             k = 1.345, s = 10,
-                            name = "smoothed Huber psi function")
+                            name = "smoothed Huber")

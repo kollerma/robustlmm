@@ -33,6 +33,7 @@ t.plot.slot("rho")
 t.plot.slot("psi")
 t.plot.slot("Dpsi")
 t.plot.slot("wgt")
+t.plot.slot("Dwgt")
 
 stopifnot(t.fun(smoothPsi))
 
@@ -46,7 +47,8 @@ p.psiFun <- function(x, object,
     m.psi <- cbind(rho    = object@rho(x),
                    psi    = object@psi(x),
                    "psi'" = object@Dpsi(x),
-                   wgt    = object@wgt(x))
+                   wgt    = object@wgt(x),
+                   "wgt'" = object@Dwgt(x))
     fExprs <- quote(list(rho(x), psi(x), {psi*minute}(x), w(x) == psi(x)/x))
     matplot(x, m.psi, col=col, lty=1, type="l",
             main = substitute(FFF ~~ ~~ " with "~~ psi*"-type" == PSI(PPP),
@@ -70,7 +72,10 @@ chkPsiDeriv <- function(m.psi, tol = 1e-4) {
     DnInf <- abs(Dpsi) < 50
     c(all.equal(diff(m.psi[,"rho"])/dx, mids(psi), tol=tol[1]), # rho'  == psi
       all.equal(Dpsi[DnInf], mids(m.psi[,"psi'"])[DnInf], tol=tol[2]),# psi'  == psip
-      all.equal((psi/x)[xn0], m.psi[xn0,"wgt"], tol= tol[1]/10))# psi/x == wgt
+      all.equal((psi/x)[xn0], m.psi[xn0,"wgt"], tol= tol[1]/10),# psi/x == wgt
+      all.equal(m.psi[,"wgt'"],
+                ifelse(x==0,0,m.psi[,"psi'"]/x - m.psi[,"psi"]/(x*x)),
+                tol=tol[1])) # wgt' == psi'/x - psi/x^2
 }
 
 head(x. <- seq(-5, 10, length=1501))

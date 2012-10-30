@@ -2,7 +2,7 @@
 \name{smoothPsi}
 \alias{smoothPsi}
 \title{smoothPsi}
-\format{Formal class 'psi_func2_cached' [package "test"] with 12 slots}
+\format{Formal class 'psi_func_cached' [package "test"] with 13 slots}
 \usage{
   smoothPsi
 }
@@ -20,4 +20,5 @@
 curve(smoothPsi@psi(x, 1.345, 10), -3, 3, col="red")
   curve(huberPsi@psi(x, 1.345), -3, 3, add=TRUE)
 }
+\keyword{datasets}
 

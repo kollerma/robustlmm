@@ -59,11 +59,11 @@ psiFuncCached <- function(rho,psi,wgt,Dwgt,Dpsi,name=NULL, ...) {
         )
 }
 
-##' Change the default arguments for a psi_func_cached object
-##'
-##' @title Change default arguments
-##' @param ... arguments to change
-##' @export
+## Change the default arguments for a psi_func_cached object
+##
+## @title Change default arguments
+## @param ... arguments to change
+## @export
 setMethod("chgDefaults", signature("psi_func_cached"),
           function(object, ...) {
               ##cat("~~~~ chgDefaults of psi_func_cached ~~~~~\n")
@@ -103,6 +103,26 @@ setMethod("chgDefaults", signature("psi_func_cached"),
               object
           })
 
+.sprintPsiFunc <- function(x, short=FALSE) {
+    v <- x@tDefs
+    n <- names(v)
+    ## do not print a single dummy parameter "."
+    if (length(n) == 1 && n == ".") {
+        v <- numeric(0)
+        n <- character(0)
+    }
+    name <- x@name
+    if (short) name <- gsub('\\s?(psi|function|\\(.*\\))', '', name)
+    if (length(v) >= 1) {
+        paste(name, " (",
+              paste(n, round(v, 3), sep = " = ", collapse = ", "), ")",
+              sep="")
+    } else name
+}
+
+##' @S3method print psi_func_cached
+print.psi_func_cached <- function(x, ...) print(robustbase:::.sprintPsiFunc(x))
+
 ## from example(psiFunc)
 F0 <- function(x=1, .) rep.int(0, length(x))
 F1 <- function(x=1, .) rep.int(1, length(x))
@@ -111,6 +131,7 @@ FF1.2 <- function(.) rep.int(1/2, length(.))
 ##' Classical psi function
 ##'
 ##' Use this psi function to get a classical fit.
+##' @docType function
 ##' @export
 cPsi <- psiFunc(rho = function(x, .) x^2 / 2, psi = function(x, .) x,
                  wgt = F1, Dwgt = F0, Dpsi = F1, Erho = FF1.2,
@@ -128,6 +149,7 @@ cPsi <- psiFunc(rho = function(x, .) x^2 / 2, psi = function(x, .) x,
 ##' @examples
 ##'   curve(smoothPsi@@psi(x, 1.345, 10), -3, 3, col="red")
 ##'   curve(huberPsi@@psi(x, 1.345), -3, 3, add=TRUE)
+##' @docType function
 ##' @export
 smoothPsi <- psiFuncCached(rho = function(x, k, s) {
                                 a <- s^(1/(s+1))
@@ -169,3 +191,82 @@ smoothPsi <- psiFuncCached(rho = function(x, k, s) {
                             },
                             k = 1.345, s = 10,
                             name = "smoothed Huber")
+
+
+.psi2propII <- function(object, ...) {
+    ## do not do anything for cPsi
+    if (identical(object, cPsi)) return(object)
+    
+    ## Convert a regular psi-function into a proposal II psi function
+    ## (with squared weights)
+    f <- formals(object@psi)
+    nf <- names(f)
+    args <- paste(nf, collapse=",")
+    x <- nf[1]
+
+    ## wgt
+    fun <- paste("function(",args,") object@wgt(", args, ")^2")
+    wgt <- eval(parse(text=fun))
+    formals(wgt) <- f
+    ## Dwgt
+    fun <- paste("function(",args,") 2*object@wgt(", args, ")*object@Dwgt(",args,")")
+    Dwgt <- eval(parse(text=fun))
+    formals(Dwgt) <- f
+    ## psi
+    fun <- paste("function(",args,") object@wgt(", args, ")*object@psi(",args,")")
+    psi <- eval(parse(text=fun))
+    formals(psi) <- f
+    ## Dpsi
+    fun <- paste("function(",args,") object@wgt(", args, ")*object@Dpsi(",args,
+                 ") + object@Dwgt(", args, ")*object@psi(",args,")")
+    Dpsi <- eval(parse(text=fun))
+    formals(Dpsi) <- f
+    ## rho
+    intRho <- function(psi, x, ...) {
+        ret <- x
+        for (i in seq_along(x)) {
+            if (is.infinite(x[i])) next
+            ret[i] <- integrate(psi, 0, x[i], ..., rel.tol = .Machine$double.eps^0.5)$value
+        }
+        ret
+    }
+    fun <- paste("function(",args,") intRho(psi,",args,")")
+    rho <- eval(parse(text=fun))
+    formals(rho) <- f
+
+    ret <- do.call(psiFuncCached, c(list(wgt=wgt, Dwgt=Dwgt, psi=psi, Dpsi=Dpsi, rho=rho),
+                                    f[-1], name=paste(object@name, ", Proposal II", sep="")))
+    ## if ... is given: pass it to chgDefaults
+    chgArgs <- list(...)
+    if (length(chgArgs) > 0) {
+        if (is.null(names(chgArgs))) stop("Extra arguments in ... need to be named")
+        ## extend list, all arguments need to be passed to chgDefaults
+        for (name in names(ret@tDefs))
+            if (is.null(chgArgs[[name]])) chgArgs[[name]] <- ret@tDefs[[name]]
+        ret <- do.call("chgDefaults", c(list(ret), chgArgs))
+    }
+    return(ret)
+}
+
+## hP2 <- psi2propII(huberPsi)
+## x <- -3:10
+## all.equal(hP2@wgt(x), huberPsi@wgt(x)^2)
+## all.equal(hP2@Dwgt(x), 2*huberPsi@wgt(x)*huberPsi@Dwgt(x))
+## all.equal(hP2@psi(x), huberPsi@wgt(x)^2*x)
+## all.equal(hP2@Dpsi(x), 2*huberPsi@wgt(x)*huberPsi@Dwgt(x)*x + huberPsi@wgt(x)^2)
+## all.equal(hP2@Dpsi(x), huberPsi@Dwgt(x)*huberPsi@psi(x) + huberPsi@wgt(x)*huberPsi@Dpsi(x))
+
+##' Converts the psi_func object into a function that corresponds
+##' to Proposal II, i.e., a function of the squared weights.
+##' The other elements of the psi_func object are adapted accordingly.
+##'
+##' @title Convert to Propsal II weight function
+##' @param object psi_func object to convert
+##' @param ... optional, new default arguments passed to chgDefaults.
+##' @alias psi2propII,psi_func-method
+##' @export
+setGeneric("psi2propII", function(object, ...) standardGeneric("psi2propII"))
+##' @exportMethod psi2propII
+setMethod("psi2propII", signature("psi_func_cached"), .psi2propII)
+##' @exportMethod psi2propII
+setMethod("psi2propII", signature("psi_func"), .psi2propII)

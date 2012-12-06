@@ -2,8 +2,8 @@
 \alias{psiFuncCached}
 \title{psiFuncCached constructor}
 \usage{
-  psiFuncCached(rho, psi, wgt, Dwgt, Dpsi,
-    name = NULL, ...)
+  psiFuncCached(rho, psi, wgt, Dwgt, Dpsi, name = NULL,
+    ...)
 }
 \arguments{
   \item{rho}{rho-function}
@@ -12,7 +12,7 @@
 
   \item{wgt}{wgt-function}
 
-  \item{Dwgt}{derivative of wgt}
+  \item{Dwgt}{derivative of weight function}
 
   \item{Dpsi}{derivative of psi}
 

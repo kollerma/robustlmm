@@ -2,15 +2,11 @@
 \alias{rlmer}
 \title{Robust linear mixed models}
 \usage{
-  rlmer(formula, data, REML = TRUE, ..., method = "DAStau",
-    method.effects = "IRWLS", rho.e = smoothPsi,
-    rho.b = smoothPsi, c.sigma.e = NULL, c.sigma.b = NULL,
-    wExp.e = 2, wExp.b = 2,
-    use.laplace = REML || method \%in\% c("Opt"),
-    rel.tol = 1e-08, max.iter = 40 * (r + 1)^2,
-    verbose = 0,
-    use.grad = c(effects = TRUE, varcomp = FALSE),
-    doFit = TRUE, clearCache = TRUE, init)
+  rlmer(formula, data, ..., method = "DAStau",
+    rho.e = smoothPsi, rho.b = smoothPsi, rho.sigma.e,
+    rho.sigma.b, rel.tol = 1e-08,
+    max.iter = 40 * (r + 1)^2, verbose = 0, doFit = TRUE,
+    init)
 }
 \arguments{
   \item{formula}{a two-sided linear formula object
@@ -25,49 +21,27 @@
   variables are taken from the environment from which
   \code{lmer} is called.}
 
-  \item{REML}{logical - Should the estimates be chosen to
-  optimize the REML criterion (as opposed to the
-  log-likelihood)?  Defaults to \code{TRUE}.}
-
   \item{...}{Additional parameters passed to lmer to find
   the initial estimates. See \code{\link[lme4]{lmer}}.}
 
   \item{method}{method to be used for estimation of theta
   and sigma, see Details.}
 
-  \item{method.effects}{method to be used for estimation of
-  the fixed and random effects.}
-
   \item{rho.e}{object of class psi_func, specifying the
-  functions to use for robustifying the residuals part of
-  the likelihood.}
+  functions to use for the huberization of the residuals.}
 
-  \item{rho.b}{object of class psi_func, specifying the
-  functions to use for robustifying the random effects part
-  of the likelihood.}
+  \item{rho.b}{object of class psi_func or list of such
+  objects (see Details), specifying the functions to use
+  for the huberization of the random effects.}
 
-  \item{c.sigma.e}{tuning parameters for rho.e when used
-  for estimating residual scale.}
+  \item{rho.sigma.e}{object of class psi_func, specifying
+  the functions to use for the huberization of the
+  residuals when estimating the variance components.}
 
-  \item{c.sigma.b}{tuning parameters for rho.b when used
-  for estimating variance components.}
-
-  \item{wExp.e}{numeric specifying the exponent used for
-  the robustness weights for the residuals. wExp == 0 means
-  that the standard rho function is used for estimating
-  theta and sigma, otherwise the weights are used with the
-  specified exponent. (wExp == 2 corresponds to Proposal
-  II.)}
-
-  \item{wExp.b}{numeric specifying the exponent used for
-  the robustness weights for the random effects. wExp == 0
-  means that the standard rho function is used for
-  estimating theta and sigma, otherwise the weights are
-  used with the specified exponent. (wExp == 2 corresponds
-  to Proposal II.)}
-
-  \item{use.laplace}{whether to use the the Laplace
-  approximation for calculating the deviance.}
+  \item{rho.sigma.b}{(optional) object of class psi_func or
+  list of such objects, specifying the functions to use for
+  the huberization of the random effects when estimating
+  the variance components.}
 
   \item{rel.tol}{relative tolerance used as criteria in the
   fitting process.}
@@ -77,18 +51,12 @@
   \item{verbose}{verbosity of output. Ranges from 0 (none)
   to 3 (a lot of output)}
 
-  \item{use.grad}{list of two elements, specifying whether
-  to use the analytical gradients in the optimization.}
-
   \item{doFit}{logical scalar. When \code{doFit = FALSE}
   the model is not fit but instead a structure with the
   model matrices for the random-effects terms is returned,
   so they can be modified for special model forms. When
   \code{doFit = TRUE}, the default, the model is fit
   immediately.}
-
-  \item{clearCache}{clear the cache before returning the
-  fitted object?}
 
   \item{init}{optional lmerMod- or rlmerMod-object to use
   for starting values, or function producing an lmerMod
@@ -104,40 +72,33 @@
 }
 \details{
   Available fitting methods for theta and sigma.e:
-  \itemize{ \item DASexp: find theta using DAS-averaged
-  approach, for each canditate theta, estimate beta and b
-  and estimate sigma_e using DAS-averaged approach. \item
-  DAStau: Analogue to the DAS-estimate in robust linear
-  regression. \item Opt: optimize for (log(sigma), theta),
-  for given theta and sigma_e, estimate beta and b }
+  \itemize{ \item DASvar: Instead of calculating the
+  expectation using the linear approximation of the
+  residuals, use it to approximate the variance of the
+  residuals / random effects and correct the scale estimate
+  with it. \item DAStau: Analogue to the DAS-estimate in
+  robust linear regression. }
 
-  Available fitting methods for fixed and random effects:
-  \itemize{ \item IRWLS: Perform iterative reweighted least
-  squares using the estimating equations (eeq) \item
-  Rcgmin: minimize the norm part of the logarithm of the
-  density using the Rcgmin optimizer. }
+  To specify separate weight functions \code{rho.b} and
+  \code{rho.sigma.b} for different variance components, it
+  is possible to pass a list instead of a psi_func object.
+  The list entries correspond to the groups as shown by
+  \code{VarCorr(.)} when applied to the model fitted with
+  \code{lmer}. A set of correlated random effects count as
+  just one group.
 }
 \examples{
 ## dropping of VC
   system.time(rlmer(Yield ~ (1|Batch), Dyestuff2))
 
-  ## compare classic fits of various methods,
-  ## without using lmer fit as initial estimate.
-  ## default method
-  system.time(rfm.DAStau <- rlmer(Yield ~ (1|Batch), Dyestuff, method="DAStau",
-                                  rho.e = cPsi, rho.b = cPsi, init=lmerNoFit))
-  ## DASr method
-  system.time(rfm.DASexp <- rlmer(Yield ~ (1|Batch), Dyestuff, method="DASexp",
-                                  rho.e = cPsi, rho.b = cPsi, init=lmerNoFit))
+  ## Default method "DAStau"
+  system.time(rfm.DAStau <- rlmer(Yield ~ (1|Batch), Dyestuff))
+  summary(rfm.DAStau)
 
-  lf.comp <- function(rfm1, rfm2, tolerance = 1e-5) {
-      ## fix calls and other slots
-      rfm2@call <- rfm1@call
-      rfm2@method <- rfm1@method
-      all.equal(rfm1, rfm2, tolerance = tolerance)
-  }
+  ## DASvar method
+  system.time(rfm.DASvar <- rlmer(Yield ~ (1|Batch), Dyestuff, method="DASvar"))
 
-  stopifnot(lf.comp(rfm.DAStau, rfm.DASexp))
+  compare(rfm.DAStau, rfm.DAStau)
 }
 \seealso{
   \code{\link[lme4]{lmer}}

@@ -18,7 +18,6 @@ u.rlmerMod <- robustlmm:::u.rlmerMod
 b.lmerMod <- robustlmm:::b.lmerMod
 b.rlmerMod <- robustlmm:::b.rlmerMod
 ## lme4
-update.merMod <- lme4:::update.merMod
 nobars <- lme4:::nobars
 ## robustbase
 lmrob.hatmatrix <- robustbase:::lmrob.hatmatrix
@@ -37,36 +36,25 @@ rfm4 <- rlmer(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2, doFit=F
 ####
 ## Test function G
 ####
-G2 <- Vectorize(function(tau=1, a, s, rho, rho.sigma, wExp = 0,
+G2 <- Vectorize(function(tau=1, a, s, rho, rho.sigma,
                         numpoints = 13) {
     gh <- robustbase:::ghq(numpoints)
     ghz <- gh$nodes
     ghw <- gh$weights*dnorm(gh$nodes)
     
     ## inner integration over z
-    inner <- {
-        if (wExp == 0) function(e) 
-            sum(2*rho.sigma@rho((e - a*rho@psi(e) - s*ghz)/tau)*ghw)
-        else
-            function(e) {
-                x <- (e - a*rho@psi(e) - s*ghz)/tau
-                sum(rho.sigma@wgt(x)^wExp*x^2*ghw)
-            }
+    inner <- function(e) {
+        x <- (e - a*rho@psi(e) - s*ghz)/tau
+        sum(rho.sigma@wgt(x)*x^2*ghw)
     }                
     ## outer integration over e
     sum(sapply(ghz, inner)*ghw)
 }, vectorize.args = c("tau", "a", "s"))
 
-G.int <- Vectorize(function(tau=1, a, s, rho, rho.sigma, wExp) {
-    fun <- {
-        if (wExp == 0)
-            function(z, e)
-                2*rho.sigma@rho((e - a*rho@psi(e) - s*z)/tau)*dnorm(e)*dnorm(z)
-        else
-            function(z, e) {
-                x <- (e - a*rho@psi(e) - s*z)/tau
-                rho.sigma@wgt(x)^wExp*x^2*dnorm(e)*dnorm(z)
-            }
+G.int <- Vectorize(function(tau=1, a, s, rho, rho.sigma) {
+    fun <- function(z, e) {
+        x <- (e - a*rho@psi(e) - s*z)/tau
+        rho.sigma@wgt(x)*x^2*dnorm(e)*dnorm(z)
     }
     inner <- Vectorize(function(e) integrate(fun, -Inf, Inf, e = e)$value)
     integrate(inner, -Inf, Inf)$value
@@ -82,8 +70,8 @@ testG <- function(object, theta=FALSE) {
         s <- .s(object)
     }
 
-    stopifnot(all.equal(G(,a,s,rho.e(object),rho.e(object, "sigma"),wExp.e(object),object@pp),
-                        unname(G.int(,a,s,rho.e(object),rho.e(object, "sigma"),wExp.e(object))),
+    stopifnot(all.equal(G(,a,s,rho.e(object),rho.e(object, "sigma"),object@pp),
+                        unname(G.int(,a,s,rho.e(object),rho.e(object, "sigma"))),
                         tolerance = 1e-4))
 }
 
@@ -100,22 +88,9 @@ a.test <- seq(0, 1, length.out = 10)
 s.test <- rep(a.test, each = 10)
 a.test <- rep(a.test, 10)
 
-testG <- function(wExp) {
-    A <- G(, a.test, s.test, smoothPsi, chgDefaults(smoothPsi, k=2, s=10), wExp, rfm3@pp)
-    B <- G2(, a.test, s.test, smoothPsi, chgDefaults(smoothPsi, k=2, s=10), wExp)
-    C <- G.int(, a.test, s.test, smoothPsi, chgDefaults(smoothPsi, k=2, s=10), wExp)
-    cat(all.equal(A, B), 
-        all.equal(A, C), 
-        all.equal(B, C), sep="\n")
-}
-
-testG(0)
-testG(1)
-testG(2)
-
 tau.test <- seq(0, 1, length.out = 100)
-A <- G(tau.test, a.test, s.test, smoothPsi, chgDefaults(smoothPsi, k=2, s=10), 2, rfm3@pp)
-B <- G2(tau.test, a.test, s.test, smoothPsi, chgDefaults(smoothPsi, k=2, s=10), 2)
+A <- G(tau.test, a.test, s.test, smoothPsi, chgDefaults(smoothPsi, k=2, s=10), rfm3@pp)
+B <- G2(tau.test, a.test, s.test, smoothPsi, chgDefaults(smoothPsi, k=2, s=10))
 all.equal(A, B)
 
 ######
@@ -125,87 +100,63 @@ all.equal(A, B)
 rfm1 <- update(rfm1, rho.e = smoothPsi, rho.b = smoothPsi)
 rfm1@pp$updateMatrices()
 
-### objective function
-.defineFun <- robustlmm:::.defineFun
-a <- a <- diag(rfm1@pp$L) / diag(Lambda(rfm1))
-s <- .s(rfm1, theta = TRUE) / diag(Lambda(rfm1))
-
-
-testObj <- function(wExp, rho = rho.b(rfm1), rho.sigma = rho.b(rfm1, "sigma"),
-                    skbs = sum(kappas), add = FALSE) {
-    kappas <- G(,a,s, rho, rho.sigma, wExp, rfm1@pp)
-    print(sum(kappas))
-    objFun <- Vectorize(.defineFun(wExp, rho.sigma, b(rfm1) / sigma(rfm1),
-                                   b(rfm1) / sigma(rfm1), skbs))
-    
-    data <- curve(objFun, 0, 3, add = add)
-    abline(h=0, v=theta(rfm1))
-    invisible(list(kappas, data$y))
-}
-
-testObj(0)
-testObj(1)
-testObj(2)
-
 .dk <- robustlmm:::.dk
 dist.b <- robustlmm:::dist.b
 ## here dk and abs(b / theta) and abs(u) should be identical
-stopifnot(all.equal(.dk(rfm1, 1), abs(b(rfm1) / diag(Lambda(rfm1)))),
-          all.equal(.dk(rfm1, 1), abs(u(rfm1))))
+stopifnot(all.equal(.dk(rfm1, 1, center=FALSE), unname(b(rfm1)) / diag(Lambda(rfm1))),
+          all.equal(.dk(rfm1, 1, center=FALSE), unname(u(rfm1))))
 
 ### test DAS-theta for rfm4
-rfm4 <- update(rfm4, rho.e = smoothPsi, rho.b = smoothPsi, wExp.e = 2, wExp.b = 2)
+rfm4 <- update(rfm4, rho.e = smoothPsi, rho.b = smoothPsi)
 
-stopifnot(all.equal(rep(.dk(rfm4, 1), each=2)[c(1:37, 40, 42, 44)], 
-                    dist.b(rfm4, 1)))
+tmp <- rep(.dk(rfm4, 1, center=FALSE), each=2)[c(1:37, 40, 42, 44)]
+## need to take square root of random effects for block dim > 1
+tmp[1:36] <- sqrt(tmp[1:36])
+stopifnot(all.equal(tmp, dist.b(rfm4, 1)))
 
 ####
 ## test optimality of sigma
-rfm <- rlmer(Yield ~ (1 | Batch), Dyestuff, clearCache = FALSE,
-             rho.e = cPsi, rho.b = cPsi)
-fm <- lmer(Yield ~ (1 | Batch), Dyestuff)
-devfun <- lmer(Yield ~ (1 | Batch), Dyestuff, devFunOnly=TRUE)
+## testing this only for the new lme4 version.
+if (packageVersion("lme4") >= "0.99999911.0") {
+    rfm <- rlmer(Yield ~ (1 | Batch), Dyestuff)
+    fm <- lmer(Yield ~ (1 | Batch), Dyestuff)
+    devfun <- lmer(Yield ~ (1 | Batch), Dyestuff, devFunOnly=TRUE)
 
-runTests <- function(rfm, ltheta) {
-    robustlmm:::theta(rfm, fit.effects = TRUE) <- ltheta
-    res <- devfun(ltheta)
-    wrss <- environment(devfun)$resp$wrss()
-    ussq <- environment(devfun)$pp$sqrL(1)
-    sigma0 <- unname(sqrt((wrss + ussq) / fm@devcomp$dims['nmp']))
-    print(c(sigma(rfm), sigma0))
-    beta <- environment(devfun)$pp$beta(1)
-    print(data.frame(.fixef(rfm), beta))
-    u <- environment(devfun)$pp$u(1)
-    print(data.frame(u(rfm), u))
-    ## test for equality
-    cat("deviance difference:", all.equal(deviance(rfm), res, check.attributes=FALSE), "\n")
-    cat("effects difference:", all.equal(c(beta, u), c(.fixef(rfm), u(rfm))), "\n")
-    stopifnot(all.equal(c(beta, u), c(.fixef(rfm), u(rfm)),
-                        tolerance = 1e-7),
-              all.equal(theta(rfm), ltheta),
-              all.equal(deviance(rfm), res, check.attributes=FALSE,
-                        tolerance = 1e-3),
-              all.equal(sigma(rfm), sigma0, tolerance = 1e-5))
-}
+    runTests <- function(rfm, ltheta) {
+        robustlmm:::theta(rfm, fit.effects = TRUE) <- ltheta
+        res <- devfun(ltheta)
+        wrss <- environment(devfun)$resp$wrss()
+        ussq <- environment(devfun)$pp$sqrL(1)
+        sigma0 <- unname(sqrt((wrss + ussq) / fm@devcomp$dims['nmp']))
+        print(c(sigma(rfm), sigma0))
+        beta <- environment(devfun)$pp$beta(1)
+        print(data.frame(.fixef(rfm), beta))
+        u <- environment(devfun)$pp$u(1)
+        print(data.frame(u(rfm), u))
+        ## test for equality
+        cat("effects difference:", all.equal(c(beta, u), c(.fixef(rfm), unname(u(rfm)))), "\n")
+        stopifnot(all.equal(c(beta, u), c(.fixef(rfm), unname(u(rfm))),
+                            tolerance = 1e-7),
+                  all.equal(theta(rfm), ltheta),
+                  all.equal(sigma(rfm), sigma0, tolerance = 1e-5))
+    }
 
     
-## test final theta
-rfm <- rlmer(Yield ~ (1 | Batch), Dyestuff, clearCache = FALSE,
-             rho.e = cPsi, rho.b = cPsi)
-runTests(rfm, theta(rfm))
+    ## test final theta
+    rfm <- rlmer(Yield ~ (1 | Batch), Dyestuff, rho.e = cPsi, rho.b = cPsi)
+    runTests(rfm, theta(rfm))
 
-## test final theta, without init
-rfm <- rlmer(Yield ~ (1 | Batch), Dyestuff, clearCache = FALSE,
-             init = lmerNoFit(Yield ~ (1 | Batch), Dyestuff),
-             rho.e = cPsi, rho.b = cPsi)
-runTests(rfm, theta(rfm))
+    ## test final theta, without init
+    rfm <- rlmer(Yield ~ (1 | Batch), Dyestuff, rho.e = cPsi, rho.b = cPsi,
+                 init = lmerNoFit(Yield ~ (1 | Batch), Dyestuff))
+    runTests(rfm, theta(rfm))
+}
 
 ####
 ## test find blocks function
 
 findBlocksOld <- function(obj) {
-    obj <- as(obj, "merPredD")
-    LambdaInd <- t(obj$Lambdat)
+    LambdaInd <- t(obj$Lambdat())
     LambdaInd@x[] <- (1:length(obj$theta))[obj$Lind]
     LambdaInd <- as(LambdaInd, "matrix") ## to avoid attempt to apply non function error
     bend <- unique(apply(LambdaInd != 0, 2, function(x) max(which(x))))
@@ -245,15 +196,12 @@ set.seed(0)
 r1 <- rnorm(20)
 r2 <- rnorm(20)
 
-stopifnot(all.equal(.wgtxy2(smoothPsi, r1, r1, 0), smoothPsi@rho(r1)*2),
-          all.equal(.wgtxy2(smoothPsi, r1, r1, 1), smoothPsi@psi(r1)*r1),
-          all.equal(.wgtxy2(smoothPsi, r1, r1, 2), smoothPsi@psi(r1)^2),
-          all.equal(.wgtxy2(smoothPsi, r1, r2, 0), smoothPsi@rho(r1)/(r1*r1)*2*r2*r2),
-          all.equal(.wgtxy2(smoothPsi, r1, r2, 1), smoothPsi@wgt(r1)*r2*r2),
-          all.equal(.wgtxy2(smoothPsi, r1, r2, 2), smoothPsi@wgt(r1)^2*r2*r2))
+smoothProp2 <- psi2propII(smoothPsi)
+
+stopifnot(all.equal(.wgtxy2(smoothPsi, r1, r1), smoothPsi@psi(r1)*r1),
+          all.equal(.wgtxy2(smoothProp2, r1, r1), smoothPsi@psi(r1)^2),
+          all.equal(.wgtxy2(smoothPsi, r1, r2), smoothPsi@wgt(r1)*r2*r2),
+          all.equal(.wgtxy2(smoothProp2, r1, r2), smoothPsi@wgt(r1)^2*r2*r2))
           
-
-
-
 
 cat('Time elapsed: ', proc.time(),'\n') # for ``statistical reasons''

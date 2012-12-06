@@ -10,17 +10,17 @@ E <- function(fun) {
     integrate(int, -Inf, Inf)$value
 }
 
-testKappaTau <- function(rho, wExp, kappa = calcKappaTau(rho, wExp)) {
-    fun <- switch(wExp + 1,
-                  function(x) rho@rho(x)*(1 - kappa/(x*x)),
+testKappaTau <- function(rho, wExp) {
+    rho2 <- if (wExp == 2) psi2propII(rho) else rho
+    kappa <- calcKappaTau(rho2, 1)
+    fun <- switch(wExp,
                   function(x) rho@psi(x)*x - kappa*rho@wgt(x),
                   function(x) rho@psi(x)^2 - kappa*rho@wgt(x)^2)
     E(fun)
 }
 
 testKappa <- function(rho) {
-    stopifnot(all.equal(0, testKappaTau(rho, 0), 1e-4),
-              all.equal(0, testKappaTau(rho, 1), 1e-4),
+    stopifnot(all.equal(0, testKappaTau(rho, 1), 1e-4),
               all.equal(0, testKappaTau(rho, 2), 1e-4))
 }
 
@@ -38,7 +38,8 @@ rfm <- rlmer(Yield ~ (1|Batch), Dyestuff)
 testTau <- function(rho, rho.sigma, wExp, a, s) {
     psi <- rho@psi
     rho.e <- rho.sigma
-    kappa <- calcKappaTau(rho.sigma, wExp)
+    rho.sigma2 <- if (wExp == 2) psi2propII(rho.sigma) else rho.sigma
+    kappa <- calcKappaTau(rho.sigma2, 1)
     i <- 1
     
     fun <- switch(wExp + 1,
@@ -57,7 +58,7 @@ testTau <- function(rho, rho.sigma, wExp, a, s) {
                       rho.e@psi(t)^2 - kappa*rho.e@wgt(t)^2
                   })
 
-    tau <- calcTau(a, s, rho, rho.sigma, wExp, rfm@pp, kappa)
+    tau <- calcTau(a, s, rho, rho.sigma2, rfm@pp, kappa)
     print(tau)
     
     ret <- tau
@@ -69,25 +70,13 @@ testTau <- function(rho, rho.sigma, wExp, a, s) {
 a <- c(0.1, 0.4, 1, 1, 0.8)
 s <- c(0.4, 0.5, 0.8, 0.1, 0.1)
 ## FIXME: increase accuracy of calcTau.
-stopifnot(all.equal(rep(0, length(a)), testTau(huberPsi, huberPsi, 0, a, s), 1e-2),
-          all.equal(rep(0, length(a)), testTau(huberPsi, huberPsi, 1, a, s), 1e-2),
+stopifnot(all.equal(rep(0, length(a)), testTau(huberPsi, huberPsi, 1, a, s), 1e-2),
           all.equal(rep(0, length(a)), testTau(huberPsi, huberPsi, 2, a, s), 1e-2))
-stopifnot(all.equal(rep(0, length(a)), testTau(smoothPsi, huberPsi, 0, a, s), 1e-2),
-          all.equal(rep(0, length(a)), testTau(smoothPsi, huberPsi, 1, a, s), 1e-2),
+stopifnot(all.equal(rep(0, length(a)), testTau(smoothPsi, huberPsi, 1, a, s), 1e-2),
           all.equal(rep(0, length(a)), testTau(smoothPsi, huberPsi, 2, a, s), 1e-1))
-stopifnot(all.equal(rep(0, length(a)), testTau(smoothPsi, smoothPsi, 0, a, s), 1e-2),
-          all.equal(rep(0, length(a)), testTau(smoothPsi, smoothPsi, 1, a, s), 1e-2),
+stopifnot(all.equal(rep(0, length(a)), testTau(smoothPsi, smoothPsi, 1, a, s), 1e-2),
           all.equal(rep(0, length(a)), testTau(smoothPsi, smoothPsi, 2, a, s), 1e-1))
 sPsi <- chgDefaults(smoothPsi, k = 1, s = 10)
-stopifnot(all.equal(rep(0, length(a)), testTau(smoothPsi, sPsi, 0, a, s), 1e-2),
-          all.equal(rep(0, length(a)), testTau(smoothPsi, sPsi, 1, a, s), 1e-2),
+stopifnot(all.equal(rep(0, length(a)), testTau(smoothPsi, sPsi, 1, a, s), 1e-2),
           all.equal(rep(0, length(a)), testTau(smoothPsi, sPsi, 2, a, s), 1e-2))
 
-## test .wgtTau function
-cPsi <- robustlmm:::cPsi
-.wgtTau <- robustlmm:::.wgtTau
-
-for (wExp in 0:2) {
-    fun <- .wgtTau(cPsi, wExp)
-    fun(-10:10)
-}

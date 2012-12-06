@@ -2,23 +2,23 @@
 ## Functions to generate commonly required objects   ##
 #######################################################
 
-##' std.b: Return the spherical random effects or
-##'   "Standardize" the Matrix matrix: \eqn{\Lambda^{-1} matrix / \sigma}{Lambda^-1 matrix / sigma}
-##'
-##' @title Standardized values
-##' @param object rlmerMod object
-##' @param sigma to use for standardization
-##' @param matrix matrix to standardize
-##' @param drop apply drop to result?
-##' @param t transpose result
-##' @rdname std
+## std.b: Return the spherical random effects or
+##   "Standardize" the Matrix matrix: \eqn{\Lambda^{-1} matrix / \sigma}{Lambda^-1 matrix / sigma}
+##
+## @title Standardized values
+## @param object rlmerMod object
+## @param sigma to use for standardization
+## @param matrix matrix to standardize
+## @param drop apply drop to result?
+## @param t transpose result
+## @rdname std
 std.b <- function(object, sigma = object@pp$sigma, matrix, drop=TRUE, t=FALSE) 
     object@pp$stdB(sigma, matrix, drop, t)
 
-##' std.e: Calculate the standardized residuals or
-##'   "Standardize" the Matrix sigma: \eqn{R^{-1} matrix / \sigma}{R^-1 matrix / sigma}
-##'
-##' @rdname std
+## std.e: Calculate the standardized residuals or
+##   "Standardize" the Matrix sigma: \eqn{R^{-1} matrix / \sigma}{R^-1 matrix / sigma}
+##
+## @rdname std
 std.e <- function(object, sigma = object@pp$sigma, matrix, drop=TRUE) {
     if (missing(matrix)) return(object@resp$wtres / sigma)
     ## for the moment: just divide by sigma
@@ -26,59 +26,73 @@ std.e <- function(object, sigma = object@pp$sigma, matrix, drop=TRUE) {
     matrix/sigma
 }
 
-##' sumRho.b: Calculate sum of rho of random effects
-##'
-##' @title sumRho
-##' @param object rlmerMod object
-##' @param sigma to use for standardization
-##' @param lambda apply normalization by lambda
-##' @param ... ignored
-##' @rdname sumRho
-sumRho.b <- function(object, sigma = object@pp$sigma, lambda = FALSE, ...) {
-    ret <- sum(object@rho.b@rho(dist.b(object, sigma))) ## dist instead of std
-    if (lambda) ret/object@rho.b@EDpsi() else ret
+## Calculate scaled squared Mahalanobis distances per group
+##
+## @title Distances per group
+## @param object rlmerMod object
+## @param sigma to use for standardization
+## @param bs spherical random effects
+## @param center whether to return the centered distances.
+## @param ... ignored
+.dk <- function(object, sigma, center, bs = b.s(object), ...) {
+    ua <- uArranged(object, bs/sigma)
+    unlist(lapply(seq_along(object@blocks), function(bt) {
+        us <- ua[[bt]]
+        s <- ncol(us)
+        if (s == 1) return(us)
+        ## else: square, sum and subtract s
+        ret <- rowSums(us*us)
+        if (center) ret <- ret - object@pp$kappa_b[bt]*s
+        ret
+        }))
+}
+## these helper functions are for the non-centered case, i.e.,
+## for estimating the random effects themselves.
+## modularize distance function: compute sum(bs^2) - s
+.d <- function(bs, s=length(bs)) {
+    if (s == 1) return(bs)
+    sqrt(sum(bs*bs))
+}
+## same function, but assume we've already summed 
+.d2 <- function(sbs2, s) {
+    if (s == 1) stop("s must be larger than 1") ## disable this test?
+    sqrt(sbs2)
+}
+## inner derivative of .d2:
+.Dd2 <- function(sbs2, s) {
+    ##if (s == 1) stop("s must be larger than 1")
+    1/.d2(sbs2,s)
 }
 
-##' sumRho.e: Calculate sum of rho of residuals
-##'
-##' @rdname sumRho
-sumRho.e <- function(object, sigma = object@pp$sigma, lambda = FALSE, ...) {
-    ret <- sum(object@rho.e@rho(dist.e(object, sigma))) ## dist instead of std
-    if (lambda) ret/object@rho.e@EDpsi() else ret
+
+## dist.b: Calculate the distance from 0 standardized by sigma.
+##   This is just value divided by sigma for uncorrelated
+##   observations. For correlated items, this is the Mahalanobis
+##   distance from 0. If \code{shifted=TRUE} and correlated items,
+##   the squared distances are centered by -kappa_b*s. This is
+##   required to compute the weights used for the size of the
+##   covariance matrix of the random effects.
+##
+## @title Calculate distance
+## @param object object to use
+## @param sigma scale for standardization
+## @param center whether to use the centered distances
+## @param ... passed on to internal functions.
+## @rdname dist
+dist.b <- function(object, sigma = object@pp$sigma, center=FALSE, ...) {
+    db <- .dk(object, sigma, center, ...)
+   ## need to take square root if not centering and dim > 1
+    if (!center && any(object@dim > 1)) {
+        bidx <- object@ind %in% which(object@dim > 1)
+        db[bidx] <- sqrt(db[bidx])
+    }
+    db[object@k]
 }
 
-##' Calculate scaled Mahalanobis distances per group
-##'
-##' @title Distances per group
-##' @param object rlmerMod object
-##' @param sigma to use for standardization
-##' @param k group indicator vector
-##' @param b.s spherical random effects
-##' @param ... ignored
-.dk <- function(object, sigma, k = object@k, bs = u(object), ...) {
-    ## aggregate and rescale by size of group
-    sqrt(aggregate(bs^2, list(k), mean)$x) / sigma ## mean instead of sum
-    
-}
-
-##' dist.b: Calculate the distance from 0 standardized by sigma.
-##'   This is just value divided by sigma for uncorrelated
-##'   observations. For correlated items, this is the Mahalanobis
-##'   distance from 0.
-##'
-##' @title Calculate distance
-##' @param object object to use
-##' @param sigma scale for standardization
-##' @rdname dist
-dist.b <- function(object, sigma = object@pp$sigma, ...) {
-    k <- object@k
-    .dk(object, sigma, k, ...)[k]
-}
-
-##' dist.e: Calculate dist for residuals
-##'   always assume they are uncorrelated
-##'
-##' @rdname dist
+## dist.e: Calculate dist for residuals
+##   always assume they are uncorrelated
+##
+## @rdname dist
 dist.e <- function(object, sigma = object@pp$sigma) {
     std.e(object, sigma) ## just the usual rescaled residuals
 }
@@ -86,318 +100,63 @@ dist.e <- function(object, sigma = object@pp$sigma) {
 ##' wgt.b: Calculate the robustness weights psi(d) / d,
 ##'   standardized by sigma. The robustness weights are calculated
 ##'   with d the Mahalanobis distance. Each group of correlated items
-##'   then gets a constant weight. 
+##'   then gets a constant weight.
+##'   The robustness weights for the random effects themselves are
+##'   different than the ones used for estimating the size of the
+##'   covariance matrix of the random effects. Those are additionally
+##'   centered. That way, inlier can also be downweighted.
+##'   If \code{center=TRUE}, then the centered distances are used to
+##'   compute the robustness weights and the weight function given
+##'   by rho.sigma.b is used.
 ##'
 ##' @title Calculate robustness weights
 ##' @param object object to use
 ##' @param sigma scale for standardization
-##' @param use.c.sigma whether use c.sigma tuning parameters or the default ones.
+##' @param center whether return the centered robustness weights, see Details.
 ##' @rdname wgt
 ##' @export
-wgt.b <- function(object, sigma = object@pp$sigma, use.c.sigma = FALSE)
-    if (use.c.sigma) object@rho.sigma.b@wgt(dist.b(object, sigma)) else
-       object@rho.b@wgt(dist.b(object, sigma))
+wgt.b <- function(object, sigma = object@pp$sigma, center = FALSE) {
+    db <- dist.b(object, sigma, center)
+    rho <- rho.b(object, if (center) "sigma" else "default")
+    ret <- numeric()
+    for (bt in seq_along(object@blocks)) {
+        bind <- as.vector(object@idx[[bt]])
+        ret <- c(ret, rho[[bt]]@wgt(db[bind]))
+    }
+    ret
+}
 
 ##' wgt.e: robustness weights of residuals
 ##'
+##' @param use.rho.sigma return the weights computed using rho.sigma.
 ##' @rdname wgt
 ##' @export
-wgt.e <- function(object, sigma = object@pp$sigma, use.c.sigma = FALSE)
-    if (use.c.sigma) object@rho.sigma.e@wgt(dist.e(object, sigma)) else
+wgt.e <- function(object, sigma = object@pp$sigma, use.rho.sigma = FALSE)
+    if (use.rho.sigma) object@rho.sigma.e@wgt(dist.e(object, sigma)) else
        object@rho.e@wgt(dist.e(object, sigma))
 
 ### Calculate robustness weights * squared effect
 ### Return sensible result in the infinite case
-## wgt(x)^wExp * y^2
-## uses M-estimator of scale robustness weights for wExp == 0.
 ## Assume: x infinite <=> y infinite
-.wgtxy2 <- function(rho, x, y, wExp)
-    .wgtxy(rho, x, y*y, wExp)
-## wgt(x)^wExp * y
-.wgtxy <- function(rho, x, y, wExp) {
-    switch(wExp + 1,
-       { ## wExp == 0
-           ret <- rho@rho(x)/(x*x)*2 * y
-           ret[is.infinite(x) & is.infinite(y)] <- rho@rho(Inf)^2
-       },
-       { ## wExp == 1
-           ret <- rho@wgt(x) * y
-           ret[is.infinite(x) & is.infinite(y)] <- rho@psi(Inf) ## * Inf
-       },
-       { ## wExp == 2
-           ret <- rho@wgt(x)^2 * y
-           ret[is.infinite(x) & is.infinite(y)] <- rho@psi(Inf)^2
-       })
+.wgtxy2 <- function(rho, x, y)
+    .wgtxy(rho, x, y*y)
+## wgt(x) * y
+.wgtxy <- function(rho, x, y) {
+    ret <- rho@wgt(x) * y
+    ret[is.infinite(x) & is.infinite(y)] <- if (rho@psi(Inf) == 0) 0 else Inf
     ret
 }
 
-##' wgtSum.b: Calculate \eqn{\sum(\psi(b^*/\sigma))}{sum(psi(b^*/sigma)}
-##'
-##' @title wgtSum(b)
-##' @param object rlmerMod object
-##' @param sigma sigma to be used
-##' @param lambda whether to normalize with EDpsi()
-##' @param wExp wExp parameter
-##' @param use.c.sigma use rho.b or rho.sigma.b
-##' @rdname wgtSum
-wgtSum.b <- function(object, sigma, lambda = FALSE, wExp = 0, use.c.sigma = FALSE) {
-    rho <- if (use.c.sigma) object@rho.sigma.b else object@rho.b
-    ret <- sum(.wgtxy2(rho, dist.b(object, sigma), std.b(object, sigma), wExp))
-    if (lambda) ret/rho@EDpsi() else ret
-}
-
-##' wgtSum.e: Calculate \eqn{\sum(\psi(r/\sigma))}{sum(psi(r/sigma)}
-##'
-##' @rdname wgtSum
-wgtSum.e <- function(object, sigma, lambda = FALSE, wExp = 0, use.c.sigma = FALSE) {
-    rho <- if (use.c.sigma) object@rho.sigma.e else object@rho.e
-    ret <- sum(.wgtxy2(rho, dist.e(object, sigma), std.e(object, sigma), wExp))
-    if (lambda) ret/rho@EDpsi() else ret
-}
-
-##' detCov.b: Calculate determinant of D / 2
-##'
-##' @title determinant of covariance matrices
-##' @param object rlmerMod object
-##' @param logarithm return logarithm of determinant
-##' @param sigma which value of sigma to use.
-##' @rdname detCov
-detCov.b <- function(object, logarithm = TRUE, sigma = object@pp$sigma) {
-    ## need to import diag from Matrix or call explicitly:
-    ##ldiag <- Matrix::diag(object@EDpsi)
-    ldiag <- diag(object@pp$U_b)
-    stopifnot(all(ldiag >= 0))
-    ## get number of fitted random effects
-    q <- sum(!object@pp$zeroB)
-    ## ignore the 0 terms:
-    ## these correspond to dropped covariance parameters
-    ldiag <- ldiag[ldiag > 0]
-    ## return 0 if all are 0
-    ldet <- if (q == 0) return(0) else 2*(q*log(sigma) + sum(log(ldiag)))
-    if (logarithm) ldet else exp(ldet)
-}
-
-##' detCov.e: Calculate determinant of R / 2
-##' @rdname detCov
-detCov.e <- function(object, logarithm = TRUE, sigma = object@pp$sigma) {
-    ## along mkDet of Matrix
-    ## assume simple diagonal covariance matrix
-    ldet <- 2* object@pp$n * log(sigma)
-    if (logarithm) ldet else exp(ldet)
-}
-
-##' detCov.rest: Calculate determinant of
-##' \eqn{Z^T V_e^{-1} Z + V_b}{Z^T V_e^{-1} Z + V_b}
-##' ML case only
-##' @rdname detCov
-detCov.rest <- function(object, logarithm = TRUE, sigma = object@pp$sigma) {
-    idx <- !object@pp$zeroB
-    mat <- crossprod(object@pp$.U_eZ[, idx]) + crossprod(solve(object@pp$U_b[idx, idx]))
-    ldet <- determinant(mat, logarithm=TRUE)$modulus[[1]] - 2 * sum(idx) * log(sigma)
-    if (logarithm) ldet else exp(ldet)
-}
-
-##' @method robll rlmerMod
-##' @rdname robll
-##' @param add.q if TRUE, result is incremented by q
-##' @S3method robll rlmerMod
-robll.rlmerMod <- function(object, norm.only = FALSE, add.q = TRUE, ...) {
-    ## calculate norm parts
-    ret <- sumRho.e(object, object@pp$sigma, lambda=TRUE, ...) +
-        sumRho.b(object, object@pp$sigma, lambda=TRUE, ...)
-    if (norm.only) return(ret)
-    ## add constants and determinants
-    log(2*pi)*(object@pp$n +
-               if (add.q) sum(!object@pp$zeroB) else 0) +
-                   detCov.e(object) + detCov.b(object) + 2*ret
-}
-
-##' @method Q rlmerMod
-##' @rdname Q
-##' @S3method Q rlmerMod
-Q.rlmerMod <- function(object, determinant = TRUE, log = determinant, ...) {
-    idx <- !object@pp$zeroB
-    q <- sum(idx)
-    update.cache <- FALSE
-    if (is.null(object@cache$Q.D.re) || any(idx != object@cache$Q.idx)) {
-        update.cache <- TRUE
-        object@cache$Q.idx <- idx
-        ##cat("updating Q cache\n")
-        
-        Z <- t(object@pp$Zt)
-        Z <- as(Z, "dgeMatrix")
-        
-        ## be careful about 0 variance components (without correlation)
-        ## drop the corresponding columns in RicZ and Dic
-        D.re <- object@pp$D_b
-        if (! all(idx)) {
-            Z <- Z[,idx]
-            D.re <- D.re[idx,idx]
-        }
-        object@cache$Q.D.resp <- object@pp$D_e / object@rho.e@EDpsi()
-        if (q > 0)
-            object@cache$Q.0part <- crossprod(Z, object@cache$Q.D.resp %*% Z)
-        object@cache$Q.D.re <- D.re / object@rho.b@EDpsi()
-        object@cache$Q.Z <- Z
-    } else  {
-        ##cat("not updating...\n")
-        D.re <- object@cache$Q.D.re
-    }
-    
-    Dic <- std.b(object, 1, Diagonal(object@pp$q))
-    Dic <- as(Dic, "dgeMatrix")
-    
-    if (! all(idx)) Dic <- Dic[idx,idx]
-
-    if (q > 0)
-        Q.0 <- object@cache$Q.0part + crossprod(Dic, D.re %*% Dic)
-
-    if (determinant && !.isREML(object)) {
-        ## ML case
-        if (q > 0) {
-            ret <- determinant(Q.0, log)$modulus
-            if (log)
-                return(ret - 2*q*log(object@pp$sigma))
-            else
-                return(ret/object@pp$sigma^(2*q))
-        } else return(0) # no VC > 0
-    }
-
-    ## REML case (or determinant not requested)
-    if (update.cache || is.null(object@cache$Q.1)) {
-        X <- object@pp$X
-        object@cache$Q.1 <- crossprod(X, object@cache$Q.D.resp %*% X)
-        ## only need to calculate Q.3 if there are any nnz vc
-        if (q > 0) {
-            object@cache$Q.3 <- crossprod(X, object@cache$Q.D.resp %*% object@cache$Q.Z)
-            object@cache$Q.partDet <- crossprod(object@cache$Q.3,
-                                             solve(object@cache$Q.1, object@cache$Q.3))
-        }
-    }
-    p <- nrow(object@cache$Q.1)
-
-    if (determinant) {
-        if (update.cache || is.null(object@cache$Q.detQ.1raw)) {
-            object@cache$Q.detQ.1raw <- ret <- determinant(object@cache$Q.1)$modulus
-        } else ret <- object@cache$Q.detQ.1raw
-        ## only need to calculate rest if there are any nnz vc
-        if (q > 0) {
-            tmat <- Q.0 - object@cache$Q.partDet
-            tval <- determinant(tmat)$modulus
-            if (is.infinite(tval)) {
-                ## use alternative calculation method in the near singular case
-                tval <- abs(prod(diag(qr.R(qr(tmat)))))
-                warning("Q, caught infinite value, using QR:", tval)
-                tval <- log(tval)
-            }
-            ret <- ret + tval
-        }
-        
-        ret <- ret - 2*(p+q)*log(object@pp$sigma)
-        if (!log) {
-            ret <- exp(ret) ## ignore sign, always positive???
-            attr(ret, "logarithm") <- FALSE
-        }
-        ##cat("    Q:", ret, "\n")
-        return(ret)
-    }
-
-    ## FIXME: matrix is of wrong size!!??
-    ##        should it always be of full size??
-
-    if (update.cache || is.null(object@cache$Q.raw)) {
-        ## cannot use Matrix here: otherwise this fails
-        ## af ... <- t(Q.3) (first execution only)
-        Q <- matrix(0, p+q, p+q)
-        Q[1:p, 1:p] <- as(object@cache$Q.1, "matrix")
-        if (q > 0) {
-            Q[1:p, p+1:q] <- Q.3 <- as(object@cache$Q.3, "matrix")
-            Q[p+1:q, 1:p] <- t(Q.3)
-        }
-        object@cache$Q.raw <- Q
-    } else Q <- object@cache$Q.raw
-    
-    if (q > 0) Q[p+1:q, p+1:q] <- as(Q.0, "matrix")
-    
-    as(Q/object@pp$sigma^2, "Matrix")
-}
-
-### Calculate the Laplace Approximation
-### assume wExp = 0
-## laplace.rlmerMod <- function(object, ...) {
-##     ret <- robll(object, FALSE, add.q = FALSE)
-##     ## cat("Laplace: ", ret,
-##     ##     if (isREML(object)) log(2*pi)*object@pp$p) else 0,
-##     ##     Q(object, TRUE, TRUE, wExp = wExp), "\n")
-##     if (.isREML(object)) ret <- ret - log(2*pi)*object@pp$p
-##     if (object@use.laplace)
-##         ret <- ret + Q(object, TRUE, TRUE)
-##     attributes(ret) <- NULL
-##     ret
-## }
-
-##' Update the value of the deviance in the rlmerMod object
-##'
-##' @title Calculate the deviance
-##' @param object rlmerMod object
-##' @param ... ignored
-updateDeviance <- function(object, ...) {
-    if (object@use.laplace || !.isREML(object)) {
-        ret <- robll(object, FALSE, add.q = FALSE)
-        if (.isREML(object)) ret <- ret - log(2*pi)*object@pp$p
-        ret <- ret + if (object@use.laplace) Q(object, TRUE, TRUE) else detCov.rest(object, TRUE)
-    } else {
-        ## REML non-laplace case
-        stop("not implemented: deviance without using Laplace approx and REML = TRUE")
-        ## FIXME: RZX depends on theta and is not updated
-        ## idx <- !object@pp$zeroB
-        ## V <- tcrossprod(object@pp$.U_eZ[,idx] %*% object@pp$U_b[idx,idx]) + Diagonal(object@pp$n)
-        ## ret <- (object@pp$n-object@pp$p)*(log(2*pi) + 2*log(object@pp$sigma)) +
-        ##     determinant(crossprod(object@pp$X) - crossprod(object@pp$RZX), TRUE)$modulus[[1]] +
-        ##         determinant(V, TRUE)$modulus[[1]] + 2*robll(object, TRUE, add.q = FALSE)
-    }
-    attributes(ret) <- NULL
-    object@pp$setDeviance(ret)
-    invisible(ret)
-}
-##' @rdname updateDeviance
-##' @method laplace rlmerMod
-##' @S3method laplace rlmerMod
-laplace.rlmerMod <- updateDeviance
-
-##' @rdname gradient
-##' @method gradient rlmerMod
-##' @S3method gradient rlmerMod
-gradient.rlmerMod <- function(object, ...) {
-    rho.resp <- object@rho.e
-    rho.re <- object@rho.b
-    
-    ## correct by rho@EDpsi() as in robll
-    Ricpsir <- std.e(object, object@pp$sigma,
-                     Matrix(rho.resp@psi(std.e(object, object@pp$sigma))/
-                            rho.resp@EDpsi()))
-    grad.u <- drop(crossprod(object@pp$U_b, (object@pp$Zt %*% Ricpsir))) - 
-        ## rho.re@psi(object@pp$b.s/object@pp$sigma)/rho.re@EDpsi()/object@pp$sigma
-        wgt.b(object)  * std.b(object, object@pp$sigma) / object@pp$sigma / rho.re@EDpsi()
-    
-    ## setting gradient to 0 for components corresponding to
-    ## variance components equal to 0
-    if (any(idx <- object@pp$zeroB))
-        grad.u[idx] <- 0
-
-    ## FIXME: this is probably wrong for nontrivial U_e.
-    -1*c(drop(crossprod(object@pp$X, Ricpsir)), grad.u)
-}
-
-##' Find blocks of correlated random effects
-##'
-##' @title Find blocks in Lambda
-##' @param obj reTrms-object
-##' @return list of blocks
-findBlocks <- function(obj) {
-    obj <- as(obj, "merPredD")
-    LambdaInd <- obj$Lambdat
-    LambdaInd@x[] <- as.double(obj$Lind)
+## Find blocks of correlated random effects
+##
+## @title Find blocks in Lambda
+## @param obj reTrms-object
+## @param Lambdat transpose of matrix Lambda (U_b(theta))
+## @param Lind vector of indices, mapping theta to Lambdat
+## @return list of blocks
+findBlocks <- function(obj, Lambdat=obj$Lambdat(), Lind=obj$Lind) {
+    LambdaInd <- Lambdat
+    LambdaInd@x[] <- as.double(Lind)
     LambdaInd <- t(LambdaInd)
     LambdaInd <- as(LambdaInd, "matrix") ## to avoid attempt to apply non function error
     bend <- unique(apply(LambdaInd != 0, 2, function(x) max(which(x))))
@@ -418,33 +177,139 @@ findBlocks <- function(obj) {
 ## Summary / printing methods                        ##
 #######################################################
 
-### Print method (calls print(lmerMod) adds some info about rho)
-.printRlmerMod <- function(x, ...) {
-    s <- lme4:::summary.merMod(x)
-    out <- capture.output(print(s, ...))
-    ## check whether the methods slot is there
-    ## (for compatibility with older versions of rlmer)
-    if (.hasSlot(x, "method"))
-        out[1] <- sprintf("Linear mixed model fit by %s ['%s']",
-                          x@method, class(x))
-    cat(out, sep="\n")
+## Print method
+## along the lines of printMerenv of lme4
+.printRlmerMod <- function(x, digits = max(3, getOption("digits") - 3),
+                           correlation = NULL, symbolic.cor = FALSE,
+                           signif.stars = getOption("show.signif.stars"), ...,
+                           so = summary.rlmerMod(x)) {
+    ## check if doFit = FALSE is in call
+    if (!is.null(so$call$doFit) && !so$call$doFit) {
+        cat("Unfitted rlmerMod object. Use update(object, doFit=TRUE) to fit it.\n")
+         return(invisible(if (missing("x")) so else x))
+    }
+    ## title
+    cat(so$methTitle, "\n")
+    ## formula and data
+    if (!is.null(cc <- so$call$formula))
+        cat("Formula:", deparse(cc),"\n")
+    if (!is.null(cc <- so$call$data))
+        cat("   Data:", deparse(cc), "\n")
+    if (!is.null(cc <- so$call$subset))
+        cat(" Subset:", deparse(asOneSidedFormula(cc)[[2]]),"\n")
+    ## random effects
+    cat("\nRandom effects:\n")
+    print(formatVC(so$varcor, digits = digits, useScale = TRUE),
+          quote = FALSE, digits = digits, ...)
+    ngrps <- so$ngrps
+    cat(sprintf("Number of obs: %d, groups: ", so$devcomp$dims[["n"]]))
+    cat(paste(paste(names(ngrps), ngrps, sep = ", "), collapse = "; "))
+    cat("\n")
+    ## fixed effecs
+    ## this part is 1:1 from printMerenv
+    p <- nrow(so$coefficients)
+    if (p > 0) {
+        cat("\nFixed effects:\n")
+        printCoefmat(so$coefficients, zap.ind = 3, #, tst.ind = 4
+                     digits = digits, signif.stars = signif.stars)
+        if(!is.logical(correlation)) { # default
+            correlation <- p <= 20
+            if(!correlation) {
+                nam <- deparse(substitute(x)) # << TODO: improve if this is called from show()
+                cat(sprintf(paste("\nCorrelation matrix not shown by default, as p = %d > 20.",
+                                  "Use print(%s, correlation=TRUE)  or",
+                                  "    vcov(%s) if you need it\n", sep="\n"),
+                            p, nam, nam))
+            }
+        }
+        if(correlation) {
+            if(is.null(VC <- so$vcov)) VC <- vcov(x)
+            corF <- VC@factors$correlation
+            if (is.null(corF)) {
+                cat("\nCorrelation of Fixed Effects is not available\n")
+            }
+            else {
+                p <- ncol(corF)
+                if (p > 1) {
+                    rn <- rownames(so$coefficients)
+                    rns <- abbreviate(rn, minlength=11)
+                    cat("\nCorrelation of Fixed Effects:\n")
+                    if (is.logical(symbolic.cor) && symbolic.cor) {
+                        corf <- as(corF, "matrix")
+                        dimnames(corf) <- list(rns,
+                                               abbreviate(rn, minlength=1, strict=TRUE))
+                        print(symnum(corf))
+                    }
+                    else {
+                        corf <- matrix(format(round(corF@x, 3), nsmall = 3),
+                                       ncol = p,
+                                       dimnames = list(rns, abbreviate(rn, minlength=6)))
+                        corf[!lower.tri(corf)] <- ""
+                        print(corf[-1, -p, drop=FALSE], quote = FALSE)
+                    }
+                }
+            }
+        }
+    }
+    ## robustness weights
+    robustbase:::summarizeRobWeights(so$wgt.e, digits=3,
+                                     header="\nRobustness weights for the residuals:")
+    robustbase:::summarizeRobWeights(so$wgt.b, digits=3,
+                                     header="\nRobustness weights for the random effects:")
+    ## rho functions
     cat("\nRho functions used for fitting:\n")
-    cat("   Residuals: ", robustbase:::.sprintPsiFunc(x@rho.e), "\n")
-    cat("      w exp.: ", x@wExp.e, "\n")
-    if (!isTRUE(all.equal(x@rho.e@tDefs, x@rho.sigma.e@tDefs)))
-        cat("     c.sigma: ", paste(names(x@rho.sigma.e@tDefs), round(x@rho.sigma.e@tDefs, 3),
-                                    sep=" = ", collapse=", "), "\n")
-    
-    cat(" Random Eff.: ", robustbase:::.sprintPsiFunc(x@rho.b), "\n")
-    cat("      w exp.: ", x@wExp.b, "\n")
-    if (!isTRUE(all.equal(x@rho.b@tDefs, x@rho.sigma.b@tDefs)))
-        cat("     c.sigma: ", paste(names(x@rho.sigma.b@tDefs), round(x@rho.sigma.b@tDefs, 3),
-                                    sep=" = ", collapse=", "), "\n")
-    invisible(x)
+    cat("  Residuals:\n")
+    cat("    eff:", .sprintPsiFunc(so$rho.e, short=TRUE), "\n")
+    cat("    sig:", .sprintPsiFunc(so$rho.sigma.e, short=TRUE), "\n")
+    for (bt in seq_along(so$rho.b)) {
+        cat("  Random Effects, variance component ", bt, " (", names(so$rho.b)[bt], "):\n", sep="")
+        cat("    eff:", .sprintPsiFunc(so$rho.b[[bt]], short=TRUE), "\n")
+        cat("    vcp:", .sprintPsiFunc(so$rho.sigma.b[[bt]], short=TRUE), "\n")
+    }
+    invisible(if (missing("x")) so else x)
 }
 
 ##' @S3method print rlmerMod
-print.rlmerMod <- .printRlmerMod
+print.rlmerMod <- function(x, ...) .printRlmerMod(x, ...)
+
+##' @S3method summary rlmerMod
+## this follows the lines of summary.merMod of lme4
+summary.rlmerMod <- function(object, ...) {
+    resp <- object@resp
+    devC <- object@devcomp
+    dd <- devC$dims
+    cmp <- devC$cmp
+    sig <- sigma(object)
+    
+    coefs <- cbind("Estimate" = fixef(object),
+                   "Std. Error" = sig * sqrt(diag(object@pp$unsc())))
+    if (nrow(coefs) > 0) {
+        coefs <- cbind(coefs, coefs[,1]/coefs[,2], deparse.level=0)
+        colnames(coefs)[3] <- "t value"
+    }
+    ## check whether the methods slot is there
+    ## (for compatibility with older versions of rlmer)
+    mName <- sprintf("Robust linear mixed model fit by %s", object@method)
+    varcor <- VarCorr(object)
+
+    structure(list(methTitle=mName, devcomp=devC,
+                   ngrps=sapply(object@flist, function(x) length(levels(x))),
+                   coefficients=coefs, sigma=sig,
+                   vcov=vcov(object, correlation=TRUE, sigm=sig),
+                   varcor=varcor, # and use formatVC(.) for printing.
+                   call=object@call,
+                   wgt.e=wgt.e(object),
+                   wgt.b=wgt.b(object),
+                   rho.e=rho.e(object),
+                   rho.sigma.e=rho.e(object, "sigma"),
+                   rho.b=rho.b(object),
+                   rho.sigma.b=rho.b(object, "sigma")
+                   ), class = "summary.rlmer")
+}
+##' @S3method print summary.rlmer
+print.summary.rlmer <- function(x, ...) {
+    .printRlmerMod(..., so = x)
+}
 ##' @exportMethod show
 setMethod("show", "rlmerMod", function(object) .printRlmerMod(object))
 
@@ -452,7 +317,17 @@ setMethod("show", "rlmerMod", function(object) .printRlmerMod(object))
 ##' @method getInfo lmerMod
 ##' @S3method getInfo lmerMod
 getInfo.lmerMod <- function(object, ...) {
-    lsum <- summary(object)
+    if (is(object, "mer")) {
+        lsum <- lme4::summary(object)
+        coefs <- lsum@coefs
+        varcor <- VarCorr(object)
+        isREML <- lme4::isREML(object)
+    } else {
+        lsum <- summary(object)
+        coefs <- lsum$coefficients
+        varcor <- lsum$varcor
+        isREML <- .isREML(object)
+    }
     .namedVector <- function(mat) {
         if (is.vector(mat)) return(mat)
         names <- rownames(mat)
@@ -465,7 +340,7 @@ getInfo.lmerMod <- function(object, ...) {
         ret <- unlist(vc, use.names = FALSE)
         names(ret) <-
             unlist(lapply(1:length(vc), function(i)
-                          paste(names(vc)[i], names(vc[[i]]))))
+                          paste(names(vc[[i]]), names(vc)[i], sep=" | ")))
         ##.namedVector(ret)
         ret
     }
@@ -473,37 +348,49 @@ getInfo.lmerMod <- function(object, ...) {
         ret <- lapply(1:length(varcor), function(i) {
             grp <- varcor[[i]]
             corr <- attr(grp, "correlation")
-            names <- outer(paste(names(varcor)[i], colnames(corr)),
-                           paste("x", rownames(corr)), paste)
-            ret <- as.vector(corr[lower.tri(corr)])
-            names(ret) <- as.vector(names[lower.tri(names)])
+            if (nrow(corr) == 1) return(NULL)
+            names <- outer(colnames(corr), paste("x", rownames(corr)), paste)
+            ret <- as.vector(corr[upper.tri(corr)])
+            names(ret) <- paste(as.vector(names[upper.tri(names)]),
+                                names(varcor)[i], sep = " | ")
             ret
         })
         unlist(ret)
     }
     ret <- list(data = object@call$data,
-                coef = .namedVector(lsum$coefficients[,1,drop=FALSE]),
-                varcomp = .getVC(lsum$varcor),
-                sigma = lsum$sigma)
-    corrs <- .getCorr(lsum$varcor)
+                coef = .namedVector(coefs[,1,drop=FALSE]),
+                stderr = .namedVector(coefs[,2,drop=FALSE]),
+                varcomp = .getVC(varcor),
+                sigma = sigma(object))
+    corrs <- .getCorr(varcor)
     if (length(corrs) > 0) ret$correlations <- corrs
-    if (.isREML(object)) {
-        ret$REML <- object@devcomp$cmp['REML']
+    if (isREML) {
+        ret$REML <- deviance(object)
     } else {
-        ret$deviance <- object@devcomp$cmp['dev']
+        ret$deviance <- deviance(object)
     }
     ret
 }
 
 ##' @rdname getInfo
+##' @method getInfo mer
+##' @S3method getInfo mer
+getInfo.mer <- getInfo.lmerMod
+
+##' @rdname getInfo
 ##' @method getInfo rlmerMod
 ##' @S3method getInfo rlmerMod
 getInfo.rlmerMod <- function(object, ...) {
-    linfo <- getInfo(as(object, "lmerMod"))
-    linfo$rho.e <- robustbase:::.sprintPsiFunc(object@rho.e, TRUE)
-    linfo$wExp.e <- object@wExp.e
-    linfo$rho.b <- robustbase:::.sprintPsiFunc(object@rho.b, TRUE)
-    linfo$wExp.b <- object@wExp.b
+    linfo <- getInfo.lmerMod(object)
+    linfo$REML <- linfo$deviance <- NULL
+    linfo$rho.e <- .sprintPsiFunc(rho.e(object), TRUE)
+    linfo$rho.sigma.e <- .sprintPsiFunc(rho.e(object, "sigma"), TRUE)
+    rho.b <- rho.b(object)
+    rho.sigma.b <- rho.b(object, "sigma")
+    for (bt in seq_along(object@blocks)) {
+        linfo[[paste("rho.b",bt,sep="_")]] <- .sprintPsiFunc(rho.b[[bt]], TRUE)
+        linfo[[paste("rho.sigma.b",bt,sep="_")]] <- .sprintPsiFunc(rho.sigma.b[[bt]], TRUE)
+    }
     linfo
 }
 
@@ -513,9 +400,11 @@ getInfo.rlmerMod <- function(object, ...) {
 ##' @param ... objects to compare
 ##' @param digits number of digits to show in print
 ##' @param dnames names of objects given as arguments (optional)
+##' @param show.rho.functions whether to show rho functions in output.
 ##' @return comparison table
 ##' @export
-compare <- function(..., digits = 3, dnames = NULL) {
+compare <- function(..., digits = 3, dnames = NULL,
+                    show.rho.functions = TRUE) {
     linfos <- list(...)
     if (!missing(dnames) && !is.null(dnames)) names(linfos) <- dnames
     linfos <- lapply(linfos, getInfo)
@@ -546,24 +435,159 @@ compare <- function(..., digits = 3, dnames = NULL) {
     call <- match.call()
     call$digits <- NULL
     call$names <- NULL
+    call$show.rho.functions <- NULL
     split <- rep("", length(linfos))
+    ## prepare coef slot:
+    ## add stderr
+    linfos <- lapply(linfos, function(linfo) {
+        cf <- paste(format(linfo[["coef"]], digits=digits), " (",
+                    format(linfo[["stderr"]], digits=digits), ")", sep="")
+        names(cf) <- names(linfo[["coef"]])
+        linfo[["coef"]] <- cf
+        linfo[["stderr"]] <- NULL
+        linfo
+    })
+    ## combine
+    ## coefficients
     ret <- rbind(Coef=split, 
                  .combineComp(.getComp(linfos, "coef")))
+    ## variance components
     ret <- rbind(ret, NULL=split, VarComp=split, 
                  .combineComp(.getComp(linfos, "varcomp")))
+    ## correlations if there are any
     if (any(sapply(linfos, function(linfo) !is.null(linfo$correlations))))
         ret <- rbind(ret, NULL=split, Correlations=split,
                      .combineComp(.getComp(linfos, "correlations")))
-    linfos <- .dropComp(linfos, c("data", "coef", "varcomp", "correlations"))
-    ret <- rbind(ret, NULL=split)
-    for (name in .getNames(linfos)) {
-        ret <- rbind(ret, format(.getComp(linfos, name), digits = digits))
-        rownames(ret)[nrow(ret)] <- name
+    ## sigma
+    ret <- rbind(ret, NULL=split, format(.getComp(linfos, "sigma"), digits = digits))
+    rownames(ret)[nrow(ret)] <- "sigma"
+    ## drop the items already included
+    linfos <- .dropComp(linfos, c("data", "coef", "varcomp", "correlations", "sigma"))
+    ## drop rho functions if requested
+    if (!show.rho.functions) 
+        linfos <- .dropComp(linfos, grep("^rho", .getNames(linfos), value=TRUE))
+    ## show the rest if there is any
+    if (length(.getNames(linfos)) > 0) {
+        ret <- rbind(ret, NULL=split)
+        for (name in .getNames(linfos)) {
+            ret <- rbind(ret, format(.getComp(linfos, name), digits = digits))
+            rownames(ret)[nrow(ret)] <- name
+        }
     }
+    ## clean up and finish
     ret <- gsub("\\s*(NA|NULL)", "", ret)
     colnames(ret) <- if (missing(dnames) && is.null(dnames)) as.character(call)[-1] else dnames
     rownames(ret)[rownames(ret) == "NULL"] <- ""
-    ret   
+    class(ret) <- "comparison.table"
+    ret
+}
+
+##' @S3method print comparison.table
+print.comparison.table <- function(x, ...) {
+    class(x) <- "matrix"
+    print(x, ..., quote=FALSE)
+}
+
+##' @title Create Latex and HTML tables for \code{compare} output
+##'
+##' This function is a wrapper to \code{table} for objects of class
+##' \code{comparison.table}. It uses the same arguments as \code{xtable()}. 
+##' @param x object of class "comparison.table".
+##' @param caption see \code{\link{xtable}}.
+##' @param label see \code{\link{xtable}}.
+##' @param align see \code{\link{xtable}}.
+##' @param digits see \code{\link{xtable}}.
+##' @param display see \code{\link{xtable}}.
+##' @param ... passed to \code{\link{xtable}}.
+##' @seealso \code{\link{xtable}}, \code{\link{print.xtable.comparison.table}}
+##'   and \code{link{compare}}.
+##' @importFrom xtable xtable
+##' @export
+##' @method xtable comparison.table
+xtable.comparison.table <- function(x, caption=NULL, label=NULL, align=NULL,
+                                    digits=NULL, display=NULL, ...) {
+    require(xtable)
+    rn <- sapply(rownames(x), function(n) {
+        switch(n,
+               Coef="Coefficients (Std. Error)",
+               VarComp="Variance components",
+               Correlations="Correlations",
+               n) })
+    tbl <- cbind(rn, x)
+    rownames(tbl) <- NULL
+    colnames(tbl) <- c(" ", colnames(x))
+    if (is.null(align)) align <- c("r", "r", rep.int("l", ncol(x)))
+    xtbl <- xtable(tbl, caption=caption, label=label, align=align,
+                   digits=digits, display=display, ...)
+    class(xtbl) <- c("xtable.comparison.table", class(xtbl))
+    xtbl
+}
+
+##' @title Print Export Tables for comparison tables
+##'
+##' Wrapper for \code{print.xtable} for objects of class
+##' \code{xtable.comparison.table}.
+##' 
+##' @param x An object of class \code{xtable.comparison.table}.
+##' @param add.hlines replace empty lines in comparison table by hlines.
+##'   Supersedes \code{hline.after} argument of \code{print.xtable}.
+##' @param latexify.namescol replace \dQuote{sigma} and \dQuote{x} in
+##'   the first column by latex equivalents.
+##' @param include.rownames include row numbers (names are included in
+##'   the first column returned by \code{xtable.comparison.table}).
+##' @param ... passed to \code{\link{print.xtable}}.
+##' @importFrom xtable print.xtable
+##' @seealso \code{\link{print.xtable}}, \code{\link{xtable.comparison.table}},
+##'  and \code{\link{compare}}.
+##' @method print xtable.comparison.table
+##' @export
+print.xtable.comparison.table <- function(x, add.hlines=TRUE,
+                                          latexify.namescol=TRUE,
+                                          include.rownames=FALSE, ...) {
+    require(xtable)
+    args <- list(...)
+    if (add.hlines) {
+        rns <- if (is.factor(x[[1]])) levels(x[[1]])[x[[1]]] else x[[1]]
+        emptyCol <- sapply(rns, nchar) == 0
+        x <- x[!emptyCol,]
+        args$hline.after=c(-1, 0, which(emptyCol)-1:sum(emptyCol),nrow(x))
+    }
+    if (latexify.namescol) {
+        if (!is.null(args$sanitize.text.function)) {
+            sanitize <- args$sanitize.text.function
+        } else {
+            ## from print.xtable
+            sanitize <- function(str) {
+                result <- str
+                result <- gsub("\\\\","SANITIZE.BACKSLASH",result)
+                result <- gsub("$","\\$",result,fixed=TRUE)
+                result <- gsub(">","$>$",result,fixed=TRUE)
+                result <- gsub("<","$<$",result,fixed=TRUE)
+                result <- gsub("|","$|$",result,fixed=TRUE)
+                result <- gsub("{","\\{",result,fixed=TRUE)
+                result <- gsub("}","\\}",result,fixed=TRUE)
+                result <- gsub("%","\\%",result,fixed=TRUE)
+                result <- gsub("&","\\&",result,fixed=TRUE)
+                result <- gsub("_","\\_",result,fixed=TRUE)
+                result <- gsub("#","\\#",result,fixed=TRUE)
+                result <- gsub("^","\\verb|^|",result,fixed=TRUE)
+                result <- gsub("~","\\~{}",result,fixed=TRUE)
+                result <- gsub("SANITIZE.BACKSLASH","$\\backslash$",result,fixed=TRUE)
+                return(result)
+                  }
+        }
+        ## sanitize text
+        for (i in 1:ncol(x)) x[[i]] <- sanitize(x[[i]])
+        args$sanitize.text.function <- identity
+        x[[1]] <- sapply(x[[1]], function(rn) {
+            rn <- sub(" x ", " $\\times$ ", rn, fixed=TRUE)
+            rn <- sub("\\bsigma\\b", "$\\\\sigma$", rn)
+            rn
+        })
+    }
+    args$include.rownames <- include.rownames
+    args$x <- x
+    do.call(print.xtable, args)
 }
  
 ##' @S3method update rlmerMod
@@ -574,22 +598,25 @@ update.rlmerMod <- function(object, formula., ..., evaluate = TRUE) {
     if (is.null(call <- object@call))
         stop("object should contain a 'call' component")
     extras <- match.call(expand.dots = FALSE)$...
-    if (!missing(formula.))
+    if (!missing(formula.)) {
         call$formula <- update.formula(formula(object), formula.)
-    ## set init to object, if not explicitly given (and no new data given)
-    if (is.null(extras[["data"]])) {
-        if (is.null(extras[["init"]])) {
-            lcall <- sys.call(sys.parent())
-            extras$init <- object
-        }
-        ## copy pp and resp (to really get a new object)
-        extras$init@pp <- object@pp$copy()
-        ## reset calledInit... fields to FALSE:
-        fields <- grep("calledInit", names(getRefClass(class(extras$init@pp))$fields()), value=TRUE)
-        Map(function(field) extras$init@pp$field(field, FALSE), fields)
-        extras$init@resp <- object@resp$copy()
-    } else {
         extras$init <- NULL
+    } else {
+        ## set init to object, if not explicitly given (and no new data given)
+        if (is.null(extras[["data"]])) {
+            if (is.null(extras[["init"]])) {
+                lcall <- sys.call(sys.parent())
+                extras$init <- object
+            }
+            ## copy pp and resp (to really get a new object)
+            extras$init@pp <- object@pp$copy()
+            ## reset calledInit... fields to FALSE:
+            fields <- grep("calledInit", names(getRefClass(class(extras$init@pp))$fields()), value=TRUE)
+            Map(function(field) extras$init@pp$field(field, FALSE), fields)
+            extras$init@resp <- object@resp$copy()
+        } else {
+            extras$init <- NULL
+        }
     }
     if (length(extras) > 0) {
         existing <- !is.na(match(names(extras), names(call)))

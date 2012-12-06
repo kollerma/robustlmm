@@ -2,7 +2,7 @@
 \name{smoothPsi}
 \alias{smoothPsi}
 \title{smoothPsi}
-\format{Formal class 'psi_func_cached' [package "test"] with 13 slots}
+\format{Formal class 'psi_func_cached' [package "test"] with 11 slots}
 \usage{
   smoothPsi
 }

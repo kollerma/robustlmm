@@ -12,12 +12,6 @@ setSigma <- function(object, value) {
     object
 }
 
-### Set deviance
-setDeviance <- function(object, value) {
-    object@pp$setDeviance(value)
-    invisible(object)
-}
-
 ### Set fixed effects
 setFixef <- function(object, value, ...) {
     object@pp$beta <- value 
@@ -60,7 +54,7 @@ setB <- function(object, value) {
 
 ### Set theta
 setTheta <- function(object, value, eps = 1e-7, fit.effects = TRUE,
-                     update.sigma = fit.effects, update.deviance = TRUE, ...) {
+                     update.sigma = fit.effects, ...) {
     ## this check is disabled, since we're still optimizing for \sigma_e
     ## if (isTRUE(all.equal(theta(object), value))) {
     ##     ## cat("theta did not change, returning old object\n")
@@ -107,10 +101,6 @@ setTheta <- function(object, value, eps = 1e-7, fit.effects = TRUE,
         setB(object, object@pp$b)
         setFixef(object, object@pp$beta)
         ## no need to update sigma here
-    }
-    if (update.deviance) {
-        updateDeviance(object)
-        ##cat("Updated deviance to", deviance(object), "\n")
     }
     invisible(object)
 }

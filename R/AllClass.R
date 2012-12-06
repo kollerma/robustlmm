@@ -3,15 +3,15 @@
 setClass("psi_func_cached", contains = c("psi_func"))
 
 
-##' This is basically a copy of the merPredD-class
-##'
-##' The one thing missing is Ptr (and the lock).
-##'
-##' REVISION: 1611
-##' 
-##' @title rlmerPredD
-##' @name rlmerPredD-class
-##' @slot all see rlmerPredD class
+## This is basically a copy of the merPredD-class
+##
+## The one thing missing is Ptr (and the lock).
+##
+## REVISION: 1611
+## 
+## @title rlmerPredD
+## @name rlmerPredD-class
+## @slot all see rlmerPredD class
 setRefClass("rlmerPredD",
             fields =
                 list(U_e     = "ddiMatrix",
@@ -27,7 +27,6 @@ setRefClass("rlmerPredD",
                      b       = "numeric",                    
                      theta   = "numeric",
                      sigma   = "numeric",
-                     deviance = "numeric",
                      n       = "numeric",
                      p       = "numeric",
                      q       = "numeric",
@@ -47,9 +46,6 @@ setRefClass("rlmerPredD",
                      .U_eZ   = "Matrix",       ## U_e\inv Z
                      M_XX    = "Matrix",       ## M_XX
                      U_btZt.U_et = "Matrix",   ## U_b\tr Z\tr U_e\inv\tr
-                     ## remlK   = "Matrix",       ## used to calculate deviance in REML case
-                     ## remlKcorr = "numeric",    ## ditto
-                     RZX     = "matrix",       ## used to calculate deviance in REML case
                      calledInit = "logical",   ## whether initMatrices has been called yet
                      M_XZ0   = "Matrix",       ## M_XZ = M_XZ0 %*% U_b
                      M_ZZ0   = "Matrix",       ## M_ZZ = U_b\tr %*% M_ZZ0 %*% U_b
@@ -57,10 +53,9 @@ setRefClass("rlmerPredD",
                      M_ZX0M_XX.M_ZZ0 = "Matrix", ## crossprod(M_XZ0, M_XX^M_ZZ0)
                      rho_e   = "psi_func",
                      rho_sigma_e = "psi_func",
-                     wExp_e  = "numeric",
-                     rho_b   = "psi_func",
-                     rho_sigma_b = "psi_func",
-                     wExp_b  = "numeric",
+                     rho_b   = "list",
+                     rho_sigma_b = "list",
+                     dim     = "numeric",
                      Epsi2_e = "numeric",      ## \Erw[\psi^2_e]
                      Epsi2_b = "numeric",      ## \Erw[\psi^2_b]
                      Epsi_bbt = "Matrix",      ## \Erw[\psi_b(u)u\tr]
@@ -73,14 +68,13 @@ setRefClass("rlmerPredD",
                 methods =
                 list(
                      initialize =
-                     function(X, Zt, RZX, Lambdat, Lind, theta, beta, b.s, lower,
-                              sigma, deviance, v_e, ...) {
+                     function(X, Zt, Lambdat, Lind, theta, beta, b.s, lower,
+                              sigma, v_e, ...) {
                          set.unsc <<- set.M <<- calledInit <<- FALSE
                          initGH(...)
                          if (!nargs()) return()
                          X <<- as(X, "matrix")
                          Zt <<- as(Zt, "dgCMatrix")
-                         RZX <<- as(RZX, "matrix")
                          setLambdat(Lambdat, Lind)
                          theta <<- as.numeric(theta)
                          n <<- nrow(X)
@@ -91,7 +85,6 @@ setRefClass("rlmerPredD",
                                    all(sort(unique(Lind)) == seq_along(theta)),
                                    length(sigma) == 1,
                                    sigma > 0,
-                                   length(deviance) == 1,
                                    length(lower) == length(theta),
                                    length(v_e) == n
                                    )
@@ -101,15 +94,22 @@ setRefClass("rlmerPredD",
                          b.s <<- b.s
                          b <<- as(U_b %*% b.s, "numeric")
                          sigma <<- sigma
-                         deviance <<- deviance
                          lower <<- lower
                          setZeroB()
                      },
+                     btapply = function(x, fun, ..., rep, add.s=TRUE) {
+                         'little helper function to apply a function to all blocktypes'
+                         stopifnot(length(x) == length(dim))
+                         x <- as.list(x)
+                         ret <- list()
+                         for (bt in seq_along(dim)) {
+                             tmp <- if (add.s) fun(x[[bt]], dim[bt], ...) else fun(x[[bt]], ...)
+                             ret <- c(ret, list(tmp))
+                         }
+                         simplify2array(if (missing(rep)) ret else ret[rep])
+                     },
                      setSigma = function(value) {
                          sigma <<- value
-                     },
-                     setDeviance = function(value) {
-                         deviance <<- value
                      },
                      setU = function(value) setB.s(value),
                      setB.s = function(value) {
@@ -176,19 +176,11 @@ setRefClass("rlmerPredD",
                      },
                      initMatrices = function(object) {
                          if (isTRUE(calledInit)) return()
-                        ## initialize often required matrices
+                         ## initialize often required matrices and other stuff
+                         dim <<- object@dim
                          .U_eX <<- solve(U_e, X)
                          .U_eZ <<- solve(U_e, t(Zt))
                          U_btZt.U_et <<- t(.U_eZ %*% U_b)
-                         ## if (.isREML(object)) {
-                         ##     ## generate matrix to be used for REML
-                         ##     ## P %*% X == 0, but has too many rows
-                         ##     H <- .U_eX %*% solve(M_XX, t(.U_eX))
-                         ##     P <- Diagonal(n) - D_e %*% H
-                         ##     qrP <- qr(P)
-                         ##     remlK <<- as(t(qr.Q(qrP)[,1:qrP$rank]), "Matrix") ## K %*% X == 0
-                         ##     remlKcorr <<- -2 * sum(log(abs(diag(qr.R(qrP))[1:qrP$rank])))
-                         ## }
                          initRho(object)
                          calledInit <<- TRUE
                      },
@@ -217,13 +209,8 @@ setRefClass("rlmerPredD",
                          rho_sigma_e <<- object@rho.sigma.e
                          rho_b <<- object@rho.b
                          rho_sigma_b <<- object@rho.sigma.b
-                         wExp_e <<- object@wExp.e
-                         wExp_b <<- object@wExp.b
-                         D_e <<- Diagonal(x=rep(rho_e@EDpsi(), n))
-                         tmp <- if (wExp_b == 0) rep(rho_b@EDpsi(),q) else {
-                             exps <- sapply(object@dim, .calcE.D.re, rho = rho_b)
-                             exps[object@ind[object@k]]
-                         }
+                         D_e <<- Diagonal(x=rep.int(rho_e@EDpsi(), n))
+                         tmp <- btapply(rho_b, .calcE.D.re2, rep=object@ind[object@k])
                          D_b <<- Diagonal(x=tmp)
                          Lambda_b <<- Diagonal(x=rho_e@EDpsi() / tmp)
                          Lambda_bD_b <<- Diagonal(x=rep(rho_e@EDpsi(), q))
@@ -235,39 +222,11 @@ setRefClass("rlmerPredD",
                          M_XX.M_ZZ0 <<- solve(M_XX, M_XZ0)
                          M_ZX0M_XX.M_ZZ0 <<- crossprod(M_XZ0, M_XX.M_ZZ0)
                          Epsi2_e <<- rho_e@Epsi2()
-                         Epsi2_b <<- rho_b@Epsi2()
                          ## calculate Epsi_bbt
-                         Eblks <- list()
-                         for (s_k in object@dim) {
-                             if (s_k == 1) {
-                                 tmp <- Matrix(rho_b@EDpsi())
-                             } else {
-                                 wgt <- .wgtTau(rho_b, wExp_b)
-                                 fun <- function(b, v) wgt(sqrt((b*b+v)/s_k))*b*b*
-                                     dnorm(b)*dchisq(v, s_k-1)
-                                 tmp <- integrate(Vectorize(function(v) integrate(fun, -Inf, Inf, v=v)$value),
-                                                  0, Inf)$value
-                                 tmp <- Diagonal(x=rep(tmp, s_k))
-                             }
-                             Eblks <- c(Eblks, tmp)
-                         }
-                         Epsi_bbt <<- bdiag(Eblks[object@ind])
+                         Epsi_bbt <<- bdiag(btapply(rho_b, .calcE.psi_bbt, rep=object@ind))
                          ## calculate Epsi_bpsi_bt
-                         Eblks <- list()
-                         for (s_k in object@dim) {
-                             if (s_k == 1) {
-                                 tmp <- Matrix(Epsi2_b)
-                             } else {
-                                 wgt <- .wgtTau(rho_b, wExp_b)
-                                 fun <- function(b, v) wgt(sqrt((b*b+v)/s_k))^2*b*b*
-                                     dnorm(b)*dchisq(v, s_k-1)
-                                 tmp <- integrate(Vectorize(function(v) integrate(fun, -Inf, Inf, v=v)$value),
-                                                  0, Inf)$value
-                                 tmp <- Diagonal(x=rep(tmp, s_k))
-                             }
-                             Eblks <- c(Eblks, tmp)
-                         }
-                         Epsi_bpsi_bt <<- bdiag(Eblks[object@ind])
+                         Epsi_bpsi_bt <<- bdiag(btapply(rho_b, .calcE.psi_bpsi_bt, rep=object@ind))
+                         Epsi2_b <<- diag(Epsi_bpsi_bt) ## for easier computation in diagonal case
                      },
                      initGH = function(numpoints=13) {
                          gh <- robustbase:::ghq(numpoints)
@@ -327,7 +286,7 @@ setRefClass("rlmerPredD",
                          } else {
                              Epsi2_e * with(r, M_BB - crossprod(M_bB, Lambda_bD_b %*% M_bB)) +
                                  if (isDiagonal(U_b)) {
-                                     Epsi2_b * crossprod(Lambda_b %*% r$M_bB)
+                                     crossprod(Diagonal(x=sqrt(Epsi2_b)) %*% Lambda_b %*% r$M_bB)
                                  } else {
                                      with(r, crossprod(Lambda_b %*% M_bB,
                                                        Epsi_bpsi_bt %*% Lambda_b %*% M_bB))
@@ -380,7 +339,7 @@ setRefClass("rlmerPredD_DAS",
                  initRho = function(object) {
                      callSuper(object)
                      EDpsi_e <<- rho_e@EDpsi()
-                     kappa_e <<- calcKappaTau(rho_sigma_e, wExp_e)
+                     kappa_e <<- calcKappaTau(rho_sigma_e, 1)
                      kappa_b <<- calcKappaTauB(object)
                  },
                  setTheta = function(value) {
@@ -398,7 +357,7 @@ setRefClass("rlmerPredD_DAS",
                  },
                  Tb = function() {
                      tmp <- L %*% Epsi_bbt
-                     diag(q) - tmp - t(tmp) + Epsi2_b * crossprod(Kt) + L %*% crossprod(Epsi_bpsi_bt, L)
+                     diag(q) - tmp - t(tmp) + Epsi2_e * crossprod(Kt) + L %*% crossprod(Epsi_bpsi_bt, L)
                  },
                  setT = function(T) {
                      .Tbk <<- T
@@ -429,24 +388,75 @@ setRefClass("rlmerPredD_DAS",
                  tau_e = function() {
                      if (isTRUE(.setTau_e)) return(.tau_e)
                      .tau_e <<- calcTau(diag(A), .s(theta=FALSE, pp=.self),
-                                        rho_e, rho_sigma_e, wExp_e, .self, kappa_e,
+                                        rho_e, rho_sigma_e, .self, kappa_e,
                                         .tau_e, method)
                      .setTau_e <<- TRUE
                      return(.tau_e)
                  }
                 )
             )
-                 
 
-##' This is similar to lmerMod from lme4
-##'
-##' @title rlmerMod
+setRefClass("rlmerResp",
+            fields =
+            list(mu      = "numeric",
+                 offset  = "numeric",
+                 sqrtrwt = "numeric",
+                 weights = "numeric",
+                 wtres   = "numeric",
+                 y       = "numeric"
+                 ),
+            methods =
+            list(
+                initialize = function(...) {
+                    if (!nargs()) return()
+                    ll <- list(...)
+                    if (is.null(ll$y)) stop("y must be specified")
+                    y <<- as.numeric(ll$y)
+                    n <- length(y)
+                    mu <<- if (!is.null(ll$mu))
+                        as.numeric(ll$mu) else numeric(n)
+                    offset <<- if (!is.null(ll$offset))
+                        as.numeric(ll$offset) else numeric(n)
+                    weights <<- if (!is.null(ll$weights))
+                        as.numeric(ll$weights) else rep.int(1,n)
+                    sqrtrwt <<- if (!is.null(ll$sqrtrwt))
+                        as.numeric(ll$sqrtrwt) else sqrt(weights)
+                    wtres   <<- sqrtrwt * (y - mu)
+                },            
+                updateMu = function(lmu) {
+                    mu <<- lmu
+                    wtres <<- sqrtrwt * (y - mu)
+                })
+            )
+            
+
+##' @title rlmerMod Class
+##' Class "rlmerMod" of Robustly Fitted Mixed-Effect Models
+##' 
+##' A robust mixed-effects model as returned by \code{\link{rlmer}}.
+##' 
 ##' @name rlmerMod-class
-##' @slot pp rlmerPredD class
-##' @slot cache environment used as cache.
-##' @slot others as in lmerMod class
+##' @aliases rlmerMod-class
+##' show,rlmerMod-method
+##' coef.rlmerMod
+##' fitted.rlmerMod formula.rlmerMod
+##' model.frame.rlmerMod model.matrix.rlmerMod print.rlmerMod
+##' show.rlmerMod summary.rlmerMod
+##' terms.rlmerMod update.rlmerMod 
+##' vcov.rlmerMod print.summary.rlmer show.summary.rlmer
+##' summary.summary.rlmer vcov.summary.rlmer
+##' @docType class
+##' @section Objects from the Class: Objects are created by calls to
+##' \code{\link{rlmer}}.
+##' @seealso \code{\link{rlmer}}
+##' @keywords classes
+##' @examples
+##' 
+##' showClass("rlmerMod")
+##' 
+##' @export
 setClass("rlmerMod",
-         representation(resp    = "lmerResp",
+         representation(resp    = "rlmerResp",
                         Gp      = "integer",
                         call    = "call",
 			frame   = "data.frame", # "model.frame" is not S4-ized yet
@@ -458,19 +468,14 @@ setClass("rlmerMod",
                         b.s       = "numeric",
                         devcomp = "list",
                         pp      = "rlmerPredD",
-                        cache   = "environment",
                         ## from rlmerResp:
                         rho.e   = "psi_func",
-                        wExp.e  = "numeric",
                         rho.sigma.e = "psi_func",
-                        use.laplace = "logical",
                         method  = "character",
-                        method.effects = "character",
                         ## from rreTrms:
                         b       = "numeric",
-                        rho.b   = "psi_func",
-                        rho.sigma.b = "psi_func",
-                        wExp.b  = "numeric",
+                        rho.b   = "list",
+                        rho.sigma.b = "list",
                         blocks  = "list",
                         ind     = "numeric",
                         idx     = "list",
@@ -482,17 +487,7 @@ setClass("rlmerMod",
              v <- validObject(object@rho.e)
              if (!is.logical(v) || ! v)
                  return(v)
-             if (length(object@wExp.e) != 1 || object@wExp.e < 0)
-                 return("wExp.e has to be positive and be of length 1")
              v <- validObject(object@rho.sigma.e)
-             if (!is.logical(v) || ! v)
-                 return(v)
-             v <- validObject(object@rho)
-             if (!is.logical(v) || ! v)
-                 return(v)
-             if (length(object@wExp.b) != 1 || object@wExp.b < 0)
-                 return("wExp.b has to be positive and be of length 1")
-             v <- validObject(object@rho.sigma.b)
              if (!is.logical(v) || ! v)
                  return(v)
              if (length(object@b) != length(object@b.s)) 
@@ -508,7 +503,7 @@ setClass("rlmerMod",
                  return("number of columns in idx not equal to number of subjects")
              if (sum(object@q) != length(object@b.s))
                  return("sum of q must be identical to length of u")
-             if (length(object@k) != length(object@b.S))
+             if (length(object@k) != length(object@b.s))
                  return("length of k must be identical to length of u")
              if (length(object@ind) != max(object@k))
                  return("length of ind must be equal to max k")
@@ -517,6 +512,14 @@ setClass("rlmerMod",
              if (any(unlist(lapply(object@blocks, function(x) unique(as.vector(x)))) !=
                      unique(unlist(lapply(object@blocks, as.vector)))))
                  return("parameters are not allowed to be in multiple blocks simultaneously")
+             if (length(object@rho.b) != length(object@dim))
+                 return("the length of list rho.b must be the same as the number ob block types")
+             if (length(object@rho.b) != length(object@rho.sigma.b))
+                 return("the lists rho.b and rho.sigma.b must be of the same length")
+             if (!all(sapply(object@rho.b, inherits, "psi_func")))
+                 return("the entries of rho.b must be of class psi_func or inherited")
+             if (!all(sapply(object@rho.sigma.b, inherits, "psi_func")))
+                 return("the entries of rho.sigma.b must be of class psi_func or inherited")
              TRUE
          },
          S3methods = TRUE)
@@ -525,92 +528,210 @@ setClass("rlmerMod",
 ## Coercing methods                                  ##
 #######################################################
 
-setIs(class1 = "rlmerPredD", class2 = "merPredD",
-      coerce = function(from) {
-          theta <- from$theta
-          if (any(idx <- theta == 0)) theta[idx] <- 1
-          pp <- new("merPredD", X=from$X, Zt=from$Zt,
-                    Lambdat=from$Lambdat(), RZX=from$RZX,
-                    Lind=from$.Lind,
-                    theta=theta, n=from$n, beta0=from$beta,
-                    u0=from$b.s)
-          if (any(idx)) pp$setTheta(from$theta)
-          pp          
-      },
-      replace = function(from, value) {
-          if (!missing(value)) {
-              from$X <- value$X
-              from$Zt <- value$Zt
-              from$setLambdat(value$Lambdat, value$Lind)
-              from$theta <- value$theta
-              from$n <- nrow(value$V)
-              from$beta <- value$delb
-              from$b.s <- value$delu
-              warning("Now run updatePp on the rlmerMod object.")
-          }
-          from
-      })
+## setIs(class1 = "rlmerPredD", class2 = "merPredD",
+##       coerce = function(from) {
+##           theta <- from$theta
+##           if (any(idx <- theta == 0)) theta[idx] <- 1
+##           pp <- new("merPredD", X=from$X, Zt=from$Zt,
+##                     Lambdat=from$Lambdat(),
+##                     Lind=from$.Lind,
+##                     theta=theta, n=from$n, beta0=from$beta,
+##                     u0=from$b.s)
+##           if (any(idx)) pp$setTheta(from$theta)
+##           pp          
+##       },
+##       replace = function(from, value) {
+##           if (!missing(value)) {
+##               from$X <- value$X
+##               from$Zt <- value$Zt
+##               from$setLambdat(value$Lambdat, value$Lind)
+##               from$theta <- value$theta
+##               from$n <- nrow(value$V)
+##               from$beta <- value$delb
+##               from$b.s <- value$delu
+##               warning("Now run updatePp on the rlmerMod object.")
+##           }
+##           from
+##       })
 
-##' @name rlmerMod-class
-### Define inheritance from lmerMod to rlmerMod
-setIs(class1 = "rlmerMod", class2 = "lmerMod",
-      coerce = function(from) {
-          ##cat("~~~~ coerce rlmerMod to lmerMod ~~~~~\n")
-          new("lmerMod",
-              resp=from@resp, Gp = from@Gp,
-              call=from@call, frame=from@frame,
-              flist=from@flist, cnms=from@cnms,
-              lower=from@lower, theta=from@theta,
-              beta=from@beta, u=from@b.s,
-              devcomp=from@devcomp,
-              pp=as(from@pp, "merPredD"))
-      },
-      replace = function(from, value) {
-          ##cat("~~~~ replace lmerMod with rlmerMod ~~~~~\n")
-          if (! missing(value)) {
-              from@resp <- value@resp
-              from@Gp <- value@Gp
-              from@call <- value@call
-              from@frame <- value@frame
-              from@flist <- value@flist
-              from@cnms <- value@cnms
-              from@lower <- value@lower
-              from@theta <- value@theta
-              from@beta <- value@beta
-              from@b.s <- value@u
-              from@devcomp = value@devcomp
-              dd <- value@devcomp$dims
-              cmp <- value@devcomp$cmp
-              from@pp <- new("rlmerPredD",
-                             X=value@pp$X,Zt=value@pp$Zt, RZX=value@pp$RZX,
-                             Lambdat=value@pp$Lambdat, Lind=value@pp$Lind,
-                             theta=value@theta, beta=value@beta, b.s=value@u,
-                             lower=value@lower, v_e=value@resp$weights,
-                             sigma=cmp[[ifelse(dd["REML"], "sigmaREML", "sigmaML")]],
-                             deviance=cmp[[ifelse(dd["REML"], "REML", "dev")]],
-                             numpoints = 13)
-              from@cache <- new.env()
-              from@rho.e <- cPsi
-              from@wExp.e <- 0
-              from@rho.sigma.e = from@rho.e
-              from@use.laplace <- TRUE ## default for Opt method
-              from@method <- "Opt"
-              from@method.effects <- "IRWLS"
-              from@b <- from@pp$b
-              from@rho.b <- cPsi
-              from@wExp.b <- 0
-              from@rho.sigma.b = from@rho.b
-              b <- findBlocks(value@pp)
-              from@blocks <- b$blocks
-              from@ind <- b$ind
-              from@idx <- b$idx
-              from@dim <- b$dim
-              from@q <- b$q
-              from@k <- b$k
-              from@pp$initMatrices(from)
-          }
-          from
-      })
+## ##' @name rlmerMod-class
+## ### Define inheritance from lmerMod to rlmerMod
+## setIs(class1 = "rlmerMod", class2 = "lmerMod",
+##       coerce = function(from) {
+##           ##cat("~~~~ coerce rlmerMod to lmerMod ~~~~~\n")
+##           new("lmerMod",
+##               resp=from@resp, Gp = from@Gp,
+##               call=from@call, frame=from@frame,
+##               flist=from@flist, cnms=from@cnms,
+##               lower=from@lower, theta=from@theta,
+##               beta=from@beta, u=from@b.s,
+##               devcomp=from@devcomp,
+##               pp=as(from@pp, "merPredD"))
+##       },
+##       replace = function(from, value) {
+##           ##cat("~~~~ replace lmerMod with rlmerMod ~~~~~\n")
+##           if (! missing(value)) {
+##               from@resp <- value@resp
+##               from@Gp <- value@Gp
+##               from@call <- value@call
+##               from@frame <- value@frame
+##               from@flist <- value@flist
+##               from@cnms <- value@cnms
+##               from@lower <- value@lower
+##               from@theta <- value@theta
+##               from@beta <- value@beta
+##               from@b.s <- value@u
+##               from@devcomp = value@devcomp
+##               dd <- value@devcomp$dims
+##               cmp <- value@devcomp$cmp
+##               from@pp <- new("rlmerPredD",
+##                              X=value@pp$X,Zt=value@pp$Zt,
+##                              Lambdat=value@pp$Lambdat, Lind=value@pp$Lind,
+##                              theta=value@theta, beta=value@beta, b.s=value@u,
+##                              lower=value@lower, v_e=value@resp$weights,
+##                              sigma=cmp[[ifelse(dd["REML"], "sigmaREML", "sigmaML")]],
+##                              numpoints = 13)
+##               from@rho.e <- cPsi
+##               from@rho.sigma.e = from@rho.e
+##               from@method <- "DAStau"
+##               from@b <- from@pp$b
+##               b <- findBlocks(value@pp)
+##               from@rho.b <- rep(list(cPsi),length(b$dim))
+##               from@rho.sigma.b = from@rho.b
+##               from@blocks <- b$blocks
+##               from@ind <- b$ind
+##               from@idx <- b$idx
+##               from@dim <- b$dim
+##               from@q <- b$q
+##               from@k <- b$k
+##               from@pp$initMatrices(from)
+##           }
+##           from
+##       })
+
+.convLme4Rlmer <- function(from) {
+    X <- getME(from, "X")
+    Zt <- getME(from, "Zt")
+    if (is(from, "mer")) {
+        ## getME does not provide all slots
+        ## create them here
+        ## prepare...
+        ngrps <- sapply(from@flist, function(x) length(levels(x)))
+        ## from@ST seems to be somewhat different from
+        ## .Call(lme4:::mer_ST_chol, from) 
+        ST <- .Call(lme4:::mer_ST_chol, from)
+        Lmbd <- chk <- list()
+        start <- 0
+        for (bt in seq_along(ngrps)) {
+            chk <- c(chk, rep(ST[bt], ngrps[bt]))
+            lq <- nrow(ST[[bt]])
+            lLmbd <- Matrix(0, lq, lq)
+            end <- start + (lq*(lq+1)/2)
+            lLmbd[lower.tri(lLmbd, diag=TRUE)] <- (start+1):end
+            start <- end
+            lLmbd <- as(lLmbd, "dgCMatrix")
+            Lmbd <- c(Lmbd, rep(list(lLmbd), ngrps[bt]))
+        }
+        LambdatInd <- t(bdiag(Lmbd))
+        chk <- bdiag(chk)
+        ## theta
+        ## the following fails sometimes
+        ## theta <- unname(getME(from, "theta"))
+        ## need to drop here sometimes for some reason...
+        theta <- drop(unlist(sapply(ST, function(z) z[upper.tri(z,diag=TRUE)])))
+        ## Lind
+        Lind <- LambdatInd@x
+        ## Lambdat
+        Lambdat <- LambdatInd
+        Lambdat@x <- theta[Lind]
+        ## check if Lambdat has been constructed correctly
+        ## as dense matrices to avoid problems with zero elements of theta
+        stopifnot(all.equal(as.matrix(chk), as.matrix(Lambdat)))
+        ## u and Zt
+        ## since we have a different Lambda, we also need to
+        ## reorder the rows of Zt and u
+        start <- 0
+        idx <- drop(unlist(sapply(lme4::ranef(from), function(x) {
+            end <- start+prod(dim(x))
+            ret <- (start+1):end
+            start <<- end
+            dim(ret) <- dim(x)
+            t(ret) })))
+        u <- from@u[idx]
+        Zt <- Zt[idx,]
+        ## lower
+        lower <- rep(-Inf, length(theta))
+        lower[unique(diag(LambdatInd))] <- 0
+        ## devcomp
+        devcomp <- list(cmp = from@deviance,
+                        dims = from@dims)
+        ## mu
+        mu <- lme4::fitted(from)
+        ## cnms
+        cnms <- lapply(from@ST, colnames)
+        names(cnms) <- names(lme4:::whichterms(from))
+        ## Add colnames to X
+        colnames(X) <- names(fixef(from))
+    } else if (is(from, "merMod")) {
+        Lambdat <- getME(from, "Lambdat")
+        Lind <- getME(from, "Lind")
+        u <- getME(from, "u")
+        lower <- getME(from, "lower")
+        devcomp <- getME(from, "devcomp")
+        theta <- getME(from, "theta")
+        mu <- from@resp$mu
+        cnms <- from@cnms
+    }
+
+    resp <- new("rlmerResp",
+                mu = mu,
+                offset = model.offset(from@frame),
+                weights = model.weights(from@frame),
+                y = model.response(from@frame))
+    pp <- new("rlmerPredD",
+              X=X,
+              Zt=Zt,
+              Lambdat=Lambdat,
+              Lind=Lind,
+              theta=theta,
+              beta=getME(from, "beta"),
+              b.s=u,
+              lower=lower,
+              v_e=resp$weights,
+              sigma=sigma(from),
+              numpoints=13)
+    b <- findBlocks(Lambdat=Lambdat, Lind=Lind)
+    to <- new("rlmerMod",
+              resp=resp,
+              Gp=getME(from, "Gp"),
+              call=from@call,
+              frame=from@frame,
+              flist=getME(from, "flist"),
+              cnms=cnms,
+              lower=lower,
+              theta=theta,
+              beta=getME(from, "beta"),
+              b.s=u,
+              devcomp=devcomp,
+              pp=pp,
+              rho.e=cPsi,
+              rho.sigma.e=cPsi,
+              method="DAS",
+              b=pp$b,
+              rho.b=rep.int(list(cPsi),length(b$dim)),
+              rho.sigma.b=rep.int(list(cPsi),length(b$dim)),
+              blocks=b$blocks,
+              ind=b$ind,
+              idx=b$idx,
+              dim=b$dim,
+              q=b$q,
+              k=b$k)
+    to@pp$initMatrices(to)
+    to
+}
+
+setAs("lmerMod", "rlmerMod", .convLme4Rlmer)
+setAs("mer", "rlmerMod", .convLme4Rlmer)
 
 setAs("rlmerPredD", "rlmerPredD_DAS", function(from) {
     to <- new("rlmerPredD_DAS")
@@ -623,12 +744,12 @@ setAs("rlmerPredD", "rlmerPredD_DAS", function(from) {
 ## Update methods                                    ##
 #######################################################
 
-##' Update robustness weights after changing any of the relevant
-##' parts in a rlmerMod object
-##'
-##' @title Update robustness weights
-##' @param object rlmerMod object to update
-##' @return rlmerMod object
+## Update robustness weights after changing any of the relevant
+## parts in a rlmerMod object
+##
+## @title Update robustness weights
+## @param object rlmerMod object to update
+## @return rlmerMod object
 updateWeights <- function(object) {
     ## copy estimates from pp to object
     object@theta <- object@pp$theta
@@ -637,25 +758,23 @@ updateWeights <- function(object) {
     object@b <- object@pp$b
     dd <- object@devcomp$dims
     object@devcomp$cmp[ifelse(dd["REML"], "sigmaREML", "sigmaML")] <- object@pp$sigma
-    object@devcomp$cmp[ifelse(dd["REML"], "REML", "dev")] <- object@pp$deviance
     ## Set slots to NA
-    object@devcomp$cmp[c("ldL2", "ldRX2", "wrss", "ussq", "pwrss", "drsum")] <- NA
+    object@devcomp$cmp[c("ldL2", "ldRX2", "wrss", "ussq", "pwrss", "drsum", "REML", "dev")] <- NA
     
     object
 }
 
-##' update pp slot from values in object
-##'
-##' (this does the reverse of updateWeights
-##' 
-##' @title set values in pp
-##' @param object rlmerMod object to update
-##' @return nothing
+## update pp slot from values in object
+##
+## (this does the reverse of updateWeights
+## 
+## @title set values in pp
+## @param object rlmerMod object to update
+## @return nothing
 updatePp <- function(object) {
     object@pp$lower <- object@lower
     dd <- object@devcomp$dims
     object@pp$setSigma(object@devcomp$cmp[[ifelse(dd["REML"], "sigmaREML", "sigmaML")]])
-    object@pp$setDeviance(object@devcomp$cmp[[ifelse(dd["REML"], "REML", "dev")]])
     object@pp$setB.s(object@b.s)
     invisible(object)
 }

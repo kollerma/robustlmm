@@ -2,13 +2,13 @@
 require(robustlmm)
 
 .calcE.D.re <- robustlmm:::.calcE.D.re
-##.calcEchi <- robustlmm:::.calcEchi
 cPsi <- robustlmm:::cPsi
+.d <- robustlmm:::.d
+.d2 <- robustlmm:::.d2
 
 ## simple tests for q = 1:
 test1 <- function(rho) {
     stopifnot(all.equal(.calcE.D.re(1, rho), rho@EDpsi())
-              ## ,all.equal(.calcEchi(1, rho), rho@Epsi2())
               )
 }
 
@@ -24,8 +24,8 @@ test2 <- function(q, rho, npts = 1000000) {
     cat("\nq", q, "\n")
     ## test .calcE.D.re
     integrand <- function(u2, v2, s2) {
-        dk <- sqrt((u2 + v2)/q)
-        (rho@Dpsi(dk)/dk - rho@psi(dk)/dk^2)*u2/dk/q + rho@psi(sqrt(s2/q))/sqrt(s2/q)
+        dk <- .d2(u2 + v2,q)
+        (rho@Dpsi(dk)/dk - rho@psi(dk)/dk^2)/dk*u2 + rho@psi(.d2(s2,q))/.d2(s2,q)
     }
     u2 <- rnorm(npts)^2
     v2 <- rchisq(npts, q-1)
@@ -35,21 +35,11 @@ test2 <- function(q, rho, npts = 1000000) {
     cat(".calcE.D.re:        ", .calcE.D.re(q, rho), "\n")
     #print(all.equal(value, .calcE.D.re(q, rho)))
     stopifnot(all.equal(value, .calcE.D.re(q, rho), tolerance = 1e-2))
-
-    ## ## test .calcEchi
-    ## integrand <- function(u2, v2) {
-    ##     dk <- sqrt((u2 + v2)/q)
-    ##     rho@wgt(dk)^2*u2
-    ## }
-    ## value <- mean(integrand(u2, v2))
-    ## cat("\nImportance Sampling:", value, "\n")
-    ## cat(".calcEchi:          ", .calcEchi(q, rho), "\n")
-    ## stopifnot(all.equal(value, .calcEchi(q, rho), tolerance = 1e-2))
-      
 }
 
-for (q in 1:10) test2(q, cPsi)
-for (q in 1:10) test2(q, smoothPsi)
+for (q in c(2,4)) test2(q, cPsi)
+for (q in c(2,4,10)) test2(q, smoothPsi)
+
 
 
 

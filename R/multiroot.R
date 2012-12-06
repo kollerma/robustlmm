@@ -5,6 +5,7 @@ multiroot <- function(f, start, maxiter=100, rtol=1e-6, atol=1e-8, ctol=1e-8,
                       method = NULL, jacfunc = NULL, ...)  {
     ## revert to rootSolves implementation if no special features are requested
     if (useFortran && is.null(lower)) {
+        require(rootSolve)
         if (!is.null(method)) warning("robustlmm::multiroot: ignoring method argument")
         return(rootSolve::multiroot(f, start, maxiter=maxiter, rtol=rtol, atol=atol, ctol=ctol,
                                     useFortran=useFortran, verbose=verbose, ...))
@@ -32,6 +33,7 @@ multiroot <- function(f, start, maxiter=100, rtol=1e-6, atol=1e-8, ctol=1e-8,
     if (!is.null(lower) && length(lower) != length(start))
         stop("`lower' must be of the same length as start conditions")
     if (is.null(jacfunc)) {
+        require(rootSolve)
         .jacfunc <- function(time,y,parms, ...) f(y, ...)
         ## (smaller pert does just destabilize the iterations)
         jacfunc <- function(x, ...)

@@ -4,14 +4,13 @@ zero.theta.DASexp <- function(par0, object, VERBOSE, ...) {
     par[idx <- par0 < object@lower] <- 0
     ## continue with sanitized parameters
     ## compare with updateTheta
-    setTheta(object, par, fit.effects = TRUE, update.deviance = FALSE, ...)
+    setTheta(object, par, fit.effects = TRUE, ...)
     skbs <- .sumKappa(object)
     
     ret <- rep(0, length(par))
     sigmae <- object@pp$sigma
-    wgt <- .wgtTau(object@rho.sigma.b, object@wExp.b)
-    wgtds <- wgt(.dk(object, sigmae))[object@k]
-    wgtb.s <- sqrt(wgtds) * object@pp$b.s
+    ## FIXME: this is not correct in the non-diagonal case
+    db <- dist.b(object, sigmae)
     idxTheta <- 0
     for (block in seq_along(object@blocks)) {
         if (VERBOSE > 3) {
@@ -20,9 +19,11 @@ zero.theta.DASexp <- function(par0, object, VERBOSE, ...) {
         }
         ldim <- object@dim[block]
         lq <- object@q[block]
-        lind <- object@ind[object@k] == block
+        lind <- object@ind[object@k] == block ## FIXME: == as.vector(object@idx[[blok]])
+        wgtds <- object@rho.sigma.b[[block]]@wgt(db[lind])
+        wgtb.s <- sqrt(wgtds) * object@pp$b.s[lind]
         idxTheta <- max(idxTheta) + 1:(ldim*(ldim+1)/2)
-        wgtb.ss <- wgtb.s[lind] / sigmae
+        wgtb.ss <- wgtb.s / sigmae
         if (all(abs(object@pp$b.s[lind] / sigmae) < 1e-7)) {
             if (VERBOSE > 3) cat("all(abs(b.ss)) < 1e-7 is TRUE, setting theta to 0\n")
             ret[idxTheta] <- 0

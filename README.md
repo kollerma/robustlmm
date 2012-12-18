@@ -16,11 +16,12 @@ linear mixed models are supported. See `?rlmer` for examples.
 Installation
 ------------
 
-This package builds on version `0.9.5` of `robustbase`. At the time of
-writing this version is only available on R-forge, not on CRAN. To install
-directly from R-forge, use:
+This package builds on the *Eigen and S4* implementation of `lme4`. We
+require at least version 0.99999911-0. At the time of writing this version
+is only available on R-forge, not on CRAN. To install directly from
+R-forge, use:
 
-    install.packages("robustbase", repos=c("http://R-Forge.R-project.org",
+    install.packages("lme4", repos=c("http://R-Forge.R-project.org",
                                      getOption("repos")))
 
 Once you have installed the newest version of `lme4`, you can install
@@ -31,6 +32,3 @@ Once you have installed the newest version of `lme4`, you can install
     require(devtools)
     install_github("robustlmm", "kollerma")
     require(robustlmm)
-
-Note: In Windows this requires the `Rtools` to be installed, see
-[here](http://cran.r-project.org/bin/windows/Rtools/).

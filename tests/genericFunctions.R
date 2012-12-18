@@ -53,14 +53,6 @@ ae(vcov(fm), vcov(rfm), check.attr = check.attr, tolerance=1e-4)
 ## confidence intervals
 ## confint(rfm)
 
-## robustness specific (should be moved to getME)
-rho.b(rfm)
-rho.b(rfm, "sigma")
-rho.e(rfm, "sigma")
-rho.e(rfm)
-wgt.b(rfm)
-wgt.e(rfm)
-
 ## other (deprecated?)
 theta(rfm)
 

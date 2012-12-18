@@ -1,0 +1,393 @@
+
+R version 2.15.2 (2012-10-26) -- "Trick or Treat"
+Copyright (C) 2012 The R Foundation for Statistical Computing
+ISBN 3-900051-07-0
+Platform: x86_64-unknown-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> ## testing getME function
+> require(robustlmm)
+Loading required package: robustlmm
+Loading required package: nlme
+Loading required package: lme4
+Loading required package: lattice
+Loading required package: Matrix
+
+Attaching package: 'Matrix'
+
+The following object(s) are masked from 'package:stats':
+
+    toeplitz
+
+
+Attaching package: 'lme4'
+
+The following object(s) are masked from 'package:nlme':
+
+    lmList
+
+Loading required package: MatrixModels
+
+Attaching package: 'MatrixModels'
+
+The following object(s) are masked from 'package:lme4':
+
+    mkRespMod
+
+Loading required package: robustbase
+Loading required package: stats4
+
+Attaching package: 'robustlmm'
+
+The following object(s) are masked from 'package:lme4':
+
+    getME, sigma
+
+> 
+> rfm <- rlmer(Reaction ~ Days + (1|Subject) + (0+Days|Subject), sleepstudy,
++              rho.e = smoothPsi, rho.b=smoothPsi,
++              rho.sigma.e = psi2propII(smoothPsi, k=2.28),
++              rho.sigma.b = psi2propII(smoothPsi, k=2.28))
+Note: Method with signature 'dsparseMatrix#dgeMatrix' chosen for function 'crossprod',
+ target signature 'dsCMatrix#dgeMatrix'.
+ "CsparseMatrix#ddenseMatrix" would also be valid
+> 
+> (nmME <- eval(formals(getME)$name))
+ [1] "X"                "Z"                "Zt"               "u"               
+ [5] "b.s"              "b"                "Gp"               "Lambda"          
+ [9] "Lambdat"          "U_b"              "Lind"             "flist"           
+[13] "beta"             "theta"            "n_rtrms"          "devcomp"         
+[17] "offset"           "lower"            "rho_e"            "rho_b"           
+[21] "rho_sigma_e"      "rho_sigma_b"      "M"                "w_e"             
+[25] "w_b"              "w_b_vector"       "w_sigma_e"        "w_sigma_b"       
+[29] "w_sigma_b_vector"
+> for (nm in nmME) {
++     cat("\nName:", nm, "\n")
++     str(getME(rfm, name=nm))
++ }
+
+Name: X 
+ num [1:180, 1:2] 1 1 1 1 1 1 1 1 1 1 ...
+ - attr(*, "dimnames")=List of 2
+  ..$ : chr [1:180] "1" "2" "3" "4" ...
+  ..$ : chr [1:2] "(Intercept)" "Days"
+ - attr(*, "assign")= int [1:2] 0 1
+
+Name: Z 
+Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
+  ..@ i       : int [1:342] 0 1 2 3 4 5 6 7 8 9 ...
+  ..@ p       : int [1:37] 0 10 20 30 40 50 60 70 80 90 ...
+  ..@ Dim     : int [1:2] 180 36
+  ..@ Dimnames:List of 2
+  .. ..$ : NULL
+  .. ..$ : chr [1:36] "308" "309" "310" "330" ...
+  ..@ x       : num [1:342] 1 1 1 1 1 1 1 1 1 1 ...
+  ..@ factors : list()
+
+Name: Zt 
+Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
+  ..@ i       : int [1:342] 0 0 18 0 18 0 18 0 18 0 ...
+  ..@ p       : int [1:181] 0 1 3 5 7 9 11 13 15 17 ...
+  ..@ Dim     : int [1:2] 36 180
+  ..@ Dimnames:List of 2
+  .. ..$ : chr [1:36] "308" "309" "310" "330" ...
+  .. ..$ : NULL
+  ..@ x       : num [1:342] 1 1 1 1 2 1 3 1 4 1 ...
+  ..@ factors : list()
+
+Name: u 
+ num [1:36] -2.69 -31.96 -31.86 18.07 19.39 ...
+
+Name: b.s 
+ num [1:36] -2.69 -31.96 -31.86 18.07 19.39 ...
+
+Name: b 
+ Named num [1:36] -3.73 -44.34 -44.19 25.07 26.9 ...
+ - attr(*, "names")= chr [1:36] "308" "309" "310" "330" ...
+
+Name: Gp 
+ int [1:3] 0 18 36
+
+Name: Lambda 
+Formal class 'ddiMatrix' [package "Matrix"] with 4 slots
+  ..@ diag    : chr "N"
+  ..@ Dim     : int [1:2] 36 36
+  ..@ Dimnames:List of 2
+  .. ..$ : NULL
+  .. ..$ : NULL
+  ..@ x       : Named num [1:36] 1.39 1.39 1.39 1.39 1.39 ...
+  .. ..- attr(*, "names")= chr [1:36] "Subject.(Intercept)" "Subject.(Intercept)" "Subject.(Intercept)" "Subject.(Intercept)" ...
+
+Name: Lambdat 
+Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
+  ..@ i       : int [1:36] 0 1 2 3 4 5 6 7 8 9 ...
+  ..@ p       : int [1:37] 0 1 2 3 4 5 6 7 8 9 ...
+  ..@ Dim     : int [1:2] 36 36
+  ..@ Dimnames:List of 2
+  .. ..$ : NULL
+  .. ..$ : NULL
+  ..@ x       : Named num [1:36] 1.39 1.39 1.39 1.39 1.39 ...
+  .. ..- attr(*, "names")= chr [1:36] "Subject.(Intercept)" "Subject.(Intercept)" "Subject.(Intercept)" "Subject.(Intercept)" ...
+  ..@ factors : list()
+
+Name: U_b 
+Formal class 'ddiMatrix' [package "Matrix"] with 4 slots
+  ..@ diag    : chr "N"
+  ..@ Dim     : int [1:2] 36 36
+  ..@ Dimnames:List of 2
+  .. ..$ : NULL
+  .. ..$ : NULL
+  ..@ x       : Named num [1:36] 1.39 1.39 1.39 1.39 1.39 ...
+  .. ..- attr(*, "names")= chr [1:36] "Subject.(Intercept)" "Subject.(Intercept)" "Subject.(Intercept)" "Subject.(Intercept)" ...
+
+Name: Lind 
+ int [1:36] 1 1 1 1 1 1 1 1 1 1 ...
+
+Name: flist 
+List of 1
+ $ Subject: Factor w/ 18 levels "308","309","310",..: 1 1 1 1 1 1 1 1 1 1 ...
+ - attr(*, "assign")= int [1:2] 1 1
+
+Name: beta 
+ num [1:2] 251.7 10.7
+
+Name: theta 
+ Named num [1:2] 1.387 0.322
+ - attr(*, "names")= chr [1:2] "Subject.(Intercept)" "Subject.Days"
+
+Name: n_rtrms 
+ int 1
+
+Name: devcomp 
+List of 2
+ $ cmp : Named num [1:10] NA NA NA NA NA ...
+  ..- attr(*, "names")= chr [1:10] "ldL2" "ldRX2" "wrss" "ussq" ...
+ $ dims: Named int [1:12] 180 180 2 178 2 36 1 2 0 2 ...
+  ..- attr(*, "names")= chr [1:12] "N" "n" "p" "nmp" ...
+
+Name: offset 
+ num [1:180] 0 0 0 0 0 0 0 0 0 0 ...
+
+Name: lower 
+ num [1:2] 0 0
+
+Name: rho_e 
+Formal class 'psi_func_cached' [package "robustlmm"] with 11 slots
+  ..@ rho  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. .. ..@ .Data:function (x, k = 1.345, s = 10)  
+  ..@ psi  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. .. ..@ .Data:function (x, k = 1.345, s = 10)  
+  ..@ wgt  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. .. ..@ .Data:function (x, k = 1.345, s = 10)  
+  ..@ Dpsi :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. .. ..@ .Data:function (x, k = 1.345, s = 10)  
+  ..@ Dwgt :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. .. ..@ .Data:function (x, k = 1.345, s = 10)  
+  ..@ tDefs: Named num [1:2] 1.34 10
+  .. ..- attr(*, "names")= chr [1:2] "k" "s"
+  ..@ Erho :Formal class 'functionXal' [package "robustbase"] with 1 slots
+  .. .. ..@ .Data:function (arg = 1)  
+  ..@ Epsi2:Formal class 'functionXal' [package "robustbase"] with 1 slots
+  .. .. ..@ .Data:function (arg = 1)  
+  ..@ EDpsi:Formal class 'functionXal' [package "robustbase"] with 1 slots
+  .. .. ..@ .Data:function (arg = 1)  
+  ..@ name : chr "smoothed Huber"
+  ..@ xtras: list()
+
+Name: rho_b 
+List of 2
+ $ Subject:Formal class 'psi_func_cached' [package "robustlmm"] with 11 slots
+  .. ..@ rho  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (x, k = 1.345, s = 10)  
+  .. ..@ psi  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (x, k = 1.345, s = 10)  
+  .. ..@ wgt  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (x, k = 1.345, s = 10)  
+  .. ..@ Dpsi :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (x, k = 1.345, s = 10)  
+  .. ..@ Dwgt :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (x, k = 1.345, s = 10)  
+  .. ..@ tDefs: Named num [1:2] 1.34 10
+  .. .. ..- attr(*, "names")= chr [1:2] "k" "s"
+  .. ..@ Erho :Formal class 'functionXal' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (arg = 1)  
+  .. ..@ Epsi2:Formal class 'functionXal' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (arg = 1)  
+  .. ..@ EDpsi:Formal class 'functionXal' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (arg = 1)  
+  .. ..@ name : chr "smoothed Huber"
+  .. ..@ xtras: list()
+ $ Subject:Formal class 'psi_func_cached' [package "robustlmm"] with 11 slots
+  .. ..@ rho  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (x, k = 1.345, s = 10)  
+  .. ..@ psi  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (x, k = 1.345, s = 10)  
+  .. ..@ wgt  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (x, k = 1.345, s = 10)  
+  .. ..@ Dpsi :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (x, k = 1.345, s = 10)  
+  .. ..@ Dwgt :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (x, k = 1.345, s = 10)  
+  .. ..@ tDefs: Named num [1:2] 1.34 10
+  .. .. ..- attr(*, "names")= chr [1:2] "k" "s"
+  .. ..@ Erho :Formal class 'functionXal' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (arg = 1)  
+  .. ..@ Epsi2:Formal class 'functionXal' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (arg = 1)  
+  .. ..@ EDpsi:Formal class 'functionXal' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (arg = 1)  
+  .. ..@ name : chr "smoothed Huber"
+  .. ..@ xtras: list()
+
+Name: rho_sigma_e 
+Formal class 'psi_func_cached' [package "robustlmm"] with 11 slots
+  ..@ rho  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. .. ..@ .Data:function (x, k = 2.28, s = 10)  
+  ..@ psi  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. .. ..@ .Data:function (x, k = 2.28, s = 10)  
+  ..@ wgt  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. .. ..@ .Data:function (x, k = 2.28, s = 10)  
+  ..@ Dpsi :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. .. ..@ .Data:function (x, k = 2.28, s = 10)  
+  ..@ Dwgt :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. .. ..@ .Data:function (x, k = 2.28, s = 10)  
+  ..@ tDefs: Named num [1:2] 2.28 10
+  .. ..- attr(*, "names")= chr [1:2] "k" "s"
+  ..@ Erho :Formal class 'functionXal' [package "robustbase"] with 1 slots
+  .. .. ..@ .Data:function (arg = 1)  
+  ..@ Epsi2:Formal class 'functionXal' [package "robustbase"] with 1 slots
+  .. .. ..@ .Data:function (arg = 1)  
+  ..@ EDpsi:Formal class 'functionXal' [package "robustbase"] with 1 slots
+  .. .. ..@ .Data:function (arg = 1)  
+  ..@ name : chr "smoothed Huber, Proposal II"
+  ..@ xtras: list()
+
+Name: rho_sigma_b 
+List of 2
+ $ Subject:Formal class 'psi_func_cached' [package "robustlmm"] with 11 slots
+  .. ..@ rho  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (x, k = 2.28, s = 10)  
+  .. ..@ psi  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (x, k = 2.28, s = 10)  
+  .. ..@ wgt  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (x, k = 2.28, s = 10)  
+  .. ..@ Dpsi :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (x, k = 2.28, s = 10)  
+  .. ..@ Dwgt :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (x, k = 2.28, s = 10)  
+  .. ..@ tDefs: Named num [1:2] 2.28 10
+  .. .. ..- attr(*, "names")= chr [1:2] "k" "s"
+  .. ..@ Erho :Formal class 'functionXal' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (arg = 1)  
+  .. ..@ Epsi2:Formal class 'functionXal' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (arg = 1)  
+  .. ..@ EDpsi:Formal class 'functionXal' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (arg = 1)  
+  .. ..@ name : chr "smoothed Huber, Proposal II"
+  .. ..@ xtras: list()
+ $ Subject:Formal class 'psi_func_cached' [package "robustlmm"] with 11 slots
+  .. ..@ rho  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (x, k = 2.28, s = 10)  
+  .. ..@ psi  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (x, k = 2.28, s = 10)  
+  .. ..@ wgt  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (x, k = 2.28, s = 10)  
+  .. ..@ Dpsi :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (x, k = 2.28, s = 10)  
+  .. ..@ Dwgt :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (x, k = 2.28, s = 10)  
+  .. ..@ tDefs: Named num [1:2] 2.28 10
+  .. .. ..- attr(*, "names")= chr [1:2] "k" "s"
+  .. ..@ Erho :Formal class 'functionXal' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (arg = 1)  
+  .. ..@ Epsi2:Formal class 'functionXal' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (arg = 1)  
+  .. ..@ EDpsi:Formal class 'functionXal' [package "robustbase"] with 1 slots
+  .. .. .. ..@ .Data:function (arg = 1)  
+  .. ..@ name : chr "smoothed Huber, Proposal II"
+  .. ..@ xtras: list()
+
+Name: M 
+List of 5
+ $ M_bb.:Formal class 'dgeMatrix' [package "Matrix"] with 4 slots
+  .. ..@ x       : Named num [1:1296] 15.68 -0.874 -0.874 -0.874 -0.874 ...
+  .. .. ..- attr(*, "names")= chr [1:1296] "Subject.(Intercept)" "Subject.(Intercept)" "Subject.(Intercept)" "Subject.(Intercept)" ...
+  .. ..@ Dim     : int [1:2] 36 36
+  .. ..@ Dimnames:List of 2
+  .. .. ..$ : chr [1:36] "308" "309" "310" "330" ...
+  .. .. ..$ : chr [1:36] "308" "309" "310" "330" ...
+  .. ..@ factors :List of 1
+  .. .. ..$ LU:Formal class 'denseLU' [package "Matrix"] with 3 slots
+  .. .. .. .. ..@ x   : Named num [1:1296] 15.68 -0.0558 -0.0558 -0.0558 -0.0558 ...
+  .. .. .. .. .. ..- attr(*, "names")= chr [1:1296] "Subject.(Intercept)" "Subject.(Intercept)" "Subject.(Intercept)" "Subject.(Intercept)" ...
+  .. .. .. .. ..@ perm: int [1:36] 1 2 3 4 5 6 7 8 9 10 ...
+  .. .. .. .. ..@ Dim : int [1:2] 36 36
+ $ M_XZ :Formal class 'dgeMatrix' [package "Matrix"] with 4 slots
+  .. ..@ x       : Named num [1:72] 11.3 51 11.3 51 11.3 ...
+  .. .. ..- attr(*, "names")= chr [1:72] "Subject.(Intercept)" "Subject.(Intercept)" "Subject.(Intercept)" "Subject.(Intercept)" ...
+  .. ..@ Dim     : int [1:2] 2 36
+  .. ..@ Dimnames:List of 2
+  .. .. ..$ : chr [1:2] "(Intercept)" "Days"
+  .. .. ..$ : chr [1:36] "308" "309" "310" "330" ...
+  .. ..@ factors : list()
+ $ M_bB :Formal class 'dgeMatrix' [package "Matrix"] with 4 slots
+  .. ..@ x       : num [1:72] -0.0943 -0.0943 -0.0943 -0.0943 -0.0943 ...
+  .. ..@ Dim     : int [1:2] 36 2
+  .. ..@ Dimnames:List of 2
+  .. .. ..$ : NULL
+  .. .. ..$ : NULL
+  .. ..@ factors : list()
+ $ M_BB :Formal class 'dgeMatrix' [package "Matrix"] with 4 slots
+  .. ..@ x       : num [1:4] 0.15422 -0.00371 -0.00371 0.00788
+  .. ..@ Dim     : int [1:2] 2 2
+  .. ..@ Dimnames:List of 2
+  .. .. ..$ : NULL
+  .. .. ..$ : NULL
+  .. ..@ factors : list()
+ $ M_bb :Formal class 'dgeMatrix' [package "Matrix"] with 4 slots
+  .. ..@ x       : Named num [1:1296] 0.2325 0.0583 0.0583 0.0583 0.0583 ...
+  .. .. ..- attr(*, "names")= chr [1:1296] "Subject.(Intercept)" "Subject.(Intercept)" "Subject.(Intercept)" "Subject.(Intercept)" ...
+  .. ..@ Dim     : int [1:2] 36 36
+  .. ..@ Dimnames:List of 2
+  .. .. ..$ : NULL
+  .. .. ..$ : NULL
+  .. ..@ factors : list()
+
+Name: w_e 
+ Named num [1:180] 1 1 0.633 1 1 ...
+ - attr(*, "names")= chr [1:180] "1" "2" "3" "4" ...
+
+Name: w_b 
+List of 2
+ $ : num [1:18, 1] 1 0.84 0.842 1 1 ...
+ $ : num [1:18, 1] 0.723 0.976 1 1 1 ...
+
+Name: w_b_vector 
+ num [1:36] 1 0.84 0.842 1 1 ...
+
+Name: w_sigma_e 
+ Named num [1:180] 1 1 1 1 1 ...
+ - attr(*, "names")= chr [1:180] "1" "2" "3" "4" ...
+
+Name: w_sigma_b 
+List of 2
+ $ : num [1:18, 1] 1 1 1 1 1 1 1 1 1 1 ...
+ $ : num [1:18, 1] 1 1 1 1 1 1 1 1 1 1 ...
+
+Name: w_sigma_b_vector 
+ num [1:36] 1 1 1 1 1 1 1 1 1 1 ...
+> 
+> proc.time()
+   user  system elapsed 
+ 46.771   0.150  47.997 

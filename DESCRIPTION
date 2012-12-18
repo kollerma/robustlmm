@@ -1,10 +1,10 @@
 Package: robustlmm
 Type: Package
 Title: Robust Linear Mixed Effects Models
-Version: 0.62
-Date: 2012-11-25
+Version: 0.7
+Date: 2012-11-18
 Author: Manuel Koller
-Maintainer: Manuel Koller <koller@stat.math.ethz.ch>
+Maintainer: Manuel Koller <koller.manuel@gmail.com>
 Description: Robust mixed effects modeling by robustification
     of scoring equations using the Design Adaptive Scale approach.
 License: GPL-2
@@ -18,8 +18,11 @@ Depends:
     robustbase (>= 0.9.5),
     stats4
 Suggests:
+    digest,
+    ggplot2,
+    reshape2,
+    rootSolve,
     xtable,
-    rootSolve
 Imports:
     xtable
 Collate:
@@ -36,3 +39,4 @@ Collate:
     'psiFunc2.R'
     'rlmer.R'
     'zero.theta.R'
+BuildVignettes: no

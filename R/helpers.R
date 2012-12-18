@@ -97,24 +97,24 @@ dist.e <- function(object, sigma = object@pp$sigma) {
     std.e(object, sigma) ## just the usual rescaled residuals
 }
 
-##' wgt.b: Calculate the robustness weights psi(d) / d,
-##'   standardized by sigma. The robustness weights are calculated
-##'   with d the Mahalanobis distance. Each group of correlated items
-##'   then gets a constant weight.
-##'   The robustness weights for the random effects themselves are
-##'   different than the ones used for estimating the size of the
-##'   covariance matrix of the random effects. Those are additionally
-##'   centered. That way, inlier can also be downweighted.
-##'   If \code{center=TRUE}, then the centered distances are used to
-##'   compute the robustness weights and the weight function given
-##'   by rho.sigma.b is used.
-##'
-##' @title Calculate robustness weights
-##' @param object object to use
-##' @param sigma scale for standardization
-##' @param center whether return the centered robustness weights, see Details.
-##' @rdname wgt
-##' @export
+## wgt.b: Calculate the robustness weights psi(d) / d,
+##   standardized by sigma. The robustness weights are calculated
+##   with d the Mahalanobis distance. Each group of correlated items
+##   then gets a constant weight.
+##   The robustness weights for the random effects themselves are
+##   different than the ones used for estimating the size of the
+##   covariance matrix of the random effects. Those are additionally
+##   centered. That way, inlier can also be downweighted.
+##   If \code{center=TRUE}, then the centered distances are used to
+##   compute the robustness weights and the weight function given
+##   by rho.sigma.b is used.
+##
+## @title Calculate robustness weights
+## @param object object to use
+## @param sigma scale for standardization
+## @param center whether return the centered robustness weights, see Details.
+## @rdname wgt
+## @export
 wgt.b <- function(object, sigma = object@pp$sigma, center = FALSE) {
     db <- dist.b(object, sigma, center)
     rho <- rho.b(object, if (center) "sigma" else "default")
@@ -126,11 +126,11 @@ wgt.b <- function(object, sigma = object@pp$sigma, center = FALSE) {
     ret
 }
 
-##' wgt.e: robustness weights of residuals
-##'
-##' @param use.rho.sigma return the weights computed using rho.sigma.
-##' @rdname wgt
-##' @export
+## wgt.e: robustness weights of residuals
+##
+## @param use.rho.sigma return the weights computed using rho.sigma.
+## @rdname wgt
+## @export
 wgt.e <- function(object, sigma = object@pp$sigma, use.rho.sigma = FALSE)
     if (use.rho.sigma) object@rho.sigma.e@wgt(dist.e(object, sigma)) else
        object@rho.e@wgt(dist.e(object, sigma))

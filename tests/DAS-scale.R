@@ -17,6 +17,7 @@ u.lmerMod <- robustlmm:::u.lmerMod
 u.rlmerMod <- robustlmm:::u.rlmerMod
 b.lmerMod <- robustlmm:::b.lmerMod
 b.rlmerMod <- robustlmm:::b.rlmerMod
+rho.e <- robustlmm:::rho.e
 ## lme4
 nobars <- lme4:::nobars
 ## robustbase

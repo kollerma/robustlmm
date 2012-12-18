@@ -52,7 +52,7 @@ Attaching package: 'robustlmm'
 
 The following object(s) are masked from 'package:lme4':
 
-    sigma
+    getME, sigma
 
 > 
 > fit <- function(formula, data, methods =  c("DASvar", "DAStau"),

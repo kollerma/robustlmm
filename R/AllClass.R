@@ -8,7 +8,7 @@ setClass("psi_func_cached", contains = c("psi_func"))
 ## The one thing missing is Ptr (and the lock).
 ##
 ## REVISION: 1611
-## 
+##
 ## @title rlmerPredD
 ## @name rlmerPredD-class
 ## @slot all see rlmerPredD class
@@ -24,7 +24,7 @@ setRefClass("rlmerPredD",
                      Zt      = "dgCMatrix",
                      beta    = "numeric",
                      b.s     = "numeric",
-                     b       = "numeric",                    
+                     b       = "numeric",
                      theta   = "numeric",
                      sigma   = "numeric",
                      n       = "numeric",
@@ -81,7 +81,7 @@ setRefClass("rlmerPredD",
                          p <<- ncol(X)
                          q <<- nrow(Zt)
                          stopifnot(length(theta) > 0L,
-                                   length(Lind) > 0L, 
+                                   length(Lind) > 0L,
                                    all(sort(unique(Lind)) == seq_along(theta)),
                                    length(sigma) == 1,
                                    sigma > 0,
@@ -134,7 +134,7 @@ setRefClass("rlmerPredD",
                      setLambdat = function(value, Lind) {
                          .Lambdat <<- value
                          .Lind <<- as.integer(Lind)
-                         ## get transposed Lind 
+                         ## get transposed Lind
                          LambdaIdx <- .Lambdat
                          LambdaIdx@x <- as.double(Lind)
                          LambdaIdx <- t(LambdaIdx)
@@ -343,7 +343,7 @@ setRefClass("rlmerPredD_DAS",
                      kappa_b <<- calcKappaTauB(object)
                  },
                  setTheta = function(value) {
-                     callSuper(value)                     
+                     callSuper(value)
                      ## update Matrices
                      updateMatrices()
                      ## need to recompute tau and co.
@@ -369,11 +369,11 @@ setRefClass("rlmerPredD_DAS",
                  updateMatrices = function() {
                      if (!isTRUE(calledInit)) initMatrices()
                      if (any(!zeroB)) {
-                         r <- M()                         
+                         r <- M()
                          tmp2 <- tcrossprod(.U_eX, ## X M_Bb U_b Z U_e\inv
                                             crossprod(U_btZt.U_et, r$M_bB))
                          tmp3 <- crossprod(U_btZt.U_et, r$M_bb) ## U_e\inv Z U_b M_bb
-                         
+
                          A <<- tcrossprod(.U_eX %*% r$M_BB, .U_eX) +
                              tmp2 + t(tmp2) + tmp3 %*% U_btZt.U_et
                          Kt <<- -1*(tcrossprod(.U_eX, r$M_bB) + tmp3)
@@ -422,19 +422,19 @@ setRefClass("rlmerResp",
                     sqrtrwt <<- if (!is.null(ll$sqrtrwt))
                         as.numeric(ll$sqrtrwt) else sqrt(weights)
                     wtres   <<- sqrtrwt * (y - mu)
-                },            
+                },
                 updateMu = function(lmu) {
                     mu <<- lmu
                     wtres <<- sqrtrwt * (y - mu)
                 })
             )
-            
+
 
 ##' @title rlmerMod Class
 ##' Class "rlmerMod" of Robustly Fitted Mixed-Effect Models
-##' 
+##'
 ##' A robust mixed-effects model as returned by \code{\link{rlmer}}.
-##' 
+##'
 ##' @name rlmerMod-class
 ##' @aliases rlmerMod-class
 ##' show,rlmerMod-method
@@ -442,7 +442,7 @@ setRefClass("rlmerResp",
 ##' fitted.rlmerMod formula.rlmerMod
 ##' model.frame.rlmerMod model.matrix.rlmerMod print.rlmerMod
 ##' show.rlmerMod summary.rlmerMod
-##' terms.rlmerMod update.rlmerMod 
+##' terms.rlmerMod update.rlmerMod
 ##' vcov.rlmerMod print.summary.rlmer show.summary.rlmer
 ##' summary.summary.rlmer vcov.summary.rlmer
 ##' @docType class
@@ -451,9 +451,9 @@ setRefClass("rlmerResp",
 ##' @seealso \code{\link{rlmer}}
 ##' @keywords classes
 ##' @examples
-##' 
+##'
 ##' showClass("rlmerMod")
-##' 
+##'
 ##' @export
 setClass("rlmerMod",
          representation(resp    = "rlmerResp",
@@ -490,7 +490,7 @@ setClass("rlmerMod",
              v <- validObject(object@rho.sigma.e)
              if (!is.logical(v) || ! v)
                  return(v)
-             if (length(object@b) != length(object@b.s)) 
+             if (length(object@b) != length(object@b.s))
                  return("b and u have to be of the same length")
              if (length(object@blocks) != max(object@ind))
                  return("number of blocks and maximum index in ind must coincide")
@@ -498,7 +498,7 @@ setClass("rlmerMod",
                  return("number of blocks and length of dim must coincide")
              if (! identical(object@dim, sapply(object@idx, NROW)))
                  return("number of rows in idx not equal to dim")
-             nblocks <- sapply(object@idx, NCOL) 
+             nblocks <- sapply(object@idx, NCOL)
              if (! identical(object@q, nblocks * object@dim))
                  return("number of columns in idx not equal to number of subjects")
              if (sum(object@q) != length(object@b.s))
@@ -538,7 +538,7 @@ setClass("rlmerMod",
 ##                     theta=theta, n=from$n, beta0=from$beta,
 ##                     u0=from$b.s)
 ##           if (any(idx)) pp$setTheta(from$theta)
-##           pp          
+##           pp
 ##       },
 ##       replace = function(from, value) {
 ##           if (!missing(value)) {
@@ -617,8 +617,10 @@ setClass("rlmerMod",
         ## create them here
         ## prepare...
         ngrps <- sapply(from@flist, function(x) length(levels(x)))
+        if (!identical(ngrps, ngrps[attr(from@flist, "assign")]))
+            stop("Multiple random effects from the same grouping factor are not allowed using this version of lme4.\n", "Install a newer version of lme4 (http://lme4.r-forge.r-project.org/)")
         ## from@ST seems to be somewhat different from
-        ## .Call(lme4:::mer_ST_chol, from) 
+        ## .Call(lme4:::mer_ST_chol, from)
         ST <- .Call(lme4:::mer_ST_chol, from)
         Lmbd <- chk <- list()
         start <- 0
@@ -657,7 +659,12 @@ setClass("rlmerMod",
             start <<- end
             dim(ret) <- dim(x)
             t(ret) })))
-        u <- from@u[idx]
+        ## need to compute u from b
+        b <- from@ranef[idx]
+        nz <- abs(b)/sigma(from) > 1e-7
+        u <- rep(0, length(idx))
+        if (any(nz)) u[nz] <- solve(t(as.matrix(Lambdat))[nz,nz], b[nz])
+        #u <- from@u[idx]
         Zt <- Zt[idx,]
         ## lower
         lower <- rep(-Inf, length(theta))
@@ -760,14 +767,14 @@ updateWeights <- function(object) {
     object@devcomp$cmp[ifelse(dd["REML"], "sigmaREML", "sigmaML")] <- object@pp$sigma
     ## Set slots to NA
     object@devcomp$cmp[c("ldL2", "ldRX2", "wrss", "ussq", "pwrss", "drsum", "REML", "dev")] <- NA
-    
+
     object
 }
 
 ## update pp slot from values in object
 ##
 ## (this does the reverse of updateWeights
-## 
+##
 ## @title set values in pp
 ## @param object rlmerMod object to update
 ## @return nothing

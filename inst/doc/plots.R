@@ -27,7 +27,7 @@ image.ggplot <- function(x, limits, low = "#132B43", high = "#56B1F7",
             scale_x_continuous(expand = c(0, 0), limits = c(0.5, ncol+0.5)) +
                 scale_y_continuous(limits = c(-0.5, nrow+0.5)) +
                     scale_y_reverse(expand = c(0, 0)) +
-                        opts(legend.position="none") +
+                        theme(legend.position="none") +
                             ylab("Row") + xlab("Column")
 }
 
@@ -55,7 +55,7 @@ ta <- function(obj, ...) {
                        resid = resid(obj),
                        weights = if (is(obj, "rlmerMod")) getME(obj, "w_e") else 1,
                        ...)
-    plt <- ggplot(data, aes(fitted, resid)) + opts(title = title)
+    plt <- ggplot(data, aes(fitted, resid)) + ggtitle(title)
     if (is(obj, "rlmerMod"))
         plt + geom_point(aes(color = weights))
     else plt + geom_point()
@@ -89,7 +89,7 @@ qq <- function(obj, type = c("resid", "ranef"), multiply.weights=FALSE) {
                    ranef = getME(obj, "w_b_vector"))[ord0]
         } else 1
     if (multiply.weights) data0$sample <- data0$sample * data0$weights
-    plt <- ggplot(data0, aes(theoretical, sample)) + opts(title = title)
+    plt <- ggplot(data0, aes(theoretical, sample)) + ggtitle(title)
     plt <-
         if (is(obj, "rlmerMod"))
             plt + geom_point(aes(color = weights))
@@ -154,6 +154,7 @@ augLinesSE <- function(obj, ..., alpha=0.2, bindAlso, subset) {
     geom_ribbon(data=data, aes(ymin=fittedLow, ymax=fittedUp), alpha=alpha, ...)
 }
 augLinesPop <- function(obj, ..., bindAlso, subset) {
+    if (!is(obj, "rlmerMod")) obj <- as(obj, "rlmerMod")
     data <- cbind(obj@frame, fitted=obj@pp$X %*% fixef(obj))
     if (!missing(bindAlso)) data <- cbind(data, bindAlso)
     env <- parent.frame()

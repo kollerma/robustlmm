@@ -1,6 +1,4 @@
 \name{getME}
-\alias{getL}
-\alias{getL,merMod-method}
 \alias{getME}
 \title{Extract or Get Generalize Components from a Fitted Mixed Effects Model}
 \usage{
@@ -74,7 +72,7 @@
   generalized sense -- from a fitted mixed-effects model,
   i.e. from an object of class
   \code{"\linkS4class{rlmerMod}"} or
-  \code{"\linkS4class{merMod}"}.
+  \code{"\linkS4class{mer}"}.
 }
 \details{
   The goal is to provide \dQuote{everything a user may

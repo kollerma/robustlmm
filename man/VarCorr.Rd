@@ -31,7 +31,7 @@
   This function calculates the estimated variances,
   standard deviations, and correlations between the
   random-effects terms in a mixed-effects model, of class
-  \code{\linkS4class{merMod}} (linear, generalized or
+  \code{\linkS4class{rlmerMod}} (linear, generalized or
   nonlinear).  The within-group error variance and standard
   deviation are also calculated.
 }

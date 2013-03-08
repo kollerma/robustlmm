@@ -33,7 +33,7 @@
 ##' entries correspond to the groups as shown by \code{VarCorr(.)}
 ##' when applied to the model fitted with \code{lmer}. A set of
 ##' correlated random effects count as just one group.
-##' 
+##'
 ##' @title Robust linear mixed models
 ##' @param formula a two-sided linear formula object describing the
 ##'   fixed-effects part of the model, with the response on the left of
@@ -84,7 +84,7 @@
 ##'   system.time(rfm.DASvar <- rlmer(Yield ~ (1|Batch), Dyestuff, method="DASvar"))
 ##'
 ##'   compare(rfm.DAStau, rfm.DAStau)
-##' 
+##'
 ##' @export
 rlmer <- function(formula, data, ..., method = "DAStau",
                   rho.e = smoothPsi, rho.b = smoothPsi,
@@ -134,14 +134,14 @@ rlmer <- function(formula, data, ..., method = "DAStau",
     if (substr(method, 1, 3) == "DAS") {
         lobj@pp <- as(lobj@pp, "rlmerPredD_DAS")
         lobj@pp$method <- method
-    } 
+    }
     lobj@pp$initRho(lobj)
     lobj@pp$initMatrices(lobj)
     lobj@pp$updateMatrices()
-   
-    
+
+
     if (!doFit) return(lobj)
-    
+
     ## do not start with theta == 0
     if (any(theta(lobj)[lobj@lower == 0] == 0)) {
         if (verbose > 0)
@@ -153,7 +153,7 @@ rlmer <- function(formula, data, ..., method = "DAStau",
         ## set theta at least once
         setTheta(lobj, theta(lobj), fit.effects = FALSE)
     }
-    
+
     if (verbose > 0) {
         cat("\nrlmer starting values:\n")
         cat("sigma, theta: ", lobj@pp$sigma, ", ", theta(lobj), "\n")
@@ -164,20 +164,20 @@ rlmer <- function(formula, data, ..., method = "DAStau",
 
     ## required for max.iter:
     r <- len(lobj, "theta")
-    
+
     ## do fit
     lobj <- switch(method,
                    `DASvar` = rlmer.fit.DAS.nondiag(lobj, verbose, max.iter, rel.tol, method="DASvar"),
                    `DAStau` = rlmer.fit.DAS(lobj, verbose, max.iter, rel.tol),
                    stop("unknown fitting method"))
-    
+
     if (verbose > 0) {
         cat("sigma, theta: ", lobj@pp$sigma, ", ", theta(lobj), "\n")
         cat("coef: ", lobj@pp$beta, "\n")
-        if (verbose > 1) 
+        if (verbose > 1)
             cat("b.s: ", b.s(lobj), "\n")
     }
-    
+
     return(updateWeights(lobj))
 }
 
@@ -194,7 +194,7 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
         ghw <- apply(as.matrix(expand.grid(lobj@pp$ghw, lobj@pp$ghw, lobj@pp$ghw, lobj@pp$ghw)), 1, prod)
         skbs <- .S(lobj)
     }
-    
+
     ## fit model using EM algorithm
     conv <- FALSE
     convBlks <- rep(FALSE, length(lobj@blocks))
@@ -210,7 +210,7 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
         if (verbose > 0) cat("---- Iteration", iter, " ----\n")
         thetatilde <- theta(lobj)
         sigma <- .sigma(lobj)
-        
+
         ## get expected value of cov(\tvbs)
         q <- len(lobj, "b")
         T <- switch(method,
@@ -251,11 +251,16 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
         WbDelta <- Diagonal(x=wbsDelta)
         T <- WbDelta %*% T
         bs <- sqrt(wbsEta) * lobj@pp$b.s
-        
+
         ## cycle block types
         for(type in seq_along(lobj@blocks)) {
             if (convBlks[type]) next
             bidx <- lobj@idx[[type]]
+            ## catch dropped vc
+            if (all(abs(bs[bidx]) < 1e-7)) {
+                convBlks[type] <- TRUE
+                next
+            }
             s <- nrow(bidx)
             K <- ncol(bidx)
             ## right hand side
@@ -274,7 +279,6 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
                 cat("LHS:", as.vector(lhs), "\n")
                 cat("RHS:", as.vector(rhs), "\n")
             }
-            ## FIXME better dropping behaviour?
             if (isTRUE(all.equal(rhs, lhs, attributes=FALSE, tolerance = rel.tol^2))) {
                 convBlks[type] <- TRUE
                 next
@@ -314,9 +318,9 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
         if (all(convBlks)) conv <- TRUE
     }
 
-    if (iter == max.iter) 
+    if (iter == max.iter)
         warning("iterations did not converge, returning unconverged estimate.")
-        
+
     lobj
 }
 
@@ -335,12 +339,12 @@ rlmer.fit.DAS <- function(lobj, verbose, max.iter, rel.tol) {
         lobj <- rlmer.fit.DAS.nondiag(lobj, verbose, max.iter, rel.tol, method="DAStau")
         return(lobj)
     }
-    
-    ## diagonal only case    
+
+    ## diagonal only case
     lupdateTheta <- switch(lobj@method,
                            DAStau=updateThetaTau,
                            stop("method not supported by rlmer.fit.DAS:", lobj@method))
-    
+
     ## fit
     converged <- FALSE
     theta0 <- theta(lobj)
@@ -356,7 +360,7 @@ rlmer.fit.DAS <- function(lobj, verbose, max.iter, rel.tol) {
         ## fit theta
         lupdateTheta(lobj, max.iter, rel.tol/10, verbose)
         theta1 <- theta(lobj)
-        
+
         if (verbose > 0) {
             cat(sprintf("delta theta: %.12f\n", sum(abs(theta0 - theta1))))
             if (verbose > 1) {
@@ -374,19 +378,19 @@ rlmer.fit.DAS <- function(lobj, verbose, max.iter, rel.tol) {
                 }
             }
         }
-        
+
         ## all zero or change smaller than relative tolerance
         ## all zero: we can't get out of this anyway, so we have to stop.
         converged <- all(theta1 == 0) || sum(abs(theta0 - theta1)) <
-            200*rel.tol*sum(abs(theta0)) 
+            200*rel.tol*sum(abs(theta0))
         if (verbose > 1)
             cat(sprintf("Criterion: %.12f, %.12f", sum(abs(theta0 - theta1)),
                         sum(abs(theta0 - theta1)) / rel.tol / sum(abs(theta0)) / 200), "\n")
         theta0 <- theta1
     }
 
-    if (iter == max.iter) 
+    if (iter == max.iter)
         warning("iterations did not converge, returning unconverged estimate.")
-        
+
     lobj
 }

@@ -3,7 +3,12 @@
 \title{Extract or Get Generalize Components from a Fitted Mixed Effects Model}
 \usage{
   getME(object,
-    name = c("X", "Z", "Zt", "u", "b.s", "b", "Gp", "Lambda", "Lambdat", "U_b", "Lind", "flist", "beta", "theta", "n_rtrms", "devcomp", "offset", "lower", "rho_e", "rho_b", "rho_sigma_e", "rho_sigma_b", "M", "w_e", "w_b", "w_b_vector", "w_sigma_e", "w_sigma_b", "w_sigma_b_vector"))
+    name = c("X", "Z", "Zt", "u", "b.s", "b", "Gp", "Lambda", 
+             "Lambdat", "U_b", "Lind", "flist", "beta", "theta", 
+             "n_rtrms", "devcomp", "offset", "lower", "rho_e", 
+             "rho_b", "rho_sigma_e", "rho_sigma_b", "M", "w_e", 
+             "w_b", "w_b_vector", "w_sigma_e", "w_sigma_b", 
+             "w_sigma_b_vector"))
 }
 \arguments{
   \item{object}{a fitted mixed-effects model of class

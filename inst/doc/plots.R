@@ -25,11 +25,10 @@ image.ggplot <- function(x, limits, low = "#132B43", high = "#56B1F7",
     ggplot(data, aes(j, i, fill = x)) + geom_tile(...) + coord_equal(ratio = 1) +
         scale_fill_continuous(limits=limits, low=low, high=high, na.value = NA) +
             scale_x_continuous(expand = c(0, 0), limits = c(0.5, ncol+0.5)) +
-                scale_y_continuous(limits = c(-0.5, nrow+0.5)) +
-                    scale_y_reverse(expand = c(0, 0)) +
-                        theme(legend.position="none") +
-                            ylab("Row") + xlab("Column")
-}
+                scale_y_reverse(expand = c(0, 0), limits = c(nrow+0.5, -0.5)) +
+                    theme(legend.position="none") +
+                        ylab("Row") + xlab("Column")
+  }
 
 image.ggplot.fast <- function(x, ...) {
     x <- as(x, "dgTMatrix")

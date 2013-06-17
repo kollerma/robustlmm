@@ -94,7 +94,14 @@ rlmer <- function(formula, data, ..., method = "DAStau",
 {
     lcall <- match.call()
     if (missing(init)) {
-        init <- lmer(formula=formula, data=data, REML=TRUE, ...)
+        lcall2 <- lcall
+        lcall2[setdiff(names(formals(rlmer)), names(formals(lmer)))] <- NULL
+        lcall2$doFit <- NULL
+        lcall2$REML <- TRUE
+        lcall2[[1]] <- as.name("lmer")
+        pf <- parent.frame()
+        init <- eval(lcall2, pf)
+        ## init <- lmer(formula=formula, data=data, REML=TRUE, ...)
     } else if (is.function(init)) {
         init <- do.call(init,list(formula=formula, data=data, REML=TRUE, ...))
     }
@@ -103,7 +110,7 @@ rlmer <- function(formula, data, ..., method = "DAStau",
 
     ## give a warning if weights or offset are used
     if (any(lobj@resp$weights != 1))
-        warning("Argument weights is untested.")
+        stop("Argument weights is unsave to use at the moment.")
     if (any(lobj@resp$offset != 0))
         warning("Argument offset is untested.")
 

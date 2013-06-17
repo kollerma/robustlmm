@@ -410,7 +410,7 @@ compare <- function(..., digits = 3, dnames = NULL,
     linfos <- lapply(linfos, getInfo)
     ## check if all methods work at least on the same dataset
     if (length(unique(sapply(linfos, function(x) x$data))) > 1)
-        stop("Comparison has to be for objects fitted to the same dataset")
+        warning("Comparison for objects not fitted to the same dataset")
     ## local helper functions
     .NULLtoNA <- function(lst)
         lapply(lst, function(x) if (is.null(x)) NA else x)

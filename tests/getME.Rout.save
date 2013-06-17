@@ -1,8 +1,7 @@
 
-R version 2.15.2 (2012-10-26) -- "Trick or Treat"
-Copyright (C) 2012 The R Foundation for Statistical Computing
-ISBN 3-900051-07-0
-Platform: i386-w64-mingw32/i386 (32-bit)
+R version 3.0.1 (2013-05-16) -- "Good Sport"
+Copyright (C) 2013 The R Foundation for Statistical Computing
+Platform: x86_64-apple-darwin10.8.0 (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
 You are welcome to redistribute it under certain conditions.
@@ -26,11 +25,11 @@ Loading required package: lattice
 
 Attaching package: 'lme4'
 
-The following object(s) are masked from 'package:nlme':
+The following object is masked from 'package:nlme':
 
-    VarCorr, lmList
+    lmList, VarCorr
 
-The following object(s) are masked from 'package:stats':
+The following object is masked from 'package:stats':
 
     AIC, BIC
 
@@ -40,9 +39,9 @@ Loading required package: stats4
 
 Attaching package: 'robustlmm'
 
-The following object(s) are masked from 'package:lme4':
+The following object is masked from 'package:lme4':
 
-    VarCorr, fixef, getME, sigma
+    fixef, getME, sigma, VarCorr
 
 > 
 > sleepstudy2 <- within(sleepstudy, Group <- letters[1:4])
@@ -51,7 +50,7 @@ The following object(s) are masked from 'package:lme4':
 +              rho.sigma.e = psi2propII(smoothPsi, k=2.28),
 +              rho.sigma.b = psi2propII(smoothPsi, k=2.28),
 +              doFit=FALSE)
-Note: Method with signature 'dsparseMatrix#dgeMatrix' chosen for function 'crossprod',
+Note: method with signature 'dsparseMatrix#dgeMatrix' chosen for function 'crossprod',
  target signature 'dtCMatrix#dgeMatrix'.
  "CsparseMatrix#ddenseMatrix" would also be valid
 > 
@@ -99,10 +98,10 @@ Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
   ..@ factors : list()
 
 Name: u 
- num [1:40] 2.34 39.68 -41.79 -34.59 -40.3 ...
+ num [1:40] 2.34 39.68 -41.79 -34.58 -40.3 ...
 
 Name: b.s 
- num [1:40] 2.34 39.68 -41.79 -34.59 -40.3 ...
+ num [1:40] 2.34 39.68 -41.79 -34.58 -40.3 ...
 
 Name: b 
  num [1:40] 2.26 9.2 -40.4 -8.62 -38.96 ...
@@ -158,7 +157,7 @@ Name: beta
  num [1:2] 251.4 10.5
 
 Name: theta 
- Named num [1:4] 0.9667 0.0152 0.2309 0
+ Named num [1:4] 9.67e-01 1.52e-02 2.31e-01 3.21e-05
  - attr(*, "names")= chr [1:4] "Subject.(Intercept)" "Subject.Days.(Intercept)" "Subject.Days" "Group.(Intercept)"
 
 Name: n_rtrms 
@@ -323,7 +322,7 @@ List of 5
   .. .. ..$ : NULL
   .. ..@ factors :List of 1
   .. .. ..$ LU:Formal class 'denseLU' [package "Matrix"] with 3 slots
-  .. .. .. .. ..@ x   : num [1:1600] 9.1046 0.9367 -0.0535 -0.0551 -0.0535 ...
+  .. .. .. .. ..@ x   : num [1:1600] 9.1047 0.9367 -0.0535 -0.0551 -0.0535 ...
   .. .. .. .. ..@ perm: int [1:40] 1 2 3 4 5 6 7 8 9 10 ...
   .. .. .. .. ..@ Dim : int [1:2] 40 40
  $ M_XZ :Formal class 'dgeMatrix' [package "Matrix"] with 4 slots
@@ -334,7 +333,7 @@ List of 5
   .. .. ..$ : NULL
   .. ..@ factors : list()
  $ M_bB :Formal class 'dgeMatrix' [package "Matrix"] with 4 slots
-  .. ..@ x       : num [1:80] -6.57e-02 -3.31e-18 -6.57e-02 -2.41e-18 -6.57e-02 ...
+  .. ..@ x       : num [1:80] -6.57e-02 7.67e-16 -6.57e-02 7.50e-16 -6.57e-02 ...
   .. ..@ Dim     : int [1:2] 40 2
   .. ..@ Dimnames:List of 2
   .. .. ..$ : NULL
@@ -379,4 +378,4 @@ Name: w_sigma_b_vector
 > 
 > proc.time()
    user  system elapsed 
-   5.03    0.10    5.13 
+  6.127   0.132   6.257 

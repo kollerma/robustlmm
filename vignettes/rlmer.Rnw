@@ -1,6 +1,9 @@
 % -*- mode: noweb; noweb-default-code-mode: R-mode; -*-
 \documentclass[11pt, a4paper]{article}
 
+%\VignetteIndexEntry{robustlmm: Robust Estimating Equations and Examples}
+%\VignetteDepends{ggplot2, reshape2, xtable, robustlmm, digest}
+
 \usepackage[a4paper, text={16cm,25cm}]{geometry}
 \usepackage[utf8]{inputenc}
 \usepackage{natbib}
@@ -388,22 +391,41 @@ st <- function(expr, update.cache=FALSE) {
     }
     structure(elapsed.time, class = "proc_time")
 }
-lqqPsi <- psiFuncCached(rho = function(x, cc) robustbase:::lmrob.psifun(x, cc, "lqq", -1),
-                        psi = function(x, cc) robustbase:::lmrob.psifun(x, cc, "lqq", 0),
-                        Dpsi = function(x, cc) robustbase:::lmrob.psifun(x, cc, "lqq", 1),
-                        wgt = function(x, cc) robustbase:::lmrob.wgtfun(x, cc, "lqq"),
-                        Dwgt = function(x, cc) (robustbase:::lmrob.psifun(x, cc, "lqq", 1) -
-                                               robustbase:::lmrob.wgtfun(x, cc, "lqq"))/x,
-                        name = "lqq",
-                        cc = c(-0.5, 1.5, 0.95, NA))
-
-bisquarePsi <- psiFuncCached(rho = function(x, k) tukeyPsi1(x, k, -1),
-                             psi = function(x, k) tukeyPsi1(x, k, 0),
-                             Dpsi = function(x, k) tukeyPsi1(x, k, 1),
-                             wgt = function(x, k) (1 - (x/k)^2)^2*(abs(x) <= k),
-                             Dwgt = function(x, k) (-(4*(1-(x/k)^2))*x/k^2)*(abs(x) <= k),
-                             name = "bisquare",
-                             k = 4.68)
+if(packageVersion("robustbase") >= "0.9-8")  {
+    lqqPsi <- psiFuncCached(rho = function(x, cc) Mpsi(x, cc, "lqq", -1),
+                            psi = function(x, cc) Mpsi(x, cc, "lqq", 0),
+                            Dpsi = function(x, cc) Mpsi(x, cc, "lqq", 1),
+                            wgt = function(x, cc) Mwgt(x, cc, "lqq"),
+                            Dwgt = function(x, cc) 
+                            (Mpsi(x, cc, "lqq", 1) - Mwgt(x, cc, "lqq"))/x,
+                            name = "lqq",
+                            cc = c(-0.5, 1.5, 0.95, NA))
+    
+    bisquarePsi <- psiFuncCached(rho = function(x, k) Mpsi(x, k, "biweight", -1),
+                                 psi = function(x, k) Mpsi(x, k, "biweight", 0),
+                                 Dpsi = function(x, k) Mpsi(x, k, "biweight", 1),
+                                 wgt = function(x, k) (1 - (x/k)^2)^2*(abs(x) <= k),
+                                 Dwgt = function(x, k) (-(4*(1-(x/k)^2))*x/k^2)*(abs(x) <= k),
+                                 name = "bisquare",
+                                 k = 4.68)
+} else {
+    lqqPsi <- psiFuncCached(rho = function(x, cc) robustbase:::lmrob.psifun(x, cc, "lqq", -1),
+                            psi = function(x, cc) robustbase:::lmrob.psifun(x, cc, "lqq", 0),
+                            Dpsi = function(x, cc) robustbase:::lmrob.psifun(x, cc, "lqq", 1),
+                            wgt = function(x, cc) robustbase:::lmrob.wgtfun(x, cc, "lqq"),
+                            Dwgt = function(x, cc) (robustbase:::lmrob.psifun(x, cc, "lqq", 1) -
+                                robustbase:::lmrob.wgtfun(x, cc, "lqq"))/x,
+                            name = "lqq",
+                            cc = c(-0.5, 1.5, 0.95, NA))
+    
+    bisquarePsi <- psiFuncCached(rho = function(x, k) tukeyPsi1(x, k, -1),
+                                 psi = function(x, k) tukeyPsi1(x, k, 0),
+                                 Dpsi = function(x, k) tukeyPsi1(x, k, 1),
+                                 wgt = function(x, k) (1 - (x/k)^2)^2*(abs(x) <= k),
+                                 Dwgt = function(x, k) (-(4*(1-(x/k)^2))*x/k^2)*(abs(x) <= k),
+                                 name = "bisquare",
+                                 k = 4.68)
+}
 ## make the functions wgt.e and wgt.b accessible again...
 wgt.e <- robustlmm:::wgt.e
 wgt.b <- robustlmm:::wgt.b

@@ -69,6 +69,9 @@
   The method is based on the robustification of the scoring
   equations and an application of the Design Adaptive Scale
   approach.
+
+  Example analyses and theoretical details on the method
+  are available in the vignette (\code{vignette("rlmer")}).
 }
 \details{
   Available fitting methods for theta and sigma.e:
@@ -101,6 +104,6 @@
   compare(rfm.DAStau, rfm.DAStau)
 }
 \seealso{
-  \code{\link[lme4]{lmer}}
+  \code{\link[lme4]{lmer}}, \code{vignette("rlmer")}
 }
 

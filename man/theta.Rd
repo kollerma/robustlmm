@@ -10,4 +10,8 @@
 \description{
   Get theta
 }
+\examples{
+fm <- rlmer(Yield ~ (1|Batch), Dyestuff)
+stopifnot(all.equal(theta(fm), getME(fm, "theta")))
+}
 

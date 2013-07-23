@@ -18,15 +18,14 @@
   a named, numeric vector of fixed-effects estimates.
 }
 \description{
-  Extract the fixed-effects estimates
+  Extract the fixed-effects estimates.
 }
 \details{
   Extract the estimates of the fixed-effects parameters
   from a fitted model.
 }
 \examples{
-## doFit=FALSE to speed up example
-fixef(rlmer(Reaction ~ Days + (Days|Subject), sleepstudy, doFit=FALSE))
+fixef(rlmer(Reaction ~ Days + (1|Subject) + (0+Days|Subject), sleepstudy))
 }
 \keyword{models}
 

@@ -10,6 +10,14 @@
   \item{...}{ignored}
 }
 \description{
-  Simple accessors for estimated residual scale sigma.
+  Simple accessor for estimated residual scale sigma.
+}
+\examples{
+fm <- rlmer(Yield ~ (1|Batch), Dyestuff)
+sigma(fm)
+getME(fm, "devcomp")$cmp[c("sigmaML", "sigmaREML")]
+}
+\seealso{
+  \code{\link{getME}}
 }
 

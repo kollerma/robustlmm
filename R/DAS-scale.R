@@ -147,8 +147,8 @@ calcKappaTau <- function(rho, s=1) {
     }
 }
 
-##' @param object rlmerMod object
-##' @rdname calcKappa
+## @param object rlmerMod object
+## @rdname calcKappa
 calcKappaTauB <- function(object) {
     object@pp$btapply(object@rho.sigma.b, calcKappaTau)
 }

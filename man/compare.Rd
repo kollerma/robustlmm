@@ -20,6 +20,14 @@
   comparison table
 }
 \description{
-  Compare the fits of multiple lmerMod or rlmerMod objects
+  Compare the fits of multiple lmerMod or rlmerMod objects.
+}
+\examples{
+fm1 <- lmer(Yield ~ (1|Batch), Dyestuff)
+fm2 <- rlmer(Yield ~ (1|Batch), Dyestuff)
+compare(fm1, fm2)
+}
+\seealso{
+  \code{\link{xtable.comparison.table}}
 }
 

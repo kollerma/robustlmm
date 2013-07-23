@@ -17,8 +17,10 @@
   smoothness of the bend.
 }
 \examples{
+par(mfrow=c(2,1))
+plot(smoothPsi)
 curve(smoothPsi@psi(x, 1.345, 10), -3, 3, col="red")
-  curve(huberPsi@psi(x, 1.345), -3, 3, add=TRUE)
+curve(huberPsi@psi(x, 1.345), -3, 3, add=TRUE)
 }
 \keyword{datasets}
 

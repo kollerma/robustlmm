@@ -8,8 +8,8 @@
 \alias{print.rlmerMod}
 \alias{print.summary.rlmer}
 \alias{rlmerMod-class}
-\alias{show.rlmerMod}
 \alias{show,rlmerMod-method}
+\alias{show.rlmerMod}
 \alias{show.summary.rlmer}
 \alias{summary.rlmerMod}
 \alias{summary.summary.rlmer}
@@ -27,8 +27,6 @@ A robust mixed-effects model as returned by \code{\link{rlmer}}.}
 
   A robust mixed-effects model as returned by
   \code{\link{rlmer}}.
-
-  ##
 }
 \section{Objects from the Class}{
   Objects are created by calls to \code{\link{rlmer}}.

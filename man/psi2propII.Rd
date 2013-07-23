@@ -14,4 +14,9 @@
   squared weights. The other elements of the psi_func
   object are adapted accordingly.
 }
+\examples{
+par(mfrow=c(2,1))
+plot(smoothPsi)
+plot(psi2propII(smoothPsi))
+}
 

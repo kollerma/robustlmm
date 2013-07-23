@@ -1,6 +1,6 @@
 \name{xtable.comparison.table}
 \alias{xtable.comparison.table}
-\title{Create Latex and HTML tables for \code{compare} output
+\title{Create Latex and HTML tables for output of \code{\link{compare}()}.
 
 This function is a wrapper to \code{table} for objects of class
 \code{comparison.table}. It uses the same arguments as \code{xtable()}.}
@@ -25,15 +25,22 @@ This function is a wrapper to \code{table} for objects of class
   \item{...}{passed to \code{\link{xtable}}.}
 }
 \description{
-  Create Latex and HTML tables for \code{compare} output
+  Create Latex and HTML tables for output of
+  \code{\link{compare}()}.
 
   This function is a wrapper to \code{table} for objects of
   class \code{comparison.table}. It uses the same arguments
   as \code{xtable()}.
 }
+\examples{
+fm1 <- lmer(Yield ~ (1|Batch), Dyestuff)
+fm2 <- rlmer(Yield ~ (1|Batch), Dyestuff)
+require(xtable)
+xtable(compare(fm1, fm2))
+}
 \seealso{
   \code{\link{xtable}},
   \code{\link{print.xtable.comparison.table}} and
-  \code{link{compare}}.
+  \code{\link{compare}}.
 }
 

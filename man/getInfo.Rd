@@ -24,6 +24,13 @@
   used to fit.
 }
 \description{
-  Prepare object for producing a comparison chart.
+  Extract some information from objects returned from
+  \code{\link{rlmer}} and \code{\link{lmer}} in the form of
+  a simple list. Internally used to prepare object for
+  producing a comparison chart in \code{\link{compare}}.
+}
+\examples{
+fm <- rlmer(Yield ~ (1|Batch), Dyestuff)
+str(getInfo(fm))
 }
 

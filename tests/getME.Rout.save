@@ -20,20 +20,25 @@ Type 'q()' to quit R.
 Loading required package: robustlmm
 Loading required package: nlme
 Loading required package: lme4
-Loading required package: Matrix
 Loading required package: lattice
+Loading required package: Matrix
+Loading required package: Rcpp
+Loading required package: RcppEigen
 
 Attaching package: 'lme4'
 
 The following object is masked from 'package:nlme':
 
-    lmList, VarCorr
-
-The following object is masked from 'package:stats':
-
-    AIC, BIC
+    lmList
 
 Loading required package: MatrixModels
+
+Attaching package: 'MatrixModels'
+
+The following object is masked from 'package:lme4':
+
+    mkRespMod
+
 Loading required package: robustbase
 Loading required package: stats4
 
@@ -41,7 +46,7 @@ Attaching package: 'robustlmm'
 
 The following object is masked from 'package:lme4':
 
-    fixef, getME, sigma, VarCorr
+    getME, sigma
 
 > 
 > sleepstudy2 <- within(sleepstudy, Group <- letters[1:4])
@@ -53,6 +58,9 @@ The following object is masked from 'package:lme4':
 Note: method with signature 'dsparseMatrix#dgeMatrix' chosen for function 'crossprod',
  target signature 'dtCMatrix#dgeMatrix'.
  "CsparseMatrix#ddenseMatrix" would also be valid
+Warning message:
+In lme4::lFormula(formula = Reaction ~ Days + (Days | Subject) +  :
+  grouping factors with < 5 sampled levels may give unreliable estimates
 > 
 > (nmME <- eval(formals(getME)$name))
  [1] "X"                "Z"                "Zt"               "u"               
@@ -70,31 +78,31 @@ Note: method with signature 'dsparseMatrix#dgeMatrix' chosen for function 'cross
 
 Name: X 
  num [1:180, 1:2] 1 1 1 1 1 1 1 1 1 1 ...
- - attr(*, "assign")= int [1:2] 0 1
  - attr(*, "dimnames")=List of 2
-  ..$ : NULL
+  ..$ : chr [1:180] "1" "2" "3" "4" ...
   ..$ : chr [1:2] "(Intercept)" "Days"
+ - attr(*, "assign")= int [1:2] 0 1
 
 Name: Z 
 Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
-  ..@ i       : int [1:540] 0 1 2 3 4 5 6 7 8 9 ...
-  ..@ p       : int [1:41] 0 10 20 30 40 50 60 70 80 90 ...
+  ..@ i       : int [1:522] 0 1 2 3 4 5 6 7 8 9 ...
+  ..@ p       : int [1:41] 0 10 19 29 38 48 57 67 76 86 ...
   ..@ Dim     : int [1:2] 180 40
   ..@ Dimnames:List of 2
   .. ..$ : NULL
-  .. ..$ : NULL
-  ..@ x       : num [1:540] 1 1 1 1 1 1 1 1 1 1 ...
+  .. ..$ : chr [1:40] "308" "308" "309" "309" ...
+  ..@ x       : num [1:522] 1 1 1 1 1 1 1 1 1 1 ...
   ..@ factors : list()
 
 Name: Zt 
 Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
-  ..@ i       : int [1:540] 0 1 36 0 1 37 0 1 38 0 ...
-  ..@ p       : int [1:181] 0 3 6 9 12 15 18 21 24 27 ...
+  ..@ i       : int [1:522] 0 36 0 1 37 0 1 38 0 1 ...
+  ..@ p       : int [1:181] 0 2 5 8 11 14 17 20 23 26 ...
   ..@ Dim     : int [1:2] 40 180
   ..@ Dimnames:List of 2
+  .. ..$ : chr [1:40] "308" "308" "309" "309" ...
   .. ..$ : NULL
-  .. ..$ : NULL
-  ..@ x       : num [1:540] 1 0 1 1 1 1 1 2 1 1 ...
+  ..@ x       : num [1:522] 1 1 1 1 1 1 2 1 1 3 ...
   ..@ factors : list()
 
 Name: u 
@@ -104,7 +112,8 @@ Name: b.s
  num [1:40] 2.34 39.68 -41.79 -34.58 -40.3 ...
 
 Name: b 
- num [1:40] 2.26 9.2 -40.4 -8.62 -38.96 ...
+ Named num [1:40] 2.26 9.2 -40.4 -8.62 -38.96 ...
+ - attr(*, "names")= chr [1:40] "308" "308" "309" "309" ...
 
 Name: Gp 
  int [1:3] 0 36 40
@@ -157,7 +166,7 @@ Name: beta
  num [1:2] 251.4 10.5
 
 Name: theta 
- Named num [1:4] 9.67e-01 1.52e-02 2.31e-01 3.21e-05
+ Named num [1:4] 9.67e-01 1.52e-02 2.31e-01 5.44e-06
  - attr(*, "names")= chr [1:4] "Subject.(Intercept)" "Subject.Days.(Intercept)" "Subject.Days" "Group.(Intercept)"
 
 Name: n_rtrms 
@@ -165,10 +174,10 @@ Name: n_rtrms
 
 Name: devcomp 
 List of 2
- $ cmp : Named num [1:13] 1751.99 1743.63 75.96 8.28 25.45 ...
-  ..- attr(*, "names")= chr [1:13] "ML" "REML" "ldL2" "ldRX2" ...
- $ dims: Named int [1:18] 2 180 2 40 1 4 1 1 2 5 ...
-  ..- attr(*, "names")= chr [1:18] "nt" "n" "p" "q" ...
+ $ cmp : Named num [1:10] 7.60e+01 8.28 9.89e+04 1.77e+04 1.17e+05 ...
+  ..- attr(*, "names")= chr [1:10] "ldL2" "ldRX2" "wrss" "ussq" ...
+ $ dims: Named int [1:12] 180 180 2 178 4 40 1 2 0 2 ...
+  ..- attr(*, "names")= chr [1:12] "N" "n" "p" "nmp" ...
 
 Name: offset 
  num [1:180] 0 0 0 0 0 0 0 0 0 0 ...
@@ -315,14 +324,14 @@ List of 2
 Name: M 
 List of 5
  $ M_bb.:Formal class 'dgeMatrix' [package "Matrix"] with 4 slots
-  .. ..@ x       : num [1:1600] 9.105 8.528 -0.487 -0.502 -0.487 ...
+  .. ..@ x       : num [1:1600] 9.105 8.529 -0.488 -0.502 -0.488 ...
   .. ..@ Dim     : int [1:2] 40 40
   .. ..@ Dimnames:List of 2
   .. .. ..$ : NULL
   .. .. ..$ : NULL
   .. ..@ factors :List of 1
   .. .. ..$ LU:Formal class 'denseLU' [package "Matrix"] with 3 slots
-  .. .. .. .. ..@ x   : num [1:1600] 9.1047 0.9367 -0.0535 -0.0551 -0.0535 ...
+  .. .. .. .. ..@ x   : num [1:1600] 9.1052 0.9367 -0.0535 -0.0551 -0.0535 ...
   .. .. .. .. ..@ perm: int [1:40] 1 2 3 4 5 6 7 8 9 10 ...
   .. .. .. .. ..@ Dim : int [1:2] 40 40
  $ M_XZ :Formal class 'dgeMatrix' [package "Matrix"] with 4 slots
@@ -333,7 +342,7 @@ List of 5
   .. .. ..$ : NULL
   .. ..@ factors : list()
  $ M_bB :Formal class 'dgeMatrix' [package "Matrix"] with 4 slots
-  .. ..@ x       : num [1:80] -6.57e-02 7.67e-16 -6.57e-02 7.50e-16 -6.57e-02 ...
+  .. ..@ x       : num [1:80] -6.57e-02 5.51e-16 -6.57e-02 5.67e-16 -6.57e-02 ...
   .. ..@ Dim     : int [1:2] 40 2
   .. ..@ Dimnames:List of 2
   .. .. ..$ : NULL
@@ -378,4 +387,4 @@ Name: w_sigma_b_vector
 > 
 > proc.time()
    user  system elapsed 
-  6.127   0.132   6.257 
+  5.279   0.108   5.378 

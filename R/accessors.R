@@ -56,6 +56,9 @@ rho.b <- function(object, which = "default") {
 ##'
 ##' @title Get theta
 ##' @param object merMod object
+##' @examples
+##' fm <- rlmer(Yield ~ (1|Batch), Dyestuff)
+##' stopifnot(all.equal(theta(fm), getME(fm, "theta")))
 ##' @export
 theta <- function(object) {
     if (is(object, "rlmerMod")) {
@@ -154,6 +157,10 @@ nobs.rlmerMod <- .nobsLmerMod
 ##' @param object rlmerMod object
 ##' @param type type of residuals
 ##' @param ... ignored
+##' @examples
+##' fm <- rlmer(Yield ~ (1|Batch), Dyestuff)
+##' stopifnot(all.equal(resid(fm, type="weighted"),
+##'                     resid(fm) * getME(fm, "w_e")))
 ##' @method residuals rlmerMod
 ##' @importFrom MatrixModels residuals resid
 ##' @S3method residuals rlmerMod
@@ -270,7 +277,6 @@ uArranged <- function(object, b.s = b.s(object)) {
 ##' \code{"rlmerMod"} object \emph{as far} as it is not available by methods, such
 ##' as \code{\link{fixef}}, \code{\link{ranef}}, \code{\link{vcov}}, etc.
 ##'
-##' @aliases getME getL getL,merMod-method
 ##' @param object a fitted mixed-effects model of class
 ##' \code{"\linkS4class{rlmerMod}"}, i.e. typically the result of
 ##' \code{\link{rlmer}()}.

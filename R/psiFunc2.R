@@ -1,8 +1,9 @@
 ##' Create psi_func_cached object using cached numerical integration for
 ##' E... slots.
 ##'
-##' The E... slots will not be fully functional: they just return the
-##' value for the current defaults and ignore their arguments.
+##' Warning: the E... slots will not be fully functional: they just
+##' return the value for the current defaults and ignore their
+##' arguments.
 ##'
 ##' @title psiFuncCached constructor
 ##' @param rho rho-function
@@ -13,6 +14,20 @@
 ##' @param name descriptor of this function family
 ##' @param ... default values for tuning constants
 ##' @return psi_func_cached-class object
+##' @seealso \code{\link{psi_func_cached-class}}
+##' @examples
+##' ## re-define cPsi as psiFuncCached.
+##' F0 <- function(x=1, .) rep.int(0, length(x))
+##' F1 <- function(x=1, .) rep.int(1, length(x))
+##' cPsi2 <- psiFuncCached(rho = function(x, .) x^2 / 2,
+##'                        psi = function(x, .) x,
+##'                        wgt = F1, Dwgt = F0, Dpsi = F1, 
+##'                        name = "classic (x^2/2)",
+##'                        . = Inf ## dummy, need at least one parameter
+##'                        )
+##' stopifnot(all.equal(cPsi@@Erho(), cPsi2@@Erho()),
+##'           all.equal(cPsi@@Epsi2(), cPsi2@@Epsi2()),
+##'           all.equal(cPsi@@EDpsi(), cPsi2@@EDpsi()))
 ##' @export
 psiFuncCached <- function(rho,psi,wgt,Dwgt,Dpsi,name=NULL, ...) {
     lent <- length(dotsargs <- list(...))
@@ -132,6 +147,8 @@ FF1.2 <- function(.) rep.int(1/2, length(.))
 ##'
 ##' Use this psi function to get a classical fit.
 ##' @docType function
+##' @examples
+##' plot(cPsi)
 ##' @export
 cPsi <- psiFunc(rho = function(x, .) x^2 / 2, psi = function(x, .) x,
                  wgt = F1, Dwgt = F0, Dpsi = F1, Erho = FF1.2,
@@ -147,8 +164,10 @@ cPsi <- psiFunc(rho = function(x, .) x^2 / 2, psi = function(x, .) x,
 ##' constant, s, determines the smoothness of the bend.
 ##' @title smoothPsi
 ##' @examples
-##'   curve(smoothPsi@@psi(x, 1.345, 10), -3, 3, col="red")
-##'   curve(huberPsi@@psi(x, 1.345), -3, 3, add=TRUE)
+##' par(mfrow=c(2,1))
+##' plot(smoothPsi)
+##' curve(smoothPsi@@psi(x, 1.345, 10), -3, 3, col="red")
+##' curve(huberPsi@@psi(x, 1.345), -3, 3, add=TRUE)
 ##' @docType function
 ##' @export
 smoothPsi <- psiFuncCached(rho = function(x, k, s) {
@@ -263,7 +282,11 @@ smoothPsi <- psiFuncCached(rho = function(x, k, s) {
 ##' @title Convert to Propsal II weight function
 ##' @param object psi_func object to convert
 ##' @param ... optional, new default arguments passed to chgDefaults.
-##' @alias psi2propII,psi_func-method
+##' @aliases psi2propII,psi_func-method
+##' @examples
+##' par(mfrow=c(2,1))
+##' plot(smoothPsi)
+##' plot(psi2propII(smoothPsi))
 ##' @export
 setGeneric("psi2propII", function(object, ...) standardGeneric("psi2propII"))
 ##' @exportMethod psi2propII

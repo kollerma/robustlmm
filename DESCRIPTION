@@ -1,8 +1,8 @@
 Package: robustlmm
 Type: Package
 Title: Robust Linear Mixed Effects Models
-Version: 1.1
-Date: 2013-06-18
+Version: 1.2
+Date: 2013-07-23
 Author: Manuel Koller
 Maintainer: Manuel Koller <koller.manuel@gmail.com>
 Description: Robust mixed effects modeling by robustification
@@ -39,4 +39,3 @@ Collate:
     'psiFunc2.R'
     'rlmer.R'
     'zero.theta.R'
-BuildVignettes: no

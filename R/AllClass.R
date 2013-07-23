@@ -2,6 +2,7 @@
 ##' @exportClass psi_func_cached
 setClass("psi_func_cached", contains = c("psi_func"))
 
+##' @importFrom Matrix bdiag
 
 ## This is basically a copy of the merPredD-class
 ##
@@ -434,7 +435,6 @@ setRefClass("rlmerResp",
 ##' Class "rlmerMod" of Robustly Fitted Mixed-Effect Models
 ##'
 ##' A robust mixed-effects model as returned by \code{\link{rlmer}}.
-##'
 ##' @name rlmerMod-class
 ##' @aliases rlmerMod-class
 ##' show,rlmerMod-method

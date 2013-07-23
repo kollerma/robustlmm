@@ -66,7 +66,7 @@
   \code{\link{ranef}()}} \item{w_sigma_b_vector}{robustness
   weights associated with the spherical random effects when
   estimating the covariance parameters, returned as one
-  long vector} } }
+  long vector} }}
 }
 \value{
   Unspecified, as very much depending on the
@@ -77,7 +77,7 @@
   generalized sense -- from a fitted mixed-effects model,
   i.e. from an object of class
   \code{"\linkS4class{rlmerMod}"} or
-  \code{"\linkS4class{mer}"}.
+  \code{"\linkS4class{merMod}"}.
 }
 \details{
   The goal is to provide \dQuote{everything a user may

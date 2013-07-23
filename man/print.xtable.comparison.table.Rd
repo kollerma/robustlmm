@@ -21,7 +21,7 @@ Wrapper for \code{print.xtable} for objects of class
   \dQuote{x} in the first column by latex equivalents.}
 
   \item{include.rownames}{include row numbers (names are
-  included in the first column returned by
+  included in the first column returned by\\
   \code{xtable.comparison.table}).}
 
   \item{...}{passed to \code{\link{print.xtable}}.}
@@ -31,6 +31,9 @@ Wrapper for \code{print.xtable} for objects of class
 
   Wrapper for \code{print.xtable} for objects of class
   \code{xtable.comparison.table}.
+}
+\examples{
+## see example in ?xtable.comparison.table
 }
 \seealso{
   \code{\link{print.xtable}},

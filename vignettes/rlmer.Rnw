@@ -1,8 +1,8 @@
 % -*- mode: noweb; noweb-default-code-mode: R-mode; -*-
 \documentclass[11pt, a4paper]{article}
 
-%\VignetteIndexEntry{robustlmm: Robust Estimating Equations and Examples}
-%\VignetteDepends{ggplot2, reshape2, xtable, robustlmm, digest}
+%\VignetteIndexEntry{Examples and some details on the method}
+%\VignetteDepends{ggplot2, reshape2, xtable, robustlmm, digest, robustbase, lme4}
 
 \usepackage[a4paper, text={16cm,25cm}]{geometry}
 \usepackage[utf8]{inputenc}
@@ -370,6 +370,8 @@ require(reshape2)
 source(file.path(rlmerDoc, "ggplot.theme.R"))
 require(xtable)
 require(robustlmm)
+require(robustbase)
+require(lme4)
 source(file.path(rlmerDoc, "plots.R"))
 ## st: function that caches the results and returns the system.time
 require(digest)

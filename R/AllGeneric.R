@@ -6,7 +6,7 @@ isTriangular <- function(...) Matrix:::isTriangular(...)
 ## Accessor methods                                ##
 #####################################################
 
-## Simple accessors for the (spherical) random effects.
+## Simple accessor for the (spherical) random effects.
 ##
 ## @title Random effects accessor
 ## @param object merMod object
@@ -16,11 +16,16 @@ b <- function(object, ...) UseMethod("b")
 ## @rdname b
 u <- function(object, ...) UseMethod("u")
 
-##' Simple accessors for estimated residual scale sigma.
+##' Simple accessor for estimated residual scale sigma.
 ##'
 ##' @title Get sigma
 ##' @param object rlmerMod object
 ##' @param ... ignored
+##' @seealso \code{\link{getME}}
+##' @examples
+##' fm <- rlmer(Yield ~ (1|Batch), Dyestuff)
+##' sigma(fm)
+##' getME(fm, "devcomp")$cmp[c("sigmaML", "sigmaREML")]
 ##' @export
 sigma <- function(object, ...) UseMethod("sigma")
 
@@ -28,7 +33,11 @@ sigma <- function(object, ...) UseMethod("sigma")
 ## Summary / printing methods                      ##
 #####################################################
 
-##' Prepare object for producing a comparison chart.
+##' Extract some information from objects returned from
+##' \code{\link{rlmer}} and \code{\link{lmer}} in the
+##' form of a simple list. Internally used to 
+##' prepare object for producing a comparison chart in
+##' \code{\link{compare}}.
 ##'
 ##' @title getInfo of an object
 ##' @param object object
@@ -36,5 +45,8 @@ sigma <- function(object, ...) UseMethod("sigma")
 ##' @return list with estimated coefficients, estimated
 ##'   variance components, sigma, deviance and
 ##'   parameter configuration used to fit.
+##' @examples
+##' fm <- rlmer(Yield ~ (1|Batch), Dyestuff)
+##' str(getInfo(fm))
 ##' @export
 getInfo <- function(object, ...) UseMethod("getInfo")

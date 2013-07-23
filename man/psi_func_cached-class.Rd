@@ -67,7 +67,8 @@ Class \code{"\linkS4class{psi_func}"}, directly.
 }
 
 \seealso{
-  \code{\linkS4class{psi_func}}
+  Inherits from \code{\linkS4class{psi_func}},
+  constructor \code{\link{psiFuncCached}}.
 }
 \examples{
 showClass("psi_func_cached")

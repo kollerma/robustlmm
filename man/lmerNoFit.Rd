@@ -14,8 +14,8 @@
   lmerMod object
 }
 \description{
-  This functions replaces the deprecated option \code{doFit
-  = FALSE} in lme4.
+  This functions replaces the deprecated option 
+  \code{doFit = FALSE} in lme4.
 }
 \examples{
 rlmer(Yield ~ (1|Batch), Dyestuff, init = lmerNoFit)

@@ -19,7 +19,7 @@ all: $(DRIVERS:=.tex) $(DRIVERS:=.pdf)
 
 ## render pdf and compress it using qpdf
 %.pdf: %.tex *.bib
-	texi2pdf $<
+	echo "require(tools); texi2pdf(\"$<\")" | R --no-save -q
 	qpdf --stream-data=compress $@ temp$@
 	mv temp$@ $@
 

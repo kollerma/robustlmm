@@ -62,24 +62,32 @@
 ##' \code{rho.sigma.e} and \code{rho.sigma.b}). Better robustness will
 ##' lead to a decrease of the efficiency. By default, the tuning
 ##' parameters are set to yield estimates with approximately 95\%
-##' efficiency.
+##' efficiency for the fixed effects. The variance components are
+##' estimated with a lower efficiency but better robustness properties.
 ##'
-##' One has to use different tuning parameters for simple variance
-##' components and for such including correlation parameters:
+##' One has to use different weight functions and tuning parameters
+##' for simple variance components and for such including correlation
+##' parameters. By default, they are chosen appropriately to the model
+##' at hand. However, when using the \code{rho.sigma.e} and
+##' \code{rho.sigma.b} arguments, it is up to the used to specify
+##' the appropriate function.
 ##' \itemize{
-##' \item For simple variance components and the residual error scale,
-##' the approach taken here is analogue to Proposal II in the
-##' location-scale problem (i.e., using the squared robustness weights
-##' of the location estimate for the scale estimate; otherwise the
-##' scale estimate is not robust).
+##' \item For simple variance components and the residual error scale
+##' use the function \code{psi2propII} to change the tuning
+##' parameters. The is similar to Proposal II in the location-scale
+##' problem (i.e., using the squared robustness weights of the
+##' location estimate for the scale estimate; otherwise the scale
+##' estimate is not robust).
 ##'
 ##' \item For random effects modeled with correlation parameters
-##' (referred to as nondiagonal case below), the parameter estimation
-##' problem is multivariate, unlike the case without correlation where
-##' the problem was univariate. For the employed estimator, this
-##' amounts to switching from simple scale estimates to estimating
-##' correlation matrices. Therefore different weight functions have to
-##' be used. Squaring of the weights is no longer necessary. To yield
+##' (referred to as nondiagonal case below), use the
+##' \code{chgDefaults} function to change the tuning parameters. The
+##' parameter estimation problem is multivariate, unlike the case
+##' without correlation where the problem was univariate. For the
+##' employed estimator, this amounts to switching from simple scale
+##' estimates to estimating correlation matrices. Therefore different
+##' weight functions have to be used. Squaring of the weights (using
+##' the function \code{psi2propII}) is no longer necessary. To yield
 ##' estimates with the same efficiency, the tuning parameters for the
 ##' nondiagonal are generally larger than for the simple case. As a
 ##' rule of thumb, one may use the squared tuning parameters of the

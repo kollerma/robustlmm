@@ -14,9 +14,7 @@ Depends:
     methods,
     lme4,
     Matrix,
-    MatrixModels,
     robustbase (>= 0.9.5),
-    stats4
 Suggests:
     digest,
     ggplot2,

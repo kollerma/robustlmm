@@ -162,7 +162,7 @@ nobs.rlmerMod <- .nobsLmerMod
 ##' stopifnot(all.equal(resid(fm, type="weighted"),
 ##'                     resid(fm) * getME(fm, "w_e")))
 ##' @method residuals rlmerMod
-##' @importFrom MatrixModels residuals resid
+##' @importFrom stats residuals resid
 ##' @S3method residuals rlmerMod
 residuals.rlmerMod <- function(object, type = c("response", "weighted"), ...) {
     type <- match.arg(type)

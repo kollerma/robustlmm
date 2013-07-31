@@ -31,16 +31,7 @@ The following object is masked from 'package:nlme':
 
     lmList
 
-Loading required package: MatrixModels
-
-Attaching package: 'MatrixModels'
-
-The following object is masked from 'package:lme4':
-
-    mkRespMod
-
 Loading required package: robustbase
-Loading required package: stats4
 
 Attaching package: 'robustlmm'
 

@@ -59,7 +59,7 @@ Note: method with signature 'dsparseMatrix#dgeMatrix' chosen for function 'cross
  target signature 'dtCMatrix#dgeMatrix'.
  "CsparseMatrix#ddenseMatrix" would also be valid
 Warning message:
-In lme4::lFormula(formula = Reaction ~ Days + (Days | Subject) +  :
+In checkNlevels(reTrms$flist, n = n, control) :
   grouping factors with < 5 sampled levels may give unreliable estimates
 > 
 > (nmME <- eval(formals(getME)$name))
@@ -387,4 +387,4 @@ Name: w_sigma_b_vector
 > 
 > proc.time()
    user  system elapsed 
-  5.279   0.108   5.378 
+  5.423   0.113   5.527 

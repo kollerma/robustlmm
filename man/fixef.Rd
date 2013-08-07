@@ -25,7 +25,8 @@
   from a fitted model.
 }
 \examples{
-fixef(rlmer(Reaction ~ Days + (1|Subject) + (0+Days|Subject), sleepstudy))
+## doFit = FALSE to speed up example
+fixef(rlmer(Reaction ~ Days + (Days|Subject), sleepstudy, doFit=FALSE))
 }
 \keyword{models}
 

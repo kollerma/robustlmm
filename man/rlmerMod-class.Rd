@@ -33,6 +33,12 @@ A robust mixed-effects model as returned by \code{\link{rlmer}}.}
 }
 \examples{
 showClass("rlmerMod")
+
+## convert an object of type 'lmerMod' to 'rlmerMod'
+## to use the methods provided by robustlmm
+fm <- lmer(Yield ~ (1|Batch), Dyestuff)
+rfm <- as(fm, "rlmerMod")
+compare(fm, rfm)
 }
 \seealso{
   \code{\link{rlmer}}

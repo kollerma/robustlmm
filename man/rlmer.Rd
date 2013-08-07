@@ -184,18 +184,18 @@
 }
 \examples{
 ## dropping of VC
-system.time(rlmer(Yield ~ (1|Batch), Dyestuff2))
+system.time(rlmer(Yield ~ (1|Batch), Dyestuff2, method="DASvar"))
 
-## Default method "DAStau"
-system.time(rfm.DAStau <- rlmer(Yield ~ (1|Batch), Dyestuff))
-summary(rfm.DAStau)
-
-## DASvar method (faster, less accurate)
-system.time(rfm.DASvar <- rlmer(Yield ~ (1|Batch), Dyestuff,
-                                method="DASvar"))
-
-compare(rfm.DAStau, rfm.DAStau)
 \dontrun{
+  ## Default method "DAStau"
+  system.time(rfm.DAStau <- rlmer(Yield ~ (1|Batch), Dyestuff))
+  summary(rfm.DAStau)
+  ## DASvar method (faster, less accurate)
+  system.time(rfm.DASvar <- rlmer(Yield ~ (1|Batch), Dyestuff,
+                                  method="DASvar"))
+  ## compare the two
+  compare(rfm.DAStau, rfm.DAStau)
+
   ## Fit variance components with higher efficiency
   ## psi2propII yields squared weights to get robust estimates
   rlmer(diameter ~ 1 + (1|plate) + (1|sample), Penicillin,

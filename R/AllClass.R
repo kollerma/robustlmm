@@ -454,6 +454,12 @@ setRefClass("rlmerResp",
 ##'
 ##' showClass("rlmerMod")
 ##'
+##' ## convert an object of type 'lmerMod' to 'rlmerMod'
+##' ## to use the methods provided by robustlmm
+##' fm <- lmer(Yield ~ (1|Batch), Dyestuff)
+##' rfm <- as(fm, "rlmerMod")
+##' compare(fm, rfm)
+##' 
 ##' @export
 setClass("rlmerMod",
          representation(resp    = "rlmerResp",

@@ -327,7 +327,9 @@ uArranged <- function(object, b.s = b.s(object)) {
 ##' ## shows many methods you should consider *before* using getME():
 ##' methods(class = "rlmerMod")
 ##'
-##' (fm1 <- rlmer(Reaction ~ Days + (Days|Subject), sleepstudy, method="DASvar"))
+##' ## doFit = FALSE to speed up example
+##' (fm1 <- rlmer(Reaction ~ Days + (Days|Subject), sleepstudy,
+##'               method="DASvar", doFit=FALSE))
 ##' Z <- getME(fm1, "Z")
 ##' stopifnot(is(Z, "CsparseMatrix"),
 ##'           c(180,36) == dim(Z),

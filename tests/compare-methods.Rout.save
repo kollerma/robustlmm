@@ -37,7 +37,7 @@ Attaching package: 'robustlmm'
 
 The following object is masked from 'package:lme4':
 
-    getME, sigma
+    getME
 
 > 
 > fit <- function(formula, data, methods =  c("DASvar", "DAStau"),
@@ -126,7 +126,7 @@ The following object is masked from 'package:lme4':
 Note: method with signature 'dsparseMatrix#dgeMatrix' chosen for function 'crossprod',
  target signature 'dsCMatrix#dgeMatrix'.
  "CsparseMatrix#ddenseMatrix" would also be valid
-Time elapsed: 3.232 0.026 3.26 0 0 
+Time elapsed: 3.227 0.028 3.255 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -160,7 +160,7 @@ Rho functions used for fitting:
 -19.822   1.081  33.966 -30.283  67.013 -51.900 
 
 ######## DAStau ########
-Time elapsed: 2.943 0.036 2.98 0 0 
+Time elapsed: 2.898 0.034 2.933 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -222,7 +222,7 @@ sigma               55.5
 +     rho.e = smoothPsi, rho.b = smoothPsi)
 
 ######## DASvar ########
-Time elapsed: 2.084 0.015 2.099 0 0 
+Time elapsed: 1.955 0.009 1.965 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -256,7 +256,7 @@ A B C D E F
 0 0 0 0 0 0 
 
 ######## DAStau ########
-Time elapsed: 3.219 0.041 3.262 0 0 
+Time elapsed: 3.3 0.039 3.339 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -318,7 +318,7 @@ sigma               4.02
 +     rho.e = smoothPsi, rho.b = smoothPsi)
 
 ######## DASvar ########
-Time elapsed: 2.92 0.048 2.969 0 0 
+Time elapsed: 2.892 0.043 2.936 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -366,7 +366,7 @@ Rho functions used for fitting:
 -2.667e-02 -7.956e-01 
 
 ######## DAStau ########
-Time elapsed: 8.545 0.067 8.616 0 0 
+Time elapsed: 8.42 0.066 8.487 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -473,8 +473,8 @@ sigma                0.561
 + }
 > 
 > cat('Time elapsed: ', proc.time(),'\n') # for ``statistical reasons''
-Time elapsed:  27.3 0.314 27.619 0.002 0.003 
+Time elapsed:  26.684 0.294 26.973 0.003 0.003 
 > 
 > proc.time()
    user  system elapsed 
- 27.302   0.317  27.619 
+ 26.687   0.297  26.974 

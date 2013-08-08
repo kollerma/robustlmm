@@ -1,15 +1,12 @@
 \name{getInfo}
 \alias{getInfo}
 \alias{getInfo.lmerMod}
-\alias{getInfo.mer}
 \alias{getInfo.rlmerMod}
 \title{getInfo of an object}
 \usage{
   getInfo(object, ...)
 
   \method{getInfo}{lmerMod} (object, ...)
-
-  \method{getInfo}{mer} (object, ...)
 
   \method{getInfo}{rlmerMod} (object, ...)
 }

@@ -16,19 +16,6 @@ b <- function(object, ...) UseMethod("b")
 ## @rdname b
 u <- function(object, ...) UseMethod("u")
 
-##' Simple accessor for estimated residual scale sigma.
-##'
-##' @title Get sigma
-##' @param object rlmerMod object
-##' @param ... ignored
-##' @seealso \code{\link{getME}}
-##' @examples
-##' fm <- rlmer(Yield ~ (1|Batch), Dyestuff)
-##' sigma(fm)
-##' getME(fm, "devcomp")$cmp[c("sigmaML", "sigmaREML")]
-##' @export
-sigma <- function(object, ...) UseMethod("sigma")
-
 #####################################################
 ## Summary / printing methods                      ##
 #####################################################

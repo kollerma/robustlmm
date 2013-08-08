@@ -12,7 +12,7 @@ LazyLoad: yes
 Depends:
     nlme,
     methods,
-    lme4,
+    lme4 (>= 1.0),
     Matrix,
     robustbase (>= 0.9.5),
 Suggests:

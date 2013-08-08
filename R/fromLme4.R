@@ -7,32 +7,28 @@
 ## Ben Bolker <bolker@mcmaster.ca>
 
 ## minimal changes: merMod -> rlmerMod
-## plus some glue for mer objects, if required
 
-##' Extract the fixed-effects estimates.
-##'
-##' Extract the estimates of the fixed-effects parameters from a fitted model.
-##' @name fixef
-##' @title Extract fixed-effects estimates
-##' @aliases fixef fixed.effects fixef.rlmerMod
-##' @docType methods
-##' @param object any fitted model object from which fixed effects estimates can
-##' be extracted.
-##' @param \dots optional additional arguments. Currently none are used in any
-##' methods.
-##' @return a named, numeric vector of fixed-effects estimates.
-##' @keywords models
-##' @examples
-##' ## doFit = FALSE to speed up example
-##' fixef(rlmer(Reaction ~ Days + (Days|Subject), sleepstudy, doFit=FALSE))
+## Extract the fixed-effects estimates.
+##
+## Extract the estimates of the fixed-effects parameters from a fitted model.
+## @name fixef
+## @title Extract fixed-effects estimates
+## @aliases fixef fixed.effects fixef.rlmerMod
+## @docType methods
+## @param object any fitted model object from which fixed effects estimates can
+## be extracted.
+## @param \dots optional additional arguments. Currently none are used in any
+## methods.
+## @return a named, numeric vector of fixed-effects estimates.
+## @keywords models
+## @examples
+## ## doFit = FALSE to speed up example
+## fixef(rlmer(Reaction ~ Days + (Days|Subject), sleepstudy, doFit=FALSE))
 ##' @importFrom nlme fixef
-##' @export fixef
 ##' @S3method fixef rlmerMod
-##' @S3method fixef mer
-##' @export
+## @export
 fixef.rlmerMod <- function(object, ...)
     structure(object@beta, names = dimnames(object@pp$X)[[2]])
-fixef.mer <- function(object, ...) lme4::fixef(object, ...)
 
 ## Extract the conditional variance-covariance matrix of the fixed-effects
 ## parameters
@@ -93,42 +89,41 @@ mkVarCorr <- function(sc, cnms, nc, theta, nms) {
     ans
 }
 
-##' Extract variance and correlation components
-##'
-##' This function calculates the estimated variances, standard
-##' deviations, and correlations between the random-effects terms in a
-##' mixed-effects model, of class \code{\linkS4class{rlmerMod}}
-##' (linear, generalized or nonlinear).  The within-group error
-##' variance and standard deviation are also calculated.
-##'
-##' @name VarCorr
-##' @aliases VarCorr VarCorr.rlmerMod
-##' @param x a fitted model object, usually an object inheriting from class
-##' \code{\linkS4class{rlmerMod}}.
-##' @param sigma an optional numeric value used as a multiplier for the standard
-##' deviations.  Default is \code{1}.
-##' @param rdig an optional integer value specifying the number of digits used
-##' to represent correlation estimates.  Default is \code{3}.
-##' @return a list of matrices, one for each random effects grouping term.
-##' For each grouping term, the standard deviations and correlation matrices for each grouping term
-##' are stored as attributes \code{"stddev"} and \code{"correlation"}, respectively, of the
-##' variance-covariance matrix, and
-##' the residual standard deviation is stored as attribute \code{"sc"}
-##' (for \code{glmer} fits, this attribute stores the scale parameter of the model).
-##' @author This is modeled after \code{\link[nlme]{VarCorr}} from package
-##' \pkg{nlme}, by Jose Pinheiro and Douglas Bates.
-##' @seealso \code{\link{lmer}}, \code{\link{nlmer}}
-##' @examples
-##' data(Orthodont, package="nlme")
-##' fm1 <- lmer(distance ~ age + (age|Subject), data = Orthodont)
-##' VarCorr(fm1)
-##' @keywords models
+## Extract variance and correlation components
+##
+## This function calculates the estimated variances, standard
+## deviations, and correlations between the random-effects terms in a
+## mixed-effects model, of class \code{\linkS4class{rlmerMod}}
+## (linear, generalized or nonlinear).  The within-group error
+## variance and standard deviation are also calculated.
+##
+## @name VarCorr
+## @aliases VarCorr VarCorr.rlmerMod
+## @param x a fitted model object, usually an object inheriting from class
+## \code{\linkS4class{rlmerMod}}.
+## @param sigma an optional numeric value used as a multiplier for the standard
+## deviations.  Default is \code{1}.
+## @param rdig an optional integer value specifying the number of digits used
+## to represent correlation estimates.  Default is \code{3}.
+## @return a list of matrices, one for each random effects grouping term.
+## For each grouping term, the standard deviations and correlation matrices for each grouping term
+## are stored as attributes \code{"stddev"} and \code{"correlation"}, respectively, of the
+## variance-covariance matrix, and
+## the residual standard deviation is stored as attribute \code{"sc"}
+## (for \code{glmer} fits, this attribute stores the scale parameter of the model).
+## @author This is modeled after \code{\link[nlme]{VarCorr}} from package
+## \pkg{nlme}, by Jose Pinheiro and Douglas Bates.
+## @seealso \code{\link{lmer}}, \code{\link{nlmer}}
+## @examples
+## data(Orthodont, package="nlme")
+## fm1 <- lmer(distance ~ age + (age|Subject), data = Orthodont)
+## VarCorr(fm1)
+## @keywords models
 ##' @importFrom nlme VarCorr
-##' @export VarCorr
+## @export VarCorr
 ##' @S3method VarCorr rlmerMod
-##' @S3method VarCorr mer
 ##' @S3method VarCorr summary.rlmer
-##' @export
+## @export
 VarCorr.rlmerMod <- function(x, sigma, rdig)# <- 3 args from nlme
 {
     ## FIXME:: add type=c("varcov","sdcorr","logs" ?)
@@ -143,7 +138,6 @@ VarCorr.rlmerMod <- function(x, sigma, rdig)# <- 3 args from nlme
     class(m) <- "VarCorr.merMod"
     m
 }
-VarCorr.mer <- function(x, ...) lme4::VarCorr(x, ...)
 VarCorr.summary.rlmer <- function(x, ...) x$varcor
 
 ## FIXME: should ... go to formatVC or to print ... ?
@@ -189,7 +183,7 @@ formatVC <- function(varc, digits = max(3, getOption("digits") - 2),
 }
 
 getFixedFormula <- function(form) {
-    form[[3]] <- if (is.null(nb <- lme4:::nobars(form[[3]]))) 1 else nb
+    form[[3]] <- if (is.null(nb <- lme4::nobars(form[[3]]))) 1 else nb
     form
 }
 

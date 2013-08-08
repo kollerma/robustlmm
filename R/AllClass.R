@@ -618,74 +618,7 @@ setClass("rlmerMod",
 .convLme4Rlmer <- function(from) {
     X <- getME(from, "X")
     Zt <- getME(from, "Zt")
-    if (is(from, "mer")) {
-        ## getME does not provide all slots
-        ## create them here
-        ## prepare...
-        ngrps <- sapply(from@flist, function(x) length(levels(x)))
-        if (!identical(ngrps, ngrps[attr(from@flist, "assign")]))
-            stop("Multiple random effects from the same grouping factor are not allowed using this version of lme4.\n", "Install a newer version of lme4 (http://lme4.r-forge.r-project.org/)")
-        ## from@ST seems to be somewhat different from
-        ## .Call(lme4:::mer_ST_chol, from)
-        ST <- .Call(lme4:::mer_ST_chol, from)
-        Lmbd <- chk <- list()
-        start <- 0
-        for (bt in seq_along(ngrps)) {
-            chk <- c(chk, rep(ST[bt], ngrps[bt]))
-            lq <- nrow(ST[[bt]])
-            lLmbd <- Matrix(0, lq, lq)
-            end <- start + (lq*(lq+1)/2)
-            lLmbd[lower.tri(lLmbd, diag=TRUE)] <- (start+1):end
-            start <- end
-            lLmbd <- as(lLmbd, "dgCMatrix")
-            Lmbd <- c(Lmbd, rep(list(lLmbd), ngrps[bt]))
-        }
-        LambdatInd <- t(bdiag(Lmbd))
-        chk <- bdiag(chk)
-        ## theta
-        ## the following fails sometimes
-        ## theta <- unname(getME(from, "theta"))
-        ## need to drop here sometimes for some reason...
-        theta <- drop(unlist(sapply(ST, function(z) z[upper.tri(z,diag=TRUE)])))
-        ## Lind
-        Lind <- LambdatInd@x
-        ## Lambdat
-        Lambdat <- LambdatInd
-        Lambdat@x <- theta[Lind]
-        ## check if Lambdat has been constructed correctly
-        ## as dense matrices to avoid problems with zero elements of theta
-        stopifnot(all.equal(as.matrix(chk), as.matrix(Lambdat)))
-        ## u and Zt
-        ## since we have a different Lambda, we also need to
-        ## reorder the rows of Zt and u
-        start <- 0
-        idx <- drop(unlist(sapply(lme4::ranef(from), function(x) {
-            end <- start+prod(dim(x))
-            ret <- (start+1):end
-            start <<- end
-            dim(ret) <- dim(x)
-            t(ret) })))
-        ## need to compute u from b
-        b <- from@ranef[idx]
-        nz <- abs(b)/sigma(from) > 1e-7
-        u <- rep(0, length(idx))
-        if (any(nz)) u[nz] <- solve(t(as.matrix(Lambdat))[nz,nz], b[nz])
-        #u <- from@u[idx]
-        Zt <- Zt[idx,]
-        ## lower
-        lower <- rep(-Inf, length(theta))
-        lower[unique(diag(LambdatInd))] <- 0
-        ## devcomp
-        devcomp <- list(cmp = from@deviance,
-                        dims = from@dims)
-        ## mu
-        mu <- lme4::fitted(from)
-        ## cnms
-        cnms <- lapply(from@ST, colnames)
-        names(cnms) <- names(lme4:::whichterms(from))
-        ## Add colnames to X
-        colnames(X) <- names(fixef(from))
-    } else if (is(from, "merMod")) {
+    if (is(from, "merMod")) {
         Lambdat <- getME(from, "Lambdat")
         Lind <- getME(from, "Lind")
         u <- getME(from, "u")
@@ -694,7 +627,7 @@ setClass("rlmerMod",
         theta <- getME(from, "theta")
         mu <- from@resp$mu
         cnms <- from@cnms
-    }
+    } else stop("Unsupported object of class", class(from))
 
     resp <- new("rlmerResp",
                 mu = mu,
@@ -744,7 +677,6 @@ setClass("rlmerMod",
 }
 
 setAs("lmerMod", "rlmerMod", .convLme4Rlmer)
-setAs("mer", "rlmerMod", .convLme4Rlmer)
 
 setAs("rlmerPredD", "rlmerPredD_DAS", function(from) {
     to <- new("rlmerPredD_DAS")

@@ -178,10 +178,7 @@ residuals.rlmerMod <- function(object, type = c("response", "weighted"), ...) {
 ##' @importFrom lme4 sigma
 ##' @S3method sigma rlmerMod
 sigma.rlmerMod <- .sigma
-##' @S3method sigma mer
-sigma.mer <- function(object, ...) lme4::sigma(object, ...)
-##' @S3method sigma merMod
-sigma.merMod <- function(object, ...) lme4:::sigma.merMod(object, ...)
+
 
 ### Get deviance
 .deviance <- function(object, ...) NA
@@ -356,7 +353,7 @@ getME <- function(object,
                   "w_sigma_b", "w_sigma_b_vector"))
 {
     if(missing(name)) stop("'name' must not be missing")
-    if (is(object, "merMod") || is(object, "mer"))
+    if (is(object, "merMod"))
         return(lme4::getME(object, name))
     ## else: assume it's rlmerMod
     stopifnot(length(name <- as.character(name)) == 1,

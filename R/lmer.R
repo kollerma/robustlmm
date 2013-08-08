@@ -10,6 +10,7 @@
 ##' @importMethodsFrom Matrix diag solve determinant t crossprod tcrossprod as.vector drop rowSums rowMeans colSums colMeans chol which
 ##' @examples
 ##'   rlmer(Yield ~ (1|Batch), Dyestuff, init = lmerNoFit)
+##' @importFrom lme4 mkMerMod
 ##' @export
 lmerNoFit <- function(..., initTheta) {
     if (packageVersion("lme4") >= "0.99999911.0") {
@@ -29,7 +30,7 @@ lmerNoFit <- function(..., initTheta) {
                        lower=fm@lower)
         fr <- fm@frame
         ##mc <- fm@call
-        lme4:::mkMerMod(environment(devfun), fakeOpt, reTrms, fr, mc)
+        mkMerMod(environment(devfun), fakeOpt, reTrms, fr, mc)
     } else {
         ## not supported
         warning("lmerNoFit not implemented for this version of lme4, returning regular lmer fit")

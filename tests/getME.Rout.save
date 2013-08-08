@@ -37,7 +37,7 @@ Attaching package: 'robustlmm'
 
 The following object is masked from 'package:lme4':
 
-    getME, sigma
+    getME
 
 > 
 > sleepstudy2 <- within(sleepstudy, Group <- letters[1:4])

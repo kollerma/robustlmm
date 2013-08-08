@@ -177,6 +177,8 @@ findBlocks <- function(obj, Lambdat=obj$Lambdat(), Lind=obj$Lind) {
 ## Summary / printing methods                        ##
 #######################################################
 
+##' @importFrom robustbase summarizeRobWeights
+
 ## Print method
 ## along the lines of printMerenv of lme4
 .printRlmerMod <- function(x, digits = max(3, getOption("digits") - 3),
@@ -252,10 +254,10 @@ findBlocks <- function(obj, Lambdat=obj$Lambdat(), Lind=obj$Lind) {
         }
     }
     ## robustness weights
-    robustbase:::summarizeRobWeights(so$wgt.e, digits=3,
-                                     header="\nRobustness weights for the residuals:")
-    robustbase:::summarizeRobWeights(so$wgt.b, digits=3,
-                                     header="\nRobustness weights for the random effects:")
+    summarizeRobWeights(so$wgt.e, digits=3,
+                        header="\nRobustness weights for the residuals:")
+    summarizeRobWeights(so$wgt.b, digits=3,
+                        header="\nRobustness weights for the random effects:")
     ## rho functions
     cat("\nRho functions used for fitting:\n")
     cat("  Residuals:\n")
@@ -317,17 +319,10 @@ setMethod("show", "rlmerMod", function(object) .printRlmerMod(object))
 ##' @method getInfo lmerMod
 ##' @S3method getInfo lmerMod
 getInfo.lmerMod <- function(object, ...) {
-    if (is(object, "mer")) {
-        lsum <- lme4::summary(object)
-        coefs <- lsum@coefs
-        varcor <- VarCorr(object)
-        isREML <- lme4::isREML(object)
-    } else {
-        lsum <- summary(object)
-        coefs <- lsum$coefficients
-        varcor <- lsum$varcor
-        isREML <- .isREML(object)
-    }
+    lsum <- summary(object)
+    coefs <- lsum$coefficients
+    varcor <- lsum$varcor
+    isREML <- .isREML(object)
     .namedVector <- function(mat) {
         if (is.vector(mat)) return(mat)
         names <- rownames(mat)
@@ -371,11 +366,6 @@ getInfo.lmerMod <- function(object, ...) {
     }
     ret
 }
-
-##' @rdname getInfo
-##' @method getInfo mer
-##' @S3method getInfo mer
-getInfo.mer <- getInfo.lmerMod
 
 ##' @rdname getInfo
 ##' @method getInfo rlmerMod

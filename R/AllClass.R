@@ -298,12 +298,12 @@ setRefClass("rlmerPredD",
                          ## if its almost symmetric, then return symmetrized matrix
                          ## otherwise summary.merMod() and chol() will complain.
                          if (!isSymmetric(cache.unsc, 0)) {
-                             ## warn if default isSymmetric fails
-                             if (!isSymmetric(cache.unsc)) {
-                                 tol <- eval(formals(isSymmetric.matrix)$tol)
-                                 warning("isSymmetric() failed: ",
-                                         all.equal(cache.unsc, t(cache.unsc), tolerance=tol))
-                             }
+                             ## ## warn if default isSymmetric fails
+                             ## if (!isSymmetric(cache.unsc)) {
+                             ##     tol <- eval(formals(isSymmetric.matrix)$tol)
+                             ##     warning("isSymmetric() failed: ",
+                             ##             all.equal(cache.unsc, t(cache.unsc), tolerance=tol))
+                             ## }
                              cache.unsc <<- symmpart(cache.unsc)
                          }
                          set.unsc <<- TRUE

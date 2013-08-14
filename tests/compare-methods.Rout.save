@@ -126,7 +126,7 @@ The following object is masked from 'package:lme4':
 Note: method with signature 'dsparseMatrix#dgeMatrix' chosen for function 'crossprod',
  target signature 'dsCMatrix#dgeMatrix'.
  "CsparseMatrix#ddenseMatrix" would also be valid
-Time elapsed: 3.227 0.028 3.255 0 0 
+Time elapsed: 3.355 0.034 3.391 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -139,7 +139,7 @@ Number of obs: 30, groups: Batch, 6
 
 Fixed effects:
             Estimate Std. Error t value
-(Intercept)  1526.82      21.61   70.65
+(Intercept)  1526.82      22.04   69.27
 
 Robustness weights for the residuals: 
  25 weights are ~= 1. The remaining 5 ones are
@@ -160,7 +160,7 @@ Rho functions used for fitting:
 -19.822   1.081  33.966 -30.283  67.013 -51.900 
 
 ######## DAStau ########
-Time elapsed: 2.898 0.034 2.933 0 0 
+Time elapsed: 3.444 0.04 3.495 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -173,7 +173,7 @@ Number of obs: 30, groups: Batch, 6
 
 Fixed effects:
             Estimate Std. Error t value
-(Intercept)  1526.85      22.57   67.66
+(Intercept)     1527         23   66.38
 
 Robustness weights for the residuals: 
  25 weights are ~= 1. The remaining 5 ones are
@@ -198,31 +198,31 @@ Rho functions used for fitting:
 ################################################
 
 ################ results for DASvar  ##############
-                    IRWLS      
-Coef                           
-(Intercept)         1527 (21.6)
-                               
-VarComp                        
-(Intercept) | Batch 46.7       
-                               
-sigma               54.2       
-                               
+                    IRWLS    
+Coef                         
+(Intercept)         1527 (22)
+                             
+VarComp                      
+(Intercept) | Batch 46.7     
+                             
+sigma               54.2     
+                             
 
 ################ results for DAStau  ##############
-                    IRWLS      
-Coef                           
-(Intercept)         1527 (22.6)
-                               
-VarComp                        
-(Intercept) | Batch 49         
-                               
-sigma               55.5       
-                               
+                    IRWLS    
+Coef                         
+(Intercept)         1527 (23)
+                             
+VarComp                      
+(Intercept) | Batch 49       
+                             
+sigma               55.5     
+                             
 > fit(Yield ~ (1 | Batch), Dyestuff2,
 +     rho.e = smoothPsi, rho.b = smoothPsi)
 
 ######## DASvar ########
-Time elapsed: 1.955 0.009 1.965 0 0 
+Time elapsed: 2.282 0.011 2.305 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -235,7 +235,7 @@ Number of obs: 30, groups: Batch, 6
 
 Fixed effects:
             Estimate Std. Error t value
-(Intercept)   5.6087     0.6777   8.276
+(Intercept)   5.6087     0.7495   7.484
 
 Robustness weights for the residuals: 
  24 weights are ~= 1. The remaining 6 ones are
@@ -256,7 +256,7 @@ A B C D E F
 0 0 0 0 0 0 
 
 ######## DAStau ########
-Time elapsed: 3.3 0.039 3.339 0 0 
+Time elapsed: 3.175 0.041 3.218 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -269,7 +269,7 @@ Number of obs: 30, groups: Batch, 6
 
 Fixed effects:
             Estimate Std. Error t value
-(Intercept)   5.6082     0.6813   8.232
+(Intercept)   5.6082     0.7534   7.444
 
 Robustness weights for the residuals: 
  24 weights are ~= 1. The remaining 6 ones are
@@ -296,7 +296,7 @@ A B C D E F
 ################ results for DASvar  ##############
                     IRWLS       
 Coef                            
-(Intercept)         5.61 (0.678)
+(Intercept)         5.61 (0.749)
                                 
 VarComp                         
 (Intercept) | Batch 0           
@@ -307,7 +307,7 @@ sigma               4
 ################ results for DAStau  ##############
                     IRWLS       
 Coef                            
-(Intercept)         5.61 (0.681)
+(Intercept)         5.61 (0.753)
                                 
 VarComp                         
 (Intercept) | Batch 0           
@@ -318,7 +318,7 @@ sigma               4.02
 +     rho.e = smoothPsi, rho.b = smoothPsi)
 
 ######## DASvar ########
-Time elapsed: 2.892 0.043 2.936 0 0 
+Time elapsed: 2.869 0.05 2.918 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -332,7 +332,7 @@ Number of obs: 144, groups: plate, 24; sample, 6
 
 Fixed effects:
             Estimate Std. Error t value
-(Intercept)  23.0116     0.8927   25.78
+(Intercept)  23.0116     0.8929   25.77
 
 Robustness weights for the residuals: 
  122 weights are ~= 1. The remaining 22 ones are summarized as
@@ -366,7 +366,7 @@ Rho functions used for fitting:
 -2.667e-02 -7.956e-01 
 
 ######## DAStau ########
-Time elapsed: 8.42 0.066 8.487 0 0 
+Time elapsed: 8.389 0.069 8.461 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -380,7 +380,7 @@ Number of obs: 144, groups: plate, 24; sample, 6
 
 Fixed effects:
             Estimate Std. Error t value
-(Intercept)  22.9981     0.9189   25.03
+(Intercept)  22.9981     0.9191   25.02
 
 Robustness weights for the residuals: 
  126 weights are ~= 1. The remaining 18 ones are summarized as
@@ -473,8 +473,8 @@ sigma                0.561
 + }
 > 
 > cat('Time elapsed: ', proc.time(),'\n') # for ``statistical reasons''
-Time elapsed:  26.684 0.294 26.973 0.003 0.003 
+Time elapsed:  27.849 0.331 28.221 0.002 0.003 
 > 
 > proc.time()
    user  system elapsed 
- 26.687   0.297  26.974 
+ 27.851   0.334  28.221 

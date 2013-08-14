@@ -283,9 +283,11 @@ setRefClass("rlmerPredD",
                          if (set.unsc) return(cache.unsc)
                          r <- M()
                          tmp <- if (all(zeroB)) { ## all theta == 0
-                             Epsi2_e * tcrossprod(solve(M_XX, t(sqrtD_e %*% .U_eX)))
+                             Epsi2_e / rho_e@EDpsi() *
+                                 tcrossprod(solve(M_XX, t(sqrtD_e %*% .U_eX)))
                          } else {
-                             Epsi2_e * with(r, M_BB - crossprod(M_bB, Lambda_bD_b %*% M_bB)) +
+                             Epsi2_e / rho_e@EDpsi() *
+                                 with(r, M_BB - crossprod(M_bB, Lambda_bD_b %*% M_bB)) +
                                  if (isDiagonal(U_b)) {
                                      crossprod(Diagonal(x=sqrt(Epsi2_b)) %*% Lambda_b %*% r$M_bB)
                                  } else {

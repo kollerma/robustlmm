@@ -72,7 +72,7 @@
 
 %% Sweave stuff
 \usepackage{color}
-\usepackage{Sweave}
+\usepackage[noae]{Sweave}
 \definecolor{Sinput}{rgb}{0,0,0.56}
 \definecolor{Soutput}{rgb}{0.56,0,0}
 \DefineVerbatimEnvironment{Sinput}{Verbatim}{%
@@ -151,10 +151,10 @@ of mixed effects models in terms of spherical random effects,
 \end{equation}
 where $q$ is the number of random effects (the length of $\vbs$) and $n$ is
 the number of observations (length of $\vec y$). The vector $\vec\theta$
-parametrizes the lower triangular part $\Ubth$ of the Cholesky
+parameterizes the lower triangular part $\Ubth$ of the Cholesky
 decomposition of the covariance matrix of the random effects $\Vbth$, i.e.,
 $\Vbth = \Ubth\Ubth\tr$. We assume the random effects to be ordered in a
-way such that correlated random effects are grouped togheter. The
+way such that correlated random effects are grouped toghether. The
 covariance matrix $\Vbth$ is therefore block diagonal. We use the index $i$
 for observations, $j$ for random effects and $k$ for blocks of random
 effects. For notatinal simplicity, we assume that there is only one type of

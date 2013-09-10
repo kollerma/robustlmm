@@ -126,7 +126,7 @@ The following object is masked from 'package:lme4':
 Note: method with signature 'dsparseMatrix#dgeMatrix' chosen for function 'crossprod',
  target signature 'dsCMatrix#dgeMatrix'.
  "CsparseMatrix#ddenseMatrix" would also be valid
-Time elapsed: 3.355 0.034 3.391 0 0 
+Time elapsed: 3.54 0.037 3.581 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -160,7 +160,7 @@ Rho functions used for fitting:
 -19.822   1.081  33.966 -30.283  67.013 -51.900 
 
 ######## DAStau ########
-Time elapsed: 3.444 0.04 3.495 0 0 
+Time elapsed: 3.21 0.037 3.25 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -222,7 +222,7 @@ sigma               55.5
 +     rho.e = smoothPsi, rho.b = smoothPsi)
 
 ######## DASvar ########
-Time elapsed: 2.282 0.011 2.305 0 0 
+Time elapsed: 2.094 0.01 2.106 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -256,7 +256,7 @@ A B C D E F
 0 0 0 0 0 0 
 
 ######## DAStau ########
-Time elapsed: 3.175 0.041 3.218 0 0 
+Time elapsed: 3.388 0.044 3.435 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -318,7 +318,7 @@ sigma               4.02
 +     rho.e = smoothPsi, rho.b = smoothPsi)
 
 ######## DASvar ########
-Time elapsed: 2.869 0.05 2.918 0 0 
+Time elapsed: 3.112 0.05 3.165 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -366,7 +366,7 @@ Rho functions used for fitting:
 -2.667e-02 -7.956e-01 
 
 ######## DAStau ########
-Time elapsed: 8.389 0.069 8.461 0 0 
+Time elapsed: 8.923 0.075 9.007 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -473,8 +473,8 @@ sigma                0.561
 + }
 > 
 > cat('Time elapsed: ', proc.time(),'\n') # for ``statistical reasons''
-Time elapsed:  27.849 0.331 28.221 0.002 0.003 
+Time elapsed:  28.507 0.336 28.867 0.002 0.004 
 > 
 > proc.time()
    user  system elapsed 
- 27.851   0.334  28.221 
+ 28.509   0.340  28.867 

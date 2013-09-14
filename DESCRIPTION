@@ -1,7 +1,7 @@
 Package: robustlmm
 Type: Package
 Title: Robust Linear Mixed Effects Models
-Version: 1.2-3
+Version: 1.2-4
 Date: 2013-09-10
 Author: Manuel Koller
 Maintainer: Manuel Koller <koller.manuel@gmail.com>
@@ -18,16 +18,17 @@ Suggests:
     rootSolve,
 Imports:
     ggplot2,
+    lattice,
     nlme,
     methods,
     robustbase (>= 0.9.5),
     xtable
 Collate:
-    'accessors.R'
     'ghq.R'
-    'fromLme4.R'
     'AllClass.R'
     'AllGeneric.R'
+    'accessors.R'
+    'fromLme4.R'
     'DAS-scale.R'
     'fit.effects.R'
     'helpers.R'

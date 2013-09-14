@@ -156,6 +156,7 @@ nobs.rlmerMod <- .nobsLmerMod
 ##' @title Get residuals
 ##' @param object rlmerMod object
 ##' @param type type of residuals
+##' @param scaled scale residuals by residual standard deviation (=scale parameter)?
 ##' @param ... ignored
 ##' @examples
 ##' fm <- rlmer(Yield ~ (1|Batch), Dyestuff)
@@ -164,13 +165,16 @@ nobs.rlmerMod <- .nobsLmerMod
 ##' @method residuals rlmerMod
 ##' @importFrom stats residuals resid
 ##' @S3method residuals rlmerMod
-residuals.rlmerMod <- function(object, type = c("response", "weighted"), ...) {
+residuals.rlmerMod <- function(object, type = c("response", "weighted"),
+                               scaled=FALSE, ...) {
     type <- match.arg(type)
-    switch(type,
-           ## FIXME: really??
-           response = object@resp$wtres,
-           weighted = wgt.e(object) * object@resp$wtres,
-           stop("unknown type of residual"))
+    r <- switch(type,
+                ## FIXME: really??
+                response = object@resp$wtres,
+                weighted = wgt.e(object) * object@resp$wtres,
+                stop("unknown type of residual"))
+    if (scaled) r <- r/sigma(object)
+    r
 }
 
 ### Get sigma (so that we are not coercing all the time)
@@ -181,7 +185,8 @@ sigma.rlmerMod <- .sigma
 
 
 ### Get deviance
-.deviance <- function(object, ...) NA
+.deviance <- function(object, ...)
+    stop("Deviance is not defined for rlmerMod objects")
 ##' @S3method deviance rlmerMod
 deviance.rlmerMod <- .deviance
 
@@ -223,15 +228,6 @@ b.lmerMod <- function(object, ...) {
     ret
 }
 
-### Get coefficients
-##' @importFrom stats coef
-##' @S3method coef rlmerMod
-coef.rlmerMod <- function(object, ...) {
-    ret <- list(beta=fixef(object),b=b(object))
-    class(ret) <- "coef.rlmerMod"
-    ret
-}
-
 ### Get ranef
 ##' @importFrom nlme ranef
 ##' @S3method ranef rlmerMod
@@ -239,7 +235,7 @@ ranef.rlmerMod <- function(object, ...) {
     ## FIXME: add postVar, drop and whichel arguments
     b <- b(object)
     ret <- uArrangedNames(object, b.s = b)
-    class(ret) <- "ranef.rlmer"
+    class(ret) <- "ranef.rlmerMod"
     ret
 }
 

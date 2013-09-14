@@ -10,13 +10,13 @@
 \alias{rlmerMod-class}
 \alias{show,rlmerMod-method}
 \alias{show.rlmerMod}
-\alias{show.summary.rlmer}
+\alias{show.summary.rlmerMod}
 \alias{summary.rlmerMod}
-\alias{summary.summary.rlmer}
+\alias{summary.summary.rlmerMod}
 \alias{terms.rlmerMod}
 \alias{update.rlmerMod}
 \alias{vcov.rlmerMod}
-\alias{vcov.summary.rlmer}
+\alias{vcov.summary.rlmerMod}
 \title{rlmerMod Class
 Class "rlmerMod" of Robustly Fitted Mixed-Effect Models
 

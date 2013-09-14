@@ -5,6 +5,10 @@ ae <- function(target, current, ...) {
     print(ret)
     stop("Objects not equal")
 }
+chgClass <- function(object) {
+    class(object) <- sub("(merMod|mer)", "rlmerMod", class(object))
+    object
+}
 
 require(robustlmm)
 
@@ -25,6 +29,8 @@ summary(rfm)
 ## object information
 ## ae(df.residual(fm), df.residual(rfm))
 ae(formula(fm), formula(rfm))
+stopifnot(isLMM(rfm))
+stopifnot(isREML(rfm))
 ae(model.frame(fm), model.frame(rfm))
 ae(model.matrix(fm), model.matrix(rfm), check.attr=FALSE)
 nobs(rfm)
@@ -33,21 +39,23 @@ ae(terms(fm), terms(rfm))
 weights(rfm)
 
 ## basic accessors for the results
-coef(rfm)
+ae(chgClass(coef(fm)), coef(rfm))
 ## dummy.coef(rfm)
-deviance(rfm)
+stopifnot(inherits(try(deviance(rfm), silent=TRUE), "try-error"))
+stopifnot(inherits(try(extractAIC(rfm), silent=TRUE), "try-error"))
+family(rfm)
 ae(fitted(fm), fitted(rfm))
-ae(lme4::fixef(fm), fixef(rfm))
-ranef(rfm)
+ae(fixef(fm), fixef(rfm))
+stopifnot(inherits(try(logLik(rfm), silent=TRUE), "try-error"))
+ae(chgClass(ranef(fm)), ranef(rfm))
 ae(resid(fm), resid(rfm))
 ae(sigma(fm), sigma(rfm))
 ## weighted.residuals(rfm)
 
 ## var-covar methods
-check.attr <- is(fm, "merMod")
 ## VarCorr(rfm)
-ae(lme4::VarCorr(fm), VarCorr(rfm), check.attr=check.attr)
-ae(vcov(fm), vcov(rfm), check.attr = check.attr, tolerance=1e-4)
+ae(chgClass(VarCorr(fm)), VarCorr(rfm))
+ae(vcov(fm), vcov(rfm), tolerance=1e-4)
 ## vcov(rfm)
 
 ## confidence intervals

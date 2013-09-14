@@ -3,12 +3,15 @@
 \title{Get residuals}
 \usage{
   \method{residuals}{rlmerMod} (object,
-    type = c("response", "weighted"), ...)
+    type = c("response", "weighted"), scaled = FALSE, ...)
 }
 \arguments{
   \item{object}{rlmerMod object}
 
   \item{type}{type of residuals}
+
+  \item{scaled}{scale residuals by residual standard
+  deviation (=scale parameter)?}
 
   \item{...}{ignored}
 }

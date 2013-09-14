@@ -16,7 +16,7 @@ fit <- function(formula, data, methods =  c("DASvar", "DAStau"),
                                         rho.e = rho.e, rho.b = rho.b, ...)),
                  "\n")
              fits[[method]][["IRWLS"]] <- m
-             print(m)
+             print(summary(m))
              print(robustlmm:::u.rlmerMod(m), 4)
              if (classic) {
                  ## compare with lmer fit

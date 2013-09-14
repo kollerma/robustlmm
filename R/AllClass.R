@@ -450,8 +450,8 @@ setRefClass("rlmerResp",
 ##' model.frame.rlmerMod model.matrix.rlmerMod print.rlmerMod
 ##' show.rlmerMod summary.rlmerMod
 ##' terms.rlmerMod update.rlmerMod
-##' vcov.rlmerMod print.summary.rlmer show.summary.rlmer
-##' summary.summary.rlmer vcov.summary.rlmer
+##' vcov.rlmerMod print.summary.rlmer show.summary.rlmerMod
+##' summary.summary.rlmerMod vcov.summary.rlmerMod
 ##' @docType class
 ##' @section Objects from the Class: Objects are created by calls to
 ##' \code{\link{rlmer}}.

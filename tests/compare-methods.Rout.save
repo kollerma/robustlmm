@@ -21,8 +21,6 @@ Loading required package: robustlmm
 Loading required package: lme4
 Loading required package: lattice
 Loading required package: Matrix
-Loading required package: Rcpp
-Loading required package: RcppEigen
 
 Attaching package: 'robustlmm'
 
@@ -46,7 +44,7 @@ The following object is masked from 'package:lme4':
 +                                         rho.e = rho.e, rho.b = rho.b, ...)),
 +                  "\n")
 +              fits[[method]][["IRWLS"]] <- m
-+              print(m)
++              print(summary(m))
 +              print(robustlmm:::u.rlmerMod(m), 4)
 +              if (classic) {
 +                  ## compare with lmer fit

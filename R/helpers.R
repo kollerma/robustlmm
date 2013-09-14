@@ -183,8 +183,9 @@ findBlocks <- function(obj, Lambdat=obj$Lambdat(), Lind=obj$Lind) {
 ## along the lines of printMerenv of lme4
 .printRlmerMod <- function(x, digits = max(3, getOption("digits") - 3),
                            correlation = NULL, symbolic.cor = FALSE,
-                           signif.stars = getOption("show.signif.stars"), ...,
-                           so = summary.rlmerMod(x)) {
+                           signif.stars = getOption("show.signif.stars"),
+                           ranef.comp = c("Variance", "Std.Dev."),
+                           ..., so = summary.rlmerMod(x)) {
     ## check if doFit = FALSE is in call
     if (!is.null(so$call$doFit) && !so$call$doFit) {
         cat("Unfitted rlmerMod object. Use update(object, doFit=TRUE) to fit it.\n")
@@ -192,21 +193,12 @@ findBlocks <- function(obj, Lambdat=obj$Lambdat(), Lind=obj$Lind) {
     }
     ## title
     cat(so$methTitle, "\n")
-    ## formula and data
-    if (!is.null(cc <- so$call$formula))
-        cat("Formula:", deparse(cc),"\n")
-    if (!is.null(cc <- so$call$data))
-        cat("   Data:", deparse(cc), "\n")
-    if (!is.null(cc <- so$call$subset))
-        cat(" Subset:", deparse(asOneSidedFormula(cc)[[2]]),"\n")
-    ## random effects
-    cat("\nRandom effects:\n")
-    print(formatVC(so$varcor, digits = digits, useScale = TRUE),
-          quote = FALSE, digits = digits, ...)
-    ngrps <- so$ngrps
-    cat(sprintf("Number of obs: %d, groups: ", so$devcomp$dims[["n"]]))
-    cat(paste(paste(names(ngrps), ngrps, sep = ", "), collapse = "; "))
-    cat("\n")
+    ## these are in fromLme4.R
+    .prt.call(so$call); cat("\n")
+    .prt.VC(so$varcor, digits=digits, useScale= so$useScale,
+	    comp = ranef.comp, ...)
+    .prt.grps(so$ngrps, nobs= so$devcomp$dims[["n"]])
+    
     ## fixed effecs
     ## this part is 1:1 from printMerenv
     p <- nrow(so$coefficients)
@@ -271,8 +263,36 @@ findBlocks <- function(obj, Lambdat=obj$Lambdat(), Lind=obj$Lind) {
     invisible(if (missing("x")) so else x)
 }
 
+.methTitle <- function(object)
+    sprintf("Robust linear mixed model fit by %s", object@method)
+
 ##' @S3method print rlmerMod
-print.rlmerMod <- function(x, ...) .printRlmerMod(x, ...)
+print.rlmerMod <- function(x, digits = max(3, getOption("digits") - 3),
+                           correlation = NULL, symbolic.cor = FALSE,
+                           signif.stars = getOption("show.signif.stars"),
+                           ranef.comp = "Std.Dev.", ...) {
+    ## check if doFit = FALSE is in call
+    if (!is.null(x@call$doFit) && !x@call$doFit) {
+        cat("Unfitted rlmerMod object. Use update(object, doFit=TRUE) to fit it.\n")
+         return(invisible(x))
+    }
+    dims <- (devC <- x@devcomp)$dims
+    ## title
+    cat(.methTitle(x), "\n")
+    .prt.call(x@call)
+    useScale <- as.logical(dims[["useSc"]])
+
+    varcor <- VarCorr(x)
+    .prt.VC(varcor, digits=digits, comp = ranef.comp, ...)
+    ngrps <- sapply(x@flist, function(x) length(levels(x)))
+    .prt.grps(ngrps, nobs= dims[["n"]])
+    if(length(cf <- fixef(x)) >= 0) {
+	cat("Fixed Effects:\n")
+	print.default(format(cf, digits = digits),
+		      print.gap = 2L, quote = FALSE, ...)
+    } else cat("No fixed effect coefficients\n")
+    invisible(x)
+}
 
 ##' @S3method summary rlmerMod
 ## this follows the lines of summary.merMod of lme4
@@ -289,12 +309,9 @@ summary.rlmerMod <- function(object, ...) {
         coefs <- cbind(coefs, coefs[,1]/coefs[,2], deparse.level=0)
         colnames(coefs)[3] <- "t value"
     }
-    ## check whether the methods slot is there
-    ## (for compatibility with older versions of rlmer)
-    mName <- sprintf("Robust linear mixed model fit by %s", object@method)
     varcor <- VarCorr(object)
 
-    structure(list(methTitle=mName, devcomp=devC,
+    structure(list(methTitle=.methTitle(object), devcomp=devC,
                    ngrps=sapply(object@flist, function(x) length(levels(x))),
                    coefficients=coefs, sigma=sig,
                    vcov=vcov(object, correlation=TRUE, sigm=sig),
@@ -306,14 +323,12 @@ summary.rlmerMod <- function(object, ...) {
                    rho.sigma.e=rho.e(object, "sigma"),
                    rho.b=rho.b(object),
                    rho.sigma.b=rho.b(object, "sigma")
-                   ), class = "summary.rlmer")
+                   ), class = "summary.rlmerMod")
 }
-##' @S3method print summary.rlmer
-print.summary.rlmer <- function(x, ...) {
+##' @S3method print summary.rlmerMod
+print.summary.rlmerMod <- function(x, ...) {
     .printRlmerMod(..., so = x)
 }
-##' @exportMethod show
-setMethod("show", "rlmerMod", function(object) .printRlmerMod(object))
 
 ##' @rdname getInfo
 ##' @method getInfo lmerMod
@@ -359,10 +374,12 @@ getInfo.lmerMod <- function(object, ...) {
                 sigma = sigma(object))
     corrs <- .getCorr(varcor)
     if (length(corrs) > 0) ret$correlations <- corrs
-    if (isREML) {
-        ret$REML <- deviance(object)
-    } else {
-        ret$deviance <- deviance(object)
+    if (!is(object, "rlmerMod")) {
+        if (isREML) {
+            ret$REML <- deviance(object)
+        } else {
+            ret$deviance <- deviance(object)
+        }
     }
     ret
 }

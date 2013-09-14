@@ -151,3 +151,44 @@ print.rlmerMod_plots <- function(x, ask=interactive() & length(x) > 1, ...) {
     }
     invisible(lapply(x, print))
 }
+
+### --- FIXME: These plot functions are just little hacks, should redo
+### --- them in ggplot at some point.
+
+##' @importFrom lattice dotplot
+##' @S3method  dotplot ranef.rlmerMod
+dotplot.ranef.rlmerMod <- function(x, data, ...) {
+    class(x) <- "ranef.mer"
+    dotplot(x, data, ...)
+}
+
+##' @importFrom graphics plot
+##' @S3method plot ranef.rlmerMod
+plot.ranef.rlmerMod <- function(x, y, ...) {
+    class(x) <- "ranef.mer"
+    plot(x, y, ...)
+}
+
+##' @importFrom lattice qqmath
+##' @S3method qqmath ranef.rlmerMod
+qqmath.ranef.rlmerMod <- function(x, data, ...) {
+    class(x) <- "ranef.rlmerMod"
+    qqmath(x, data, ...)
+}
+
+##' @importFrom graphics plot
+##' @S3method plot coef.rlmerMod
+plot.coef.rlmerMod <- function(x, y, ...) {
+    ## remove non-varying columns from frames
+    reduced <- lapply(x, function(el)
+		      el[, !sapply(el, function(cc) all(cc == cc[1]))])
+    plot.ranef.rlmerMod(reduced, ...)
+}
+
+##' @importFrom lattice dotplot
+##' @S3method dotplot coef.rlmerMod
+dotplot.coef.rlmerMod <- function(x, data, ...) {
+    mc <- match.call()
+    mc[[1]] <- as.name("dotplot.ranef.rlmerMod")
+    eval(mc)
+}

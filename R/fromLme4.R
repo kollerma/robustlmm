@@ -13,39 +13,14 @@
 ## minimal changes: merMod -> rlmerMod
 ## and replaced with a stop message if not defined
 
-## coef() method for all kinds of "mer", "*merMod", ... objects
-## ------  should work with fixef() + ranef()  alone
-coefRlmerMod <- function(object, ...)
-{
-    if (length(list(...)))
-	warning('arguments named "', paste(names(list(...)), collapse = ", "),
-                '" ignored')
-    fef <- data.frame(rbind(fixef(object)), check.names = FALSE)
-    ref <- ranef(object)
-    ## check for variables in RE but missing from FE, fill in zeros in FE accordingly
-    refnames <- unlist(lapply(ref,colnames))
-    nmiss <- length(missnames <- setdiff(refnames,names(fef)))
-    if (nmiss >0) {
-        fillvars <- setNames(data.frame(rbind(rep(0,nmiss))),missnames)
-        fef <- cbind(fillvars,fef)
-    }
-    val <- lapply(ref, function(x)
-		  fef[rep.int(1L, nrow(x)),,drop = FALSE])
-    for (i in seq(a = val)) {
-	refi <- ref[[i]]
-	row.names(val[[i]]) <- row.names(refi)
-	nmsi <- colnames(refi)
-	if (!all(nmsi %in% names(fef)))
-	    stop("unable to align random and fixed effects")
-	for (nm in nmsi) val[[i]][[nm]] <- val[[i]][[nm]] + refi[,nm]
-    }
-    class(val) <- "coef.rlmerMod"
-    val
-} ##  {coefRlmerMod}
-
 ##' @importFrom stats coef
 ##' @S3method coef rlmerMod
-coef.rlmerMod <- coefRlmerMod
+coef.rlmerMod <- function(object, ...) {
+    class(object) <- "lmerMod"
+    val <- coef(object, ...)
+    class(val) <- "coef.rlmerMod"
+    val
+}
 
 ## deviance is in accessors.R
 
@@ -94,16 +69,9 @@ getFixedFormula <- function(form) {
 
 ##' @importFrom stats formula
 ##' @S3method formula rlmerMod
-formula.rlmerMod <- function(x, fixed.only=FALSE, ...) {
-    if (is.null(form <- attr(x@frame,"formula"))) {
-        if (!grepl("rlmer$",deparse(getCall(x)[[1]])))
-            stop("can't find formula stored in model frame or call")
-        form <- as.formula(formula(getCall(x),...))
-    }
-    if (fixed.only) {
-        form <- getFixedFormula(form)
-    }
-    form
+formula.rlmerMod <- function(x, ...) {
+    class(x) <- "lmerMod"
+    formula(x)
 }
 
 ##' @importFrom lme4 isREML
@@ -121,15 +89,9 @@ logLik.rlmerMod <- function(object, REML = NULL, ...)
 
 ##' @importFrom stats model.frame
 ##' @S3method model.frame rlmerMod
-model.frame.rlmerMod <- function(formula, fixed.only=FALSE, ...) {
-    fr <- formula@frame
-    if (fixed.only) {
-        ff <- formula(formula,fixed.only=TRUE)
-        ## thanks to Thomas Leeper and Roman Luštrik, Stack Overflow
-        vars <- rownames(attr(terms.formula(ff), "factors"))
-        fr <- fr[vars]
-    }
-    fr
+model.frame.rlmerMod <- function(formula, ...) {
+    class(formula) <- "lmerMod"
+    model.frame(formula, ...)
 }
 
 ##' @importFrom stats model.matrix
@@ -150,13 +112,9 @@ model.matrix.rlmerMod <- function(object, ...) object@pp$X
 
 ##' @importFrom stats terms
 ##' @S3method terms rlmerMod
-terms.rlmerMod <- function(x, fixed.only=TRUE, ...) {
-  if (fixed.only) {
-      tt <- terms.formula(formula(x,fixed.only=TRUE))
-      attr(tt,"predvars") <- attr(attr(x@frame,"terms"),"predvars.fixed")
-      tt
-  }
-  else attr(x@frame,"terms")
+terms.rlmerMod <- function(x, ...) {
+    class(x) <- "lmerMod"
+    terms(x, ...)
 }
 
 ## update is in helpers.R
@@ -200,34 +158,13 @@ setMethod("show", "rlmerMod", function(object) print.rlmerMod(object))
 
 ## getME is in helpers.R
 
-## Extract the conditional variance-covariance matrix of the fixed-effects
-## parameters
-##
-## @title Extract conditional covariance matrix of fixed effects
-## @param sigma numeric scalar, the residual standard error
-## @param unsc matrix of class \code{"\linkS4class{dpoMatrix}"}, the
-##     unscaled variance-covariance matrix
-## @param nmsX character vector of column names of the model matrix
-## @param correlation logical scalar, should the correlation matrix
-##     also be evaluated.
-## @param ... additional, optional parameters.  None are used at present.
-mkVcov <- function(sigma, unsc, nmsX, correlation = TRUE, ...) {
-    V <- sigma^2 * unsc
-    if(is.null(rr <- tryCatch(as(V, "dpoMatrix"),
-			      error = function(e) NULL)))
-	stop("Computed variance-covariance matrix is not positive definite")
-    dimnames(rr) <- list(nmsX, nmsX)
-    if(correlation)
-	rr@factors$correlation <-
-	    if(!is.na(sigma)) as(rr, "corMatrix") else rr # (is NA anyway)
-    rr
-}
-
 ##' @importFrom stats vcov
 ##' @S3method vcov rlmerMod
-vcov.rlmerMod <- function(object, correlation = TRUE, sigm = sigma(object), ...)
-    mkVcov(sigm, unsc = object@pp$unsc(), nmsX = colnames(object@pp$X),
-   correlation=correlation, ...)
+vcov.rlmerMod <- function(object, correlation = TRUE, sigm =
+                          sigma(object), ...) {
+    class(object) <- "lmerMod"
+    vcov(object, correlation=correlation, sigm=sigm, ...)
+}
 
 ##' @importFrom stats vcov
 ##' @S3method vcov summary.rlmerMod
@@ -236,63 +173,25 @@ vcov.summary.rlmerMod <- function(object, correlation = TRUE, ...) {
     object$vcov
 }
 
-##' @importFrom lme4 mkVarCorr
-
-## Extract variance and correlation components
-##
-## This function calculates the estimated variances, standard deviations, and
-## correlations between the random-effects terms in a mixed-effects model, of
-## class \code{\linkS4class{merMod}} (linear, generalized or nonlinear).  The
-## within-group error variance and standard deviation are also calculated.
-##
-## @name VarCorr
-## @aliases VarCorr VarCorr.merMod
-## @param x a fitted model object, usually an object inheriting from class
-## \code{\linkS4class{merMod}}.
-## @param sigma an optional numeric value used as a multiplier for the standard
-## deviations.  Default is \code{1}.
-## @param rdig an optional integer value specifying the number of digits used
-## to represent correlation estimates.  Default is \code{3}.
-## @return a list of matrices, one for each random effects grouping term.
-## For each grouping term, the standard deviations and correlation matrices for each grouping term
-## are stored as attributes \code{"stddev"} and \code{"correlation"}, respectively, of the
-## variance-covariance matrix, and
-## the residual standard deviation is stored as attribute \code{"sc"}
-## (for \code{glmer} fits, this attribute stores the scale parameter of the model).
-## @author This is modeled after \code{\link[nlme]{VarCorr}} from package
-## \pkg{nlme}, by Jose Pinheiro and Douglas Bates.
-## @seealso \code{\link{lmer}}, \code{\link{nlmer}}
-## @examples
-## data(Orthodont, package="nlme")
-## fm1 <- lmer(distance ~ age + (age|Subject), data = Orthodont)
-## VarCorr(fm1)
-## @keywords models
 ##' @importFrom nlme VarCorr
-## @export VarCorr
 ##' @method VarCorr rlmerMod
 ##' @export
 VarCorr.rlmerMod <- function(x, sigma, rdig)# <- 3 args from nlme
 {
-  ## FIXME:: would like to fix nlme to add ...
-  ## FIXME:: add type=c("varcov","sdcorr","logs" ?)
-    if (is.null(cnms <- x@cnms))
-	stop("VarCorr methods require reTrms, not just reModule")
-    if(missing(sigma)) # "bug": fails via default 'sigma=sigma(x)'
-	sigma <- lme4::sigma(x)  ## FIXME: do we still need lme4:: ?
-    nc <- vapply(cnms, length, 1L) # no. of columns per term
-    structure(mkVarCorr(sigma, cnms=cnms, nc=nc, theta = x@theta,
-			nms = {fl <- x@flist; names(fl)[attr(fl, "assign")]}),
-	      useSc = as.logical(x@devcomp$dims["useSc"]),
-	      class = "VarCorr.rlmerMod")
+    class(x) <- "lmerMod"
+    val <- VarCorr(x, sigma, rdig)
+    class(val) <- "VarCorr.rlmerMod"
+    val
 }
 
 ##' @S3method VarCorr summary.rlmerMod
 VarCorr.summary.rlmerMod <- function(x, ...) x$varcor
 
 ##' @S3method print VarCorr.rlmerMod
-print.VarCorr.rlmerMod <- function(x, digits = max(3, getOption("digits") - 2),
-		   comp = "Std.Dev.", ...)
-    print(formatVC(x, digits=digits, comp=comp), quote=FALSE, ...)
+print.VarCorr.rlmerMod <- function(x, ...) {
+    class(x) <- "VarCorr.lmerMod"
+    print(x, ...)
+}
 
 ## __NOT YET EXPORTED__
 ## "format()" the 'VarCorr' matrix of the random effects -- for

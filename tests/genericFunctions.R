@@ -68,3 +68,12 @@ theta(rfm)
 getInfo(rfm)
 compare(fm, rfm)
 update(rfm, ~ . + Covar)
+
+## predict method (various examples)
+ae(predict(fm), predict(rfm))
+ae(predict(fm,REform=NA), predict(rfm,REform=NA))
+newdata <- with(sleepstudy, expand.grid(Subject=unique(Subject),
+                                        Days=3:5, Group=letters[1:2]))
+ae(predict(fm,newdata), predict(rfm,newdata))
+ae(predict(fm,newdata,REform=NA), predict(rfm,newdata,REform=NA))
+ae(predict(fm,newdata,REform=~(1|Subject)), predict(rfm,newdata,REform=~(1|Subject)))

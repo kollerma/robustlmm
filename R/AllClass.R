@@ -30,7 +30,7 @@ setRefClass("rlmerPredD",
                      Zt      = "dgCMatrix",
                      beta    = "numeric",
                      b.s     = "numeric",
-                     b       = "numeric",
+                     b.r     = "numeric",
                      theta   = "numeric",
                      sigma   = "numeric",
                      n       = "numeric",
@@ -98,7 +98,7 @@ setRefClass("rlmerPredD",
                          V_e <<- Diagonal(x=if (is(v_e, "numeric")) v_e else diag(v_e))
                          beta <<- beta
                          b.s <<- b.s
-                         b <<- as(U_b %*% b.s, "numeric")
+                         b.r <<- as(U_b %*% b.s, "numeric")
                          sigma <<- sigma
                          lower <<- lower
                          setZeroB()
@@ -120,10 +120,10 @@ setRefClass("rlmerPredD",
                      setU = function(value) setB.s(value),
                      setB.s = function(value) {
                          b.s <<- value
-                         b <<- as(U_b %*% value, "numeric")
+                         b.r <<- as(U_b %*% value, "numeric")
                      },
                      setB = function(value) {
-                         b <<- value
+                         b.r <<- value
                          b.s <<- as(stdB(1, Matrix(value)), "numeric")
                      },
                      stdB = function(sigma = sigma, matrix, drop=TRUE, t=FALSE) {
@@ -315,6 +315,11 @@ setRefClass("rlmerPredD",
                          }
                          set.unsc <<- TRUE
                          return(cache.unsc)
+                     },
+                     ## functions for compatibility with lme4
+                     b = function(fac) {
+                         stopifnot(isTRUE(all.equal(fac, 1.)))
+                         b.r
                      }
                      )
                 )
@@ -486,7 +491,7 @@ setClass("rlmerMod",
                         rho.sigma.e = "psi_func",
                         method  = "character",
                         ## from rreTrms:
-                        b       = "numeric",
+                        b.r      = "numeric",
                         rho.b   = "list",
                         rho.sigma.b = "list",
                         blocks  = "list",
@@ -503,7 +508,7 @@ setClass("rlmerMod",
              v <- validObject(object@rho.sigma.e)
              if (!is.logical(v) || ! v)
                  return(v)
-             if (length(object@b) != length(object@b.s))
+             if (length(object@b.r) != length(object@b.s))
                  return("b and u have to be of the same length")
              if (length(object@blocks) != max(object@ind))
                  return("number of blocks and maximum index in ind must coincide")
@@ -607,7 +612,7 @@ setClass("rlmerMod",
 ##               from@rho.e <- cPsi
 ##               from@rho.sigma.e = from@rho.e
 ##               from@method <- "DAStau"
-##               from@b <- from@pp$b
+##               from@b.r <- from@pp$b.r
 ##               b <- findBlocks(value@pp)
 ##               from@rho.b <- rep(list(cPsi),length(b$dim))
 ##               from@rho.sigma.b = from@rho.b
@@ -670,7 +675,7 @@ setClass("rlmerMod",
               rho.e=cPsi,
               rho.sigma.e=cPsi,
               method="DAS",
-              b=pp$b,
+              b.r=pp$b.r,
               rho.b=rep.int(list(cPsi),length(b$dim)),
               rho.sigma.b=rep.int(list(cPsi),length(b$dim)),
               blocks=b$blocks,
@@ -707,7 +712,7 @@ updateWeights <- function(object) {
     object@theta <- object@pp$theta
     object@beta <- object@pp$beta
     object@b.s <- object@pp$b.s
-    object@b <- object@pp$b
+    object@b.r <- object@pp$b.r
     dd <- object@devcomp$dims
     object@devcomp$cmp[ifelse(dd["REML"], "sigmaREML", "sigmaML")] <- object@pp$sigma
     ## Set slots to NA

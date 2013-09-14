@@ -199,7 +199,7 @@ deviance.rlmerMod <- .deviance
     ## Author: Manuel Koller, Date: 11 Apr 2011, 11:40
 
     ## FIXME: ?? offset will be added in updateMu
-    drop(crossprod(object@pp$Zt, object@pp$b) + (object@pp$X %*% object@pp$beta))
+    drop(crossprod(object@pp$Zt, object@pp$b.r) + (object@pp$X %*% object@pp$beta))
 }
 
 ### Get fixed effects
@@ -216,9 +216,9 @@ u.rlmerMod <- function(object, ...) {
 u.lmerMod <- function(object, ...) object@u
 
 ### Get b
-.b <- function(object, ...) object@pp$b
+.b <- function(object, ...) object@pp$b.r
 b.rlmerMod <- function(object, ...) {
-    ret <- object@pp$b
+    ret <- object@pp$b.r
     names(ret) <- dimnames(getZ(object))[[2]]
     ret
 }

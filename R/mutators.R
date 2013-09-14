@@ -35,7 +35,7 @@ setU <- function(object, value) {
 `u<-` <- function(object, value) {
     setU(object, value)
     object@b.s <- object@pp$b.s
-    object@b <- object@pp$b
+    object@b.r <- object@pp$b.r
    object
 }
 
@@ -48,7 +48,7 @@ setB <- function(object, value) {
 `b<-` <- function(object, value) {
     setB(object, value)
     object@b.s <- object@pp$b.s
-    object@b <- object@pp$b
+    object@b.r <- object@pp$b.r
     object
 }
 
@@ -98,7 +98,7 @@ setTheta <- function(object, value, eps = 1e-7, fit.effects = TRUE,
         }
     } else {
         ## update b.s according to the new Lambda
-        setB(object, object@pp$b)
+        setB(object, object@pp$b.r)
         setFixef(object, object@pp$beta)
         ## no need to update sigma here
     }

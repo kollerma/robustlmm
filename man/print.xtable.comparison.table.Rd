@@ -1,9 +1,6 @@
 \name{print.xtable.comparison.table}
 \alias{print.xtable.comparison.table}
-\title{Print Export Tables for comparison tables
-
-Wrapper for \code{print.xtable} for objects of class
-\code{xtable.comparison.table}.}
+\title{Print Export Tables for comparison tables}
 \usage{
   \method{print}{xtable.comparison.table} (x,
     add.hlines = TRUE, latexify.namescol = TRUE,
@@ -27,8 +24,6 @@ Wrapper for \code{print.xtable} for objects of class
   \item{...}{passed to \code{\link{print.xtable}}.}
 }
 \description{
-  Print Export Tables for comparison tables
-
   Wrapper for \code{print.xtable} for objects of class
   \code{xtable.comparison.table}.
 }

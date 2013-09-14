@@ -1,5 +1,5 @@
 
-R version 3.0.1 (2013-05-16) -- "Good Sport"
+R Under development (unstable) (2013-09-10 r63898) -- "Unsuffered Consequences"
 Copyright (C) 2013 The R Foundation for Statistical Computing
 Platform: x86_64-apple-darwin10.8.0 (64-bit)
 
@@ -18,20 +18,9 @@ Type 'q()' to quit R.
 > ## testing getME function
 > require(robustlmm)
 Loading required package: robustlmm
-Loading required package: nlme
 Loading required package: lme4
 Loading required package: lattice
 Loading required package: Matrix
-Loading required package: Rcpp
-Loading required package: RcppEigen
-
-Attaching package: 'lme4'
-
-The following object is masked from 'package:nlme':
-
-    lmList
-
-Loading required package: robustbase
 
 Attaching package: 'robustlmm'
 
@@ -359,8 +348,11 @@ Name: w_e
 
 Name: w_b 
 List of 2
- $ : num [1:18, 1:2] 0.859 0.634 0.756 0.984 1 ...
- $ : num [1:4, 1] 1 1 1 1
+ $ Subject:'data.frame':	18 obs. of  2 variables:
+  ..$ (Intercept): num [1:18] 0.859 0.634 0.756 0.984 1 ...
+  ..$ Days       : num [1:18] 0.859 0.634 0.756 0.984 1 ...
+ $ Group  :'data.frame':	4 obs. of  1 variable:
+  ..$ (Intercept): num [1:4] 1 1 1 1
 
 Name: w_b_vector 
  num [1:40] 0.859 0.859 0.634 0.634 0.756 ...
@@ -370,12 +362,15 @@ Name: w_sigma_e
 
 Name: w_sigma_b 
 List of 2
- $ : num [1:18, 1:2] 1 0.614 1 1 1 ...
- $ : num [1:4, 1] 1 1 1 1
+ $ Subject:'data.frame':	18 obs. of  2 variables:
+  ..$ (Intercept): num [1:18] 1 0.614 1 1 1 ...
+  ..$ Days       : num [1:18] 1 0.614 1 1 1 ...
+ $ Group  :'data.frame':	4 obs. of  1 variable:
+  ..$ (Intercept): num [1:4] 1 1 1 1
 
 Name: w_sigma_b_vector 
  num [1:40] 1 1 0.614 0.614 1 ...
 > 
 > proc.time()
    user  system elapsed 
-  5.423   0.113   5.527 
+  5.020   0.105   5.117 

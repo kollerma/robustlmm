@@ -483,10 +483,10 @@ print.comparison.table <- function(x, ...) {
     print(x, ..., quote=FALSE)
 }
 
-##' @title Create Latex and HTML tables for output of \code{\link{compare}()}.
-##'
 ##' This function is a wrapper to \code{table} for objects of class
-##' \code{comparison.table}. It uses the same arguments as \code{xtable()}. 
+##' \code{comparison.table}. It uses the same arguments as \code{xtable()}.
+##' 
+##' @title Create Latex and HTML tables for output of \code{\link{compare}()}.
 ##' @param x object of class "comparison.table".
 ##' @param caption see \code{\link{xtable}}.
 ##' @param label see \code{\link{xtable}}.
@@ -497,16 +497,17 @@ print.comparison.table <- function(x, ...) {
 ##' @seealso \code{\link{xtable}}, \code{\link{print.xtable.comparison.table}}
 ##'   and \code{\link{compare}}.
 ##' @examples
-##' fm1 <- lmer(Yield ~ (1|Batch), Dyestuff)
-##' fm2 <- rlmer(Yield ~ (1|Batch), Dyestuff)
-##' require(xtable)
-##' xtable(compare(fm1, fm2))
+##' \dontrun{
+##'   fm1 <- lmer(Yield ~ (1|Batch), Dyestuff)
+##'   fm2 <- rlmer(Yield ~ (1|Batch), Dyestuff)
+##'   require(xtable)
+##'   xtable(compare(fm1, fm2))
+##' }
 ##' @importFrom xtable xtable
 ##' @export
 ##' @method xtable comparison.table
 xtable.comparison.table <- function(x, caption=NULL, label=NULL, align=NULL,
                                     digits=NULL, display=NULL, ...) {
-    require(xtable)
     rn <- sapply(rownames(x), function(n) {
         switch(n,
                Coef="Coefficients (Std. Error)",
@@ -523,11 +524,10 @@ xtable.comparison.table <- function(x, caption=NULL, label=NULL, align=NULL,
     xtbl
 }
 
-##' @title Print Export Tables for comparison tables
-##'
 ##' Wrapper for \code{print.xtable} for objects of class
 ##' \code{xtable.comparison.table}.
 ##' 
+##' @title Print Export Tables for comparison tables
 ##' @param x An object of class \code{xtable.comparison.table}.
 ##' @param add.hlines replace empty lines in comparison table by hlines.
 ##'   Supersedes \code{hline.after} argument of \code{print.xtable}.
@@ -546,7 +546,6 @@ xtable.comparison.table <- function(x, caption=NULL, label=NULL, align=NULL,
 print.xtable.comparison.table <- function(x, add.hlines=TRUE,
                                           latexify.namescol=TRUE,
                                           include.rownames=FALSE, ...) {
-    require(xtable)
     args <- list(...)
     if (add.hlines) {
         rns <- if (is.factor(x[[1]])) levels(x[[1]])[x[[1]]] else x[[1]]

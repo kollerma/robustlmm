@@ -78,7 +78,7 @@ psiFuncCached <- function(rho,psi,wgt,Dwgt,Dpsi,name=NULL, ...) {
 ##
 ## @title Change default arguments
 ## @param ... arguments to change
-## @export
+##' @export
 setMethod("chgDefaults", signature("psi_func_cached"),
           function(object, ...) {
               ##cat("~~~~ chgDefaults of psi_func_cached ~~~~~\n")
@@ -135,40 +135,55 @@ setMethod("chgDefaults", signature("psi_func_cached"),
     } else name
 }
 
-##' @S3method print psi_func_cached
-print.psi_func_cached <- function(x, ...) print(robustbase:::.sprintPsiFunc(x))
-
 ## from example(psiFunc)
 F0 <- function(x=1, .) rep.int(0, length(x))
 F1 <- function(x=1, .) rep.int(1, length(x))
 FF1 <- function(.) rep.int(1, length(.))
 FF1.2 <- function(.) rep.int(1/2, length(.))
-##' Classical psi function
+
+##' \eqn{\psi}{Psi}-functions are used by \code{\link{rlmer}}
+##' in the estimating equations and to compute robustness
+##' weights.
+##' 
+##' The \dQuote{classical} \eqn{\psi}{psi}-function \code{cPsi}
+##' can be used to get a non-robust, i.e., classical, fit.
+##' The \code{psi} slot equals the identity function, and
+##' the \code{rho} slot equals quadratic function. Accordingly,
+##' the robustness weights will always be 1 when using \code{cPsi}.
 ##'
-##' Use this psi function to get a classical fit.
-##' @docType function
+##' The Huber \eqn{\psi}{psi}-function \code{huberPsi} is identical to
+##' the one in the package \code{robustbase}. The \code{psi} slot equals
+##' the identity function within \eqn{\pm k}{+-k} (where \eqn{k}{k} is
+##' the tuning parameter). Outside this interval it is equal to
+##' \eqn{\pm k}{+-k}. The \code{rho} slot equals the quadratic
+##' function within \eqn{\pm k}{+-k} and a linear function outside.
+##'
+##' The smoothed Huber \eqn{\psi}{psi}-function is very similar to
+##' the regular Huber \eqn{\psi}{psi}-function.
+##' Instead of a sharp bend like the Huber function,
+##' the smoothe Huber function bends smoothly. The first tuning
+##' contant, k, can be compared to the tuning constant
+##' of the original Huber function. The second tuning
+##' constant, s, determines the smoothness of the bend.
+##'
+##' @title Classical, Huber and smoother Huber psi-functions
+##' @aliases huberPsi smoothPsi
 ##' @examples
+##' par(mfrow=c(2,2))
 ##' plot(cPsi)
+##' plot(huberPsi)
+##' plot(smoothPsi)
+##' curve(cPsi@@psi(x), -3, 3)
+##' curve(smoothPsi@@psi(x, 1.345, 10), -3, 3, add=TRUE, col="red")
+##' curve(huberPsi@@psi(x, 1.345), -3, 3, add=TRUE, col="blue")
 ##' @export
 cPsi <- psiFunc(rho = function(x, .) x^2 / 2, psi = function(x, .) x,
                  wgt = F1, Dwgt = F0, Dpsi = F1, Erho = FF1.2,
                  Epsi2 = FF1, EDpsi = FF1,
                  name = "classic (x^2/2)", . = Inf)
 
-##' Smoothed Huber Function
-##'
-##' Instead of a sharp bend like the huber function,
-##' this function bends smoothly. The first tuning
-##' contant, k, can be compared to the tuning constant
-##' of the original Huber function. The second tuning
-##' constant, s, determines the smoothness of the bend.
-##' @title smoothPsi
-##' @examples
-##' par(mfrow=c(2,1))
-##' plot(smoothPsi)
-##' curve(smoothPsi@@psi(x, 1.345, 10), -3, 3, col="red")
-##' curve(huberPsi@@psi(x, 1.345), -3, 3, add=TRUE)
-##' @docType function
+##' @exportMethod plot
+##' @export huberPsi
 ##' @export
 smoothPsi <- psiFuncCached(rho = function(x, k, s) {
                                 a <- s^(1/(s+1))

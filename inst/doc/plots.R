@@ -47,56 +47,6 @@ g.get_colors_brewer <- function(n, name='Dark2') {
 }
 ## plot(1:8, rep(1, 8), col = col[c(6:3,7,1:2,8)], pch = 18, cex = 5)
 
-## TA-plots inclusive coloring for weights
-ta <- function(obj, ...) {
-    title <- paste("Tukey-Anscombe Plot for", deparse(match.call()[[2]]))
-    data <- data.frame(fitted = fitted(obj),
-                       resid = resid(obj),
-                       weights = if (is(obj, "rlmerMod")) getME(obj, "w_e") else 1,
-                       ...)
-    plt <- ggplot(data, aes(fitted, resid)) + ggtitle(title)
-    if (is(obj, "rlmerMod"))
-        plt + geom_point(aes(color = weights))
-    else plt + geom_point()
-}
-
-## QQ-plots inclusive coloring for weights
-qq <- function(obj, type = c("resid", "ranef"), multiply.weights=FALSE) {
-    type <- match.arg(type)
-    title <- paste("QQ-Plot for", type, "of", deparse(match.call()[[2]]))
-    val0 <- switch(type,
-                  resid = list(resid = data.frame(resid=resid(obj))),
-                  ranef = ranef(obj),
-                  stop("unknown type"))
-    ord0 <- numeric(0)
-    for (level in names(val0)) {
-        val1 <- val0[[level]]
-        for (col in colnames(val1)) {
-            val <- val1[[col]]
-            ord <- order(val)
-            name <- if (ncol(val1) == 1) level else paste(level, col, sep="/")
-            data <- data.frame(level = name,
-                               sample = val[ord],
-                               theoretical = qnorm(ppoints(length(val))))
-            data0 <- if (exists("data0")) rbind(data0, data) else data
-            ord0 <- c(ord0, length(ord0) + ord)
-        }
-    }
-    data0$weights <-
-        if (is(obj, "rlmerMod")) {
-            switch(type, resid = getME(obj, "w_e"),
-                   ranef = getME(obj, "w_b_vector"))[ord0]
-        } else 1
-    if (multiply.weights) data0$sample <- data0$sample * data0$weights
-    plt <- ggplot(data0, aes(theoretical, sample)) + ggtitle(title)
-    plt <-
-        if (is(obj, "rlmerMod"))
-            plt + geom_point(aes(color = weights))
-        else plt + geom_point()
-    if (length(levels(data0$level)) > 1) plt + facet_wrap(~ level) else plt
-}
-
-
 augLines <- function(obj, ..., bindAlso, subset) {
     data <- cbind(obj@frame, fitted=fitted(obj))
     if (!missing(bindAlso)) data <- cbind(data, bindAlso)

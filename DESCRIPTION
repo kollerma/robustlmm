@@ -1,7 +1,7 @@
 Package: robustlmm
 Type: Package
 Title: Robust Linear Mixed Effects Models
-Version: 1.2-2
+Version: 1.2-3
 Date: 2013-09-10
 Author: Manuel Koller
 Maintainer: Manuel Koller <koller.manuel@gmail.com>
@@ -10,21 +10,21 @@ Description: Robust mixed effects modeling by robustification
 License: GPL-2
 LazyLoad: yes
 Depends:
-    nlme,
-    methods,
     lme4 (>= 1.0),
-    Matrix,
-    robustbase (>= 0.9.5),
+    Matrix (>= 1.0-13),
 Suggests:
     digest,
-    ggplot2,
     reshape2,
     rootSolve,
-    xtable,
 Imports:
+    ggplot2,
+    nlme,
+    methods,
+    robustbase (>= 0.9.5),
     xtable
 Collate:
     'accessors.R'
+    'ghq.R'
     'fromLme4.R'
     'AllClass.R'
     'AllGeneric.R'
@@ -37,3 +37,4 @@ Collate:
     'psiFunc2.R'
     'rlmer.R'
     'zero.theta.R'
+    'plot.R'

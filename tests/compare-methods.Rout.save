@@ -18,20 +18,11 @@ Type 'q()' to quit R.
 > ## test that should make sure that the results remain constant
 > require(robustlmm)
 Loading required package: robustlmm
-Loading required package: nlme
 Loading required package: lme4
 Loading required package: lattice
 Loading required package: Matrix
 Loading required package: Rcpp
 Loading required package: RcppEigen
-
-Attaching package: 'lme4'
-
-The following object is masked from 'package:nlme':
-
-    lmList
-
-Loading required package: robustbase
 
 Attaching package: 'robustlmm'
 

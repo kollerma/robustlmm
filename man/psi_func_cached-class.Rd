@@ -49,11 +49,17 @@ Class \code{"\linkS4class{psi_func}"}, directly.
       values for the tuning parameters, and returns a
       \code{\link{psi_func-class}} object, a copy of input \code{object}
       with the slot \code{tDefs} possibly changed. }
+    \item{plot}{\code{signature(object = "psi_func_cached")}:
+      Creates a plot of all the function slots.
+    }
     \item{psi2propII}{\code{signature(object = "psi_func_cached")}:
       Converts the psi_func object into a function that
       corresponds to Proposal II, i.e., a function of the
       squared weights. The other elements of the psi_func
       object are adapted accordingly.
+    }
+   \item{show}{\code{signature(object = "psi_func_cached")}:
+     Print function.
     }
   }
 }

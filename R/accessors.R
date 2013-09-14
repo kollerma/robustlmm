@@ -238,23 +238,27 @@ coef.rlmerMod <- function(object, ...) {
 ranef.rlmerMod <- function(object, ...) {
     ## FIXME: add postVar, drop and whichel arguments
     b <- b(object)
+    ret <- uArrangedNames(object, b.s = b)
+    class(ret) <- "ranef.rlmer"
+    ret
+}
+
+## return u as list arranged like ranef
+uArrangedNames <- function(object, b.s = b.s(object)) {
     ret <- lapply(object@idx, function(bidx) {
-        lret <- b[bidx]
+        lret <- b.s[bidx]
         dim(lret) <- dim(bidx)
         ## add rownames
-        colnames(lret) <- names(b)[bidx[1,]]
+        colnames(lret) <- names(b.s)[bidx[1,]]
         as.data.frame(t(lret))
     })
     ## add names and colnames
     names(ret) <- names(object@cnms)
     for (i in names(ret))
         colnames(ret[[i]]) <- object@cnms[[i]]
-    class(ret) <- "ranef.rlmer"
     ret
 }
-
-## return u as list arranged like ranef
-## but do not bother setting names
+## same as uArrangedNames, but do not set names
 uArranged <- function(object, b.s = b.s(object)) {
     ret <- lapply(object@idx, function(bidx) {
         lret <- b.s[bidx]
@@ -319,6 +323,13 @@ uArranged <- function(object, b.s = b.s(object)) {
 ##' \code{\link{fixef}}, \code{\link{vcov}}, etc.:
 ##' see \code{methods(class="rlmerMod")}
 ##' @keywords utilities
+##' @usage getME(object,
+##'   name = c("X", "Z", "Zt", "u", "b.s", "b", "Gp", "Lambda",
+##'            "Lambdat", "U_b", "Lind", "flist", "beta", "theta",
+##'            "n_rtrms", "devcomp", "offset", "lower", "rho_e",
+##'            "rho_b", "rho_sigma_e", "rho_sigma_b", "M", "w_e",
+##'            "w_b", "w_b_vector", "w_sigma_e", "w_sigma_b",
+##'            "w_sigma_b_vector"))
 ##' @examples
 ##'
 ##' ## shows many methods you should consider *before* using getME():
@@ -389,10 +400,10 @@ getME <- function(object,
            "rho_sigma_b" = rho.b(object, "sigma"),
            "M" = PR$ M(),
            "w_e" = wgt.e(object),
-           "w_b" = uArranged(object, wgt.b(object)),
+           "w_b" = uArrangedNames(object, wgt.b(object)),
            "w_b_vector" = wgt.b(object),
            "w_sigma_e" = wgt.e(object, use.rho.sigma=TRUE),
-           "w_sigma_b" = uArranged(object, wgt.b(object, center=TRUE)),
+           "w_sigma_b" = uArrangedNames(object, wgt.b(object, center=TRUE)),
            "w_sigma_b_vector" = wgt.b(object, center=TRUE),
 	   "..foo.." =# placeholder!
 	   stop(gettextf("'%s' is not implemented yet",

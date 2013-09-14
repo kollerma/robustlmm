@@ -1,8 +1,12 @@
 
+##' @importClassesFrom robustbase psi_func
 ##' @exportClass psi_func_cached
 setClass("psi_func_cached", contains = c("psi_func"))
 
 ##' @importFrom Matrix bdiag
+##' @importFrom methods new setAs setClass setRefClass setMethod
+##' @importFrom robustbase huberPsi psiFunc summarizeRobWeights
+##' @importMethodsFrom robustbase chgDefaults plot
 
 ## This is basically a copy of the merPredD-class
 ##
@@ -13,6 +17,7 @@ setClass("psi_func_cached", contains = c("psi_func"))
 ## @title rlmerPredD
 ## @name rlmerPredD-class
 ## @slot all see rlmerPredD class
+##' @importMethodsFrom Matrix isDiagonal isTriangular
 setRefClass("rlmerPredD",
             fields =
                 list(U_e     = "ddiMatrix",
@@ -230,7 +235,7 @@ setRefClass("rlmerPredD",
                          Epsi2_b <<- diag(Epsi_bpsi_bt) ## for easier computation in diagonal case
                      },
                      initGH = function(numpoints=13) {
-                         gh <- robustbase:::ghq(numpoints)
+                         gh <- ghq(numpoints)
                          ghz <<- gh$nodes
                          ghw <<- gh$weights*dnorm(gh$nodes)
                          ghZ <<- matrix(ghz, numpoints, numpoints)
@@ -562,7 +567,7 @@ setClass("rlmerMod",
 ##           from
 ##       })
 
-## ##' @name rlmerMod-class
+## ## @name rlmerMod-class
 ## ### Define inheritance from lmerMod to rlmerMod
 ## setIs(class1 = "rlmerMod", class2 = "lmerMod",
 ##       coerce = function(from) {

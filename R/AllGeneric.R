@@ -1,7 +1,3 @@
-## force imports
-isDiagonal <- function(...) Matrix:::isDiagonal(...)
-isTriangular <- function(...) Matrix:::isTriangular(...)
-
 #####################################################
 ## Accessor methods                                ##
 #####################################################

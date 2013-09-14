@@ -191,6 +191,7 @@
 ##'         rho.sigma.b = chgDefaults(smoothPsi, k = 5.11, s=10))
 ##' }
 ##'
+##' @importFrom lme4 lmer
 ##' @export
 rlmer <- function(formula, data, ..., method = "DAStau",
                   rho.e = smoothPsi, rho.b = smoothPsi,

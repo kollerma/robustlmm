@@ -567,17 +567,17 @@ print(xtable(compare(classical, robust, robust2, show.rho.functions=FALSE),
              caption="Comparison table of the fitted models for the Penicillin example.",
              label="tab:cmpPenicillin"))
 <<penicillin-ta,fig=TRUE,width=2.5,height=2.5>>=
+plots <- plot(robust)
 lower <- floor(min(getME(robust, "w_e"), getME(robust, "w_b_vector"))*100)/100
-ta(robust) + scale_colour_gradient(limits=c(lower,1)) +
-    theme(legend.position = "none") + ggtitle("Tukey-Anscombe Plot")
+plots[[1]] + scale_colour_gradient(limits=c(lower,1)) +
+    theme(legend.position = "none")
 <<penicillin-qq-resid,fig=TRUE,width=2.5,height=2.5>>=
-qq(robust) + scale_colour_gradient(limits=c(lower,1)) +
-    theme(legend.position = "none") + ggtitle("QQ-plot of the Residuals")
+plots[[2]] + scale_colour_gradient(limits=c(lower,1)) +
+    theme(legend.position = "none")
 <<penicillin-qq-ranef,fig=TRUE,height=3.3>>=
-qq(robust, type="ranef") +
+plots[[3]] +
     scale_colour_gradient("robustness weights", limits=c(lower,1)) +
-    theme(legend.position = "bottom", legend.box = "horizontal") +
-    ggtitle("QQ-plot of the Random Effects")
+    theme(legend.position = "bottom", legend.box = "horizontal")
 @
 
 \begin{figure}[htbp]
@@ -881,12 +881,9 @@ function decreases more quickly and the off-diagonal points get a lower
 weight, finally this leads to a negative estimate of the correlation.
 
 <<sleepstudy-ranef-scatterplot,fig=TRUE,width=5,height=5>>=
-r <- ranef(redesc)[[1]]
-r$wgt.b <- matrix(getME(redesc, "w_b_vector"),2)[1,]
-print(ggplot(r, aes(`(Intercept)`, `Days`, color=wgt.b)) +
-      geom_point() +
+plots[[4]] + 
       scale_colour_gradient(expression(w[b])) +
-      theme(legend.position = "bottom", legend.box = "horizontal"))
+      theme(legend.position = "bottom", legend.box = "horizontal")
 @
 
 \begin{figure}[htb!]

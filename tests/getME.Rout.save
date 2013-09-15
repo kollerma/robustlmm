@@ -38,9 +38,6 @@ The following object is masked from 'package:lme4':
 Note: method with signature 'dsparseMatrix#dgeMatrix' chosen for function 'crossprod',
  target signature 'dtCMatrix#dgeMatrix'.
  "CsparseMatrix#ddenseMatrix" would also be valid
-Warning message:
-In checkNlevels(reTrms$flist, n = n, control) :
-  grouping factors with < 5 sampled levels may give unreliable estimates
 > 
 > (nmME <- eval(formals(getME)$name))
  [1] "X"                "Z"                "Zt"               "u"               

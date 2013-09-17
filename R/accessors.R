@@ -52,29 +52,6 @@ rho.b <- function(object, which = "default") {
     ret
 }
 
-##' Get theta
-##'
-##' @title Get theta
-##' @param object merMod object
-##' @examples
-##' fm <- rlmer(Yield ~ (1|Batch), Dyestuff)
-##' stopifnot(all.equal(theta(fm), getME(fm, "theta")))
-##' @export
-theta <- function(object) {
-    if (is(object, "rlmerMod")) {
-        ## add names like lme4
-        tt <- object@pp$theta
-        nc <- c(unlist(mapply(function(g,e) {
-            mm <- outer(e,e,paste,sep=".")
-            diag(mm) <- e
-            mm <- mm[lower.tri(mm,diag=TRUE)]
-            paste(g,mm,sep=".")
-        }, names(object@cnms),object@cnms)))
-        names(tt) <- nc
-        tt
-    } else getME(object, "theta")
-}
-
 ## Get Lambda
 ##
 ## @title Get Lambda
@@ -408,3 +385,24 @@ getME <- function(object,
 	   stop(sprintf("Mixed-Effects extraction of '%s' is not available for class \"%s\"",
 			name, class(object))))
 }## {getME}
+
+##' The function \code{theta} is short for \code{getME(, "theta")}.
+##'
+##' @rdname getME
+##' @examples
+##' stopifnot(all.equal(theta(fm1), getME(fm1, "theta")))
+##' @export
+theta <- function(object) {
+    if (is(object, "rlmerMod")) {
+        ## add names like lme4
+        tt <- object@pp$theta
+        nc <- c(unlist(mapply(function(g,e) {
+            mm <- outer(e,e,paste,sep=".")
+            diag(mm) <- e
+            mm <- mm[lower.tri(mm,diag=TRUE)]
+            paste(g,mm,sep=".")
+        }, names(object@cnms),object@cnms)))
+        names(tt) <- nc
+        tt
+    } else getME(object, "theta")
+}

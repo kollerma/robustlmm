@@ -157,24 +157,15 @@ print.rlmerMod_plots <- function(x, ask=interactive() & length(x) > 1, ...) {
 
 ##' @importFrom lattice dotplot
 ##' @S3method  dotplot ranef.rlmerMod
-dotplot.ranef.rlmerMod <- function(x, data, ...) {
-    class(x) <- "ranef.mer"
-    dotplot(x, data, ...)
-}
+dotplot.ranef.rlmerMod <- getS3method("dotplot", "ranef.mer")
 
 ##' @importFrom graphics plot
 ##' @S3method plot ranef.rlmerMod
-plot.ranef.rlmerMod <- function(x, y, ...) {
-    class(x) <- "ranef.mer"
-    plot(x, y, ...)
-}
+plot.ranef.rlmerMod <- getS3method("plot", "ranef.mer")
 
 ##' @importFrom lattice qqmath
 ##' @S3method qqmath ranef.rlmerMod
-qqmath.ranef.rlmerMod <- function(x, data, ...) {
-    class(x) <- "ranef.rlmerMod"
-    qqmath(x, data, ...)
-}
+qqmath.ranef.rlmerMod <- getS3method("qqmath", "ranef.mer")
 
 ##' @importFrom graphics plot
 ##' @S3method plot coef.rlmerMod

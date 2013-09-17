@@ -1,4 +1,5 @@
 \name{rlmer}
+\alias{lmerNoFit}
 \alias{rlmer}
 \title{Robust linear mixed models}
 \usage{
@@ -7,6 +8,8 @@
     rho.sigma.b, rel.tol = 1e-08,
     max.iter = 40 * (r + 1)^2, verbose = 0, doFit = TRUE,
     init)
+
+  lmerNoFit(..., initTheta)
 }
 \arguments{
   \item{formula}{a two-sided linear formula object
@@ -66,6 +69,9 @@
   \item{init}{optional lmerMod- or rlmerMod-object to use
   for starting values, or function producing an lmerMod
   object.}
+
+  \item{initTheta}{parameter to initialize theta with
+  (optional)}
 }
 \value{
   object of class rlmerMod.
@@ -74,6 +80,11 @@
   Robust estimation of linear mixed effects models, for
   hierarchical nested and non-nested, e.g., crossed,
   datasets.
+
+  The \code{lmerNoFit} function can be used to get trivial
+  starting values. This is mainly used to verify the
+  algorithms to reproduce the fit by \code{\link{lmer}}
+  when starting from trivial initial values.
 }
 \details{
   \describe{ \item{Overview:}{ This function implements a
@@ -133,27 +144,27 @@
   arguments, it is up to the used to specify the
   appropriate function. \itemize{ \item For simple variance
   components and the residual error scale use the function
-  \code{psi2propII} to change the tuning parameters. The is
-  similar to Proposal II in the location-scale problem
-  (i.e., using the squared robustness weights of the
-  location estimate for the scale estimate; otherwise the
-  scale estimate is not robust).
+  \code{\link{psi2propII}} to change the tuning parameters.
+  The is similar to Proposal II in the location-scale
+  problem (i.e., using the squared robustness weights of
+  the location estimate for the scale estimate; otherwise
+  the scale estimate is not robust).
 
   \item For random effects modeled with correlation
   parameters (referred to as nondiagonal case below), use
-  the \code{chgDefaults} function to change the tuning
-  parameters. The parameter estimation problem is
+  the \code{\link{chgDefaults}} function to change the
+  tuning parameters. The parameter estimation problem is
   multivariate, unlike the case without correlation where
   the problem was univariate. For the employed estimator,
   this amounts to switching from simple scale estimates to
   estimating correlation matrices. Therefore different
   weight functions have to be used. Squaring of the weights
-  (using the function \code{psi2propII}) is no longer
-  necessary. To yield estimates with the same efficiency,
-  the tuning parameters for the nondiagonal are generally
-  larger than for the simple case. As a rule of thumb, one
-  may use the squared tuning parameters of the simple case
-  for the nondiagonal case. }
+  (using the function \code{\link{psi2propII}}) is no
+  longer necessary. To yield estimates with the same
+  efficiency, the tuning parameters for the nondiagonal are
+  generally larger than for the simple case. As a rule of
+  thumb, one may use the squared tuning parameters of the
+  simple case for the nondiagonal case.  }
 
   Tables of tuning factors are given in the vignette
   (\code{vignette("rlmer")}). For the smoothed Huber
@@ -207,9 +218,11 @@ system.time(rlmer(Yield ~ (1|Batch), Dyestuff2, method="DASvar"))
   rlmer(Reaction ~ Days + (Days|Subject), sleepstudy,
         rho.sigma.e = psi2propII(smoothPsi, k = 2.28),
         rho.sigma.b = chgDefaults(smoothPsi, k = 5.11, s=10))
+rlmer(Yield ~ (1|Batch), Dyestuff, init = lmerNoFit)
 }
 }
 \seealso{
   \code{\link[lme4]{lmer}}, \code{vignette("rlmer")}
 }
+\keyword{models}
 

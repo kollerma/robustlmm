@@ -7,6 +7,8 @@ setClass("psi_func_cached", contains = c("psi_func"))
 ##' @importFrom methods new setAs setClass setRefClass setMethod
 ##' @importFrom robustbase huberPsi psiFunc summarizeRobWeights
 ##' @importMethodsFrom robustbase chgDefaults plot
+##' @importMethodsFrom Matrix diag solve determinant t crossprod tcrossprod as.vector drop rowSums rowMeans colSums colMeans chol which
+
 
 ## This is basically a copy of the merPredD-class
 ##
@@ -235,7 +237,8 @@ setRefClass("rlmerPredD",
                          Epsi2_b <<- diag(Epsi_bpsi_bt) ## for easier computation in diagonal case
                      },
                      initGH = function(numpoints=13) {
-                         gh <- ghq(numpoints)
+                         ### ::: required to make roxygen2 work
+                         gh <- robustlmm:::ghq(numpoints)
                          ghz <<- gh$nodes
                          ghw <<- gh$weights*dnorm(gh$nodes)
                          ghZ <<- matrix(ghz, numpoints, numpoints)
@@ -443,24 +446,70 @@ setRefClass("rlmerResp",
             )
 
 
-##' @title rlmerMod Class
 ##' Class "rlmerMod" of Robustly Fitted Mixed-Effect Models
 ##'
 ##' A robust mixed-effects model as returned by \code{\link{rlmer}}.
+##' @title rlmerMod Class
 ##' @name rlmerMod-class
-##' @aliases rlmerMod-class
-##' show,rlmerMod-method
-##' coef.rlmerMod
-##' fitted.rlmerMod formula.rlmerMod
-##' model.frame.rlmerMod model.matrix.rlmerMod print.rlmerMod
-##' show.rlmerMod summary.rlmerMod
-##' terms.rlmerMod update.rlmerMod
-##' vcov.rlmerMod print.summary.rlmer show.summary.rlmerMod
-##' summary.summary.rlmerMod vcov.summary.rlmerMod
+##' @aliases rlmerMod-class coef.rlmerMod deviance.rlmerMod
+##' extractAIC.rlmerMod family.rlmerMod fitted.rlmerMod fixef.rlmerMod
+##' formula.rlmerMod isGLMM.rlmerMod isLMM.rlmerMod isNLMM.rlmerMod
+##' isREML.rlmerMod logLik.rlmerMod model.frame.rlmerMod
+##' model.matrix.rlmerMod nobs.rlmerMod predict.rlmerMod
+##' print.rlmerMod print.summary.rlmer print.VarCorr.rlmerMod
+##' ranef.rlmerMod resid.rlmerMod rlmerMod-class sigma.rlmerMod
+##' show.rlmerMod show,rlmerMod-method show.summary.rlmerMod
+##' summary.rlmerMod summary.summary.rlmerMod terms.rlmerMod
+##' update.rlmerMod VarCorr.rlmerMod VarCorr.summary.rlmerMod
+##' vcov.rlmerMod vcov.summary.rlmerMod weights.rlmerMod
 ##' @docType class
 ##' @section Objects from the Class: Objects are created by calls to
 ##' \code{\link{rlmer}}.
-##' @seealso \code{\link{rlmer}}
+##' @section Methods: Almost all methods available from objects
+##' returned from \code{\link{lmer}} are also available for objects
+##' returned by \code{\link{rlmer}}. They usage is the
+##' same.
+##'
+##' It follows a list of some the methods that are exported by this
+##' package:
+##' 
+##' \itemize{
+##' \item \code{\link{coef}}
+##' \item \code{\link{deviance}} (disabled, see below)
+##' \item \code{\link{extractAIC}} (disabled, see below)
+##' \item \code{\link{family}}
+##' \item \code{\link{fitted}}
+##' \item \code{\link[=fixef.merMod]{fixef}}
+##' \item \code{\link{formula}}
+##' \item \code{\link{getInfo}}
+##' \item \code{\link{isGLMM}}
+##' \item \code{\link{isLMM}}
+##' \item \code{\link{isNLMM}}
+##' \item \code{\link{isREML}}
+##' \item \code{\link{logLik}} (disabled, see below)
+##' \item \code{\link{model.frame}}
+##' \item \code{\link{model.matrix}}
+##' \item \code{\link{nobs}}
+##' \item \code{\link[=plot.rlmerMod]{plot}}
+##' \item \code{\link[=predict.merMod]{predict}}
+##' \item \code{\link[=ranef.merMod]{ranef}} (only partially implemented)
+##' \item \code{\link[=residuals.rlmerMod]{residuals}}
+##' \item \code{\link{sigma}}
+##' \item \code{\link{summary}}
+##' \item \code{\link{terms}}
+##' \item \code{\link{update}}
+##' \item \code{\link[=VarCorr.merMod]{VarCorr}}
+##' \item \code{\link{vcov}}
+##' \item \code{\link{weights}}
+##' }
+##' @section Disabled methods: A log likelihood or even a pseudo log
+##' likelihood is not defined for the robust estimates returned by
+##' \code{\link{rlmer}}. Methods that depend on the log likelihood are
+##' therefore not available. For this reason the methods
+##' \code{deviance}, \code{extractAIC} and \code{logLik} stop with an
+##' error if they are called.
+##' @seealso \code{\link{rlmer}}; corresponding class in package
+##' \code{lme4}: \code{\link{merMod}}
 ##' @keywords classes
 ##' @examples
 ##'

@@ -19,4 +19,5 @@ par(mfrow=c(2,1))
 plot(smoothPsi)
 plot(psi2propII(smoothPsi))
 }
+\keyword{utilities}
 

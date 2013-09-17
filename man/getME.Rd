@@ -1,5 +1,6 @@
 \name{getME}
 \alias{getME}
+\alias{theta}
 \title{Extract or Get Generalize Components from a Fitted Mixed Effects Model}
 \usage{
   getME(object, name = c("X", "Z", "Zt", "u", "b.s", "b",
@@ -8,6 +9,8 @@
     "lower", "rho_e", "rho_b", "rho_sigma_e",
     "rho_sigma_b", "M", "w_e", "w_b", "w_b_vector",
     "w_sigma_e", "w_sigma_b", "w_sigma_b_vector"))
+
+  theta(object)
 }
 \arguments{
   \item{object}{a fitted mixed-effects model of class
@@ -77,6 +80,9 @@
   i.e. from an object of class
   \code{"\linkS4class{rlmerMod}"} or
   \code{"\linkS4class{merMod}"}.
+
+  The function \code{theta} is short for \code{getME(,
+  "theta")}.
 }
 \details{
   The goal is to provide \dQuote{everything a user may
@@ -106,6 +112,7 @@ stopifnot(is(Z, "CsparseMatrix"),
 str(parts <- sapply(nmME, function(nm) try(getME(fm1, nm)),
                     simplify=FALSE))
 }\% dont..
+stopifnot(all.equal(theta(fm1), getME(fm1, "theta")))
 }
 \seealso{
   \code{\link{getCall}()}, More standard methods for

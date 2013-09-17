@@ -1,15 +1,14 @@
-## Define all imports for roxygen2 here
-
-##' This functions replaces the deprecated option \code{doFit = FALSE}
-##' in lme4.
+##' The \code{lmerNoFit} function can be used to get trivial
+##' starting values. This is mainly used to verify the algorithms to
+##' reproduce the fit by \code{\link{lmer}} when starting from trivial
+##' initial values. 
 ##'
-##' @title Construct lmerMod object but do not fit the data.
-##' @param ... passed to lmer()
+##' @rdname rlmer
 ##' @param initTheta parameter to initialize theta with (optional)
-##' @return lmerMod object
-##' @importMethodsFrom Matrix diag solve determinant t crossprod tcrossprod as.vector drop rowSums rowMeans colSums colMeans chol which
 ##' @examples
+## \dontrun{
 ##'   rlmer(Yield ~ (1|Batch), Dyestuff, init = lmerNoFit)
+##' }
 ##' @importFrom lme4 mkMerMod
 ##' @export
 lmerNoFit <- function(..., initTheta) {

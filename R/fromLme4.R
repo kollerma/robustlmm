@@ -13,11 +13,14 @@
 ## minimal changes: merMod -> rlmerMod
 ## and replaced with a stop message if not defined
 
+## use getS3method to copy methods from lme4
+##' @importFrom utils getS3method
+
 ##' @importFrom stats coef
 ##' @S3method coef rlmerMod
+coefMer <- getS3method("coef", "merMod")
 coef.rlmerMod <- function(object, ...) {
-    class(object) <- "lmerMod"
-    val <- coef(object, ...)
+    val <- coefMer(object, ...)
     class(val) <- "coef.rlmerMod"
     val
 }
@@ -69,18 +72,24 @@ getFixedFormula <- function(form) {
 
 ##' @importFrom stats formula
 ##' @S3method formula rlmerMod
-formula.rlmerMod <- function(x, ...) {
-    class(x) <- "lmerMod"
-    formula(x)
-}
+formula.rlmerMod <- getS3method("formula", "merMod")
 
 ##' @importFrom lme4 isREML
 ##' @S3method isREML rlmerMod
 isREML.rlmerMod <- function(x, ...) .isREML(x, ...)
 
+## needed for predict():
+##' @importFrom lme4 isGLMM
+##' @S3method isGLMM rlmerMod
+isGLMM.rlmerMod <- function(x, ...) FALSE
+
 ##' @importFrom lme4 isLMM
 ##' @S3method isLMM rlmerMod
 isLMM.rlmerMod <- function(x, ...) TRUE
+
+##' @importFrom lme4 isNLMM
+##' @S3method isNLMM rlmerMod
+isNLMM.rlmerMod <- function(x, ...) FALSE
 
 ##' @importFrom stats logLik
 ##' @S3method logLik rlmerMod
@@ -89,10 +98,7 @@ logLik.rlmerMod <- function(object, REML = NULL, ...)
 
 ##' @importFrom stats model.frame
 ##' @S3method model.frame rlmerMod
-model.frame.rlmerMod <- function(formula, ...) {
-    class(formula) <- "lmerMod"
-    model.frame(formula, ...)
-}
+model.frame.rlmerMod <- getS3method("model.frame", "merMod")
 
 ##' @importFrom stats model.matrix
 ##' @S3method model.matrix rlmerMod
@@ -112,10 +118,7 @@ model.matrix.rlmerMod <- function(object, ...) object@pp$X
 
 ##' @importFrom stats terms
 ##' @S3method terms rlmerMod
-terms.rlmerMod <- function(x, ...) {
-    class(x) <- "lmerMod"
-    terms(x, ...)
-}
+terms.rlmerMod <- getS3method("terms", "merMod")
 
 ## update is in helpers.R
 
@@ -160,11 +163,7 @@ setMethod("show", "rlmerMod", function(object) print.rlmerMod(object))
 
 ##' @importFrom stats vcov
 ##' @S3method vcov rlmerMod
-vcov.rlmerMod <- function(object, correlation = TRUE, sigm =
-                          sigma(object), ...) {
-    class(object) <- "lmerMod"
-    vcov(object, correlation=correlation, sigm=sigm, ...)
-}
+vcov.rlmerMod <- getS3method("vcov", "merMod")
 
 ##' @importFrom stats vcov
 ##' @S3method vcov summary.rlmerMod
@@ -176,10 +175,10 @@ vcov.summary.rlmerMod <- function(object, correlation = TRUE, ...) {
 ##' @importFrom nlme VarCorr
 ##' @method VarCorr rlmerMod
 ##' @export
+VarCorrMer <- getS3method("VarCorr", "merMod")
 VarCorr.rlmerMod <- function(x, sigma, rdig)# <- 3 args from nlme
 {
-    class(x) <- "lmerMod"
-    val <- VarCorr(x, sigma, rdig)
+    val <- VarCorrMer(x, sigma, rdig)
     class(val) <- "VarCorr.rlmerMod"
     val
 }
@@ -188,10 +187,7 @@ VarCorr.rlmerMod <- function(x, sigma, rdig)# <- 3 args from nlme
 VarCorr.summary.rlmerMod <- function(x, ...) x$varcor
 
 ##' @S3method print VarCorr.rlmerMod
-print.VarCorr.rlmerMod <- function(x, ...) {
-    class(x) <- "VarCorr.lmerMod"
-    print(x, ...)
-}
+print.VarCorr.rlmerMod <- getS3method("print", "VarCorr.merMod")
 
 ## __NOT YET EXPORTED__
 ## "format()" the 'VarCorr' matrix of the random effects -- for
@@ -259,3 +255,13 @@ weights.rlmerMod <- function(object, ...) {
 }
 
 ## no optimizer options in rlmer
+
+#######################################################
+## predict method                                    ##
+#######################################################
+
+##' @importFrom stats predict
+##' @S3method predict rlmerMod
+predict.rlmerMod <- getS3method("predict", "merMod")
+## the following is needed to get the correct getME() function:
+environment(predict.rlmerMod) <- environment()

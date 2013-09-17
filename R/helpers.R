@@ -330,86 +330,16 @@ print.summary.rlmerMod <- function(x, ...) {
     .printRlmerMod(..., so = x)
 }
 
-##' @rdname getInfo
-##' @method getInfo lmerMod
-##' @S3method getInfo lmerMod
-getInfo.lmerMod <- function(object, ...) {
-    lsum <- summary(object)
-    coefs <- lsum$coefficients
-    varcor <- lsum$varcor
-    isREML <- .isREML(object)
-    .namedVector <- function(mat) {
-        if (is.vector(mat)) return(mat)
-        names <- rownames(mat)
-        ret <- drop(mat)
-        names(ret) <- names
-        ret
-    }
-    .getVC <- function(varcor) {
-        vc <- lapply(varcor, function(grp) attr(grp, "stddev"))
-        ret <- unlist(vc, use.names = FALSE)
-        names(ret) <-
-            unlist(lapply(1:length(vc), function(i)
-                          paste(names(vc[[i]]), names(vc)[i], sep=" | ")))
-        ##.namedVector(ret)
-        ret
-    }
-    .getCorr <- function(varcor) {
-        ret <- lapply(1:length(varcor), function(i) {
-            grp <- varcor[[i]]
-            corr <- attr(grp, "correlation")
-            if (nrow(corr) == 1) return(NULL)
-            names <- outer(colnames(corr), paste("x", rownames(corr)), paste)
-            ret <- as.vector(corr[upper.tri(corr)])
-            names(ret) <- paste(as.vector(names[upper.tri(names)]),
-                                names(varcor)[i], sep = " | ")
-            ret
-        })
-        unlist(ret)
-    }
-    ret <- list(data = object@call$data,
-                coef = .namedVector(coefs[,1,drop=FALSE]),
-                stderr = .namedVector(coefs[,2,drop=FALSE]),
-                varcomp = .getVC(varcor),
-                sigma = sigma(object))
-    corrs <- .getCorr(varcor)
-    if (length(corrs) > 0) ret$correlations <- corrs
-    if (!is(object, "rlmerMod")) {
-        if (isREML) {
-            ret$REML <- deviance(object)
-        } else {
-            ret$deviance <- deviance(object)
-        }
-    }
-    ret
-}
-
-##' @rdname getInfo
-##' @method getInfo rlmerMod
-##' @S3method getInfo rlmerMod
-getInfo.rlmerMod <- function(object, ...) {
-    linfo <- getInfo.lmerMod(object)
-    linfo$REML <- linfo$deviance <- NULL
-    linfo$rho.e <- .sprintPsiFunc(rho.e(object), TRUE)
-    linfo$rho.sigma.e <- .sprintPsiFunc(rho.e(object, "sigma"), TRUE)
-    rho.b <- rho.b(object)
-    rho.sigma.b <- rho.b(object, "sigma")
-    for (bt in seq_along(object@blocks)) {
-        linfo[[paste("rho.b",bt,sep="_")]] <- .sprintPsiFunc(rho.b[[bt]], TRUE)
-        linfo[[paste("rho.sigma.b",bt,sep="_")]] <- .sprintPsiFunc(rho.sigma.b[[bt]], TRUE)
-    }
-    linfo
-}
-
-##' Compare the fits of multiple lmerMod or rlmerMod objects.
+##' Use \code{compare} to quickly compare the estaimated parameters of
+##' the fits of multiple lmerMod or rlmerMod objects.
 ##'
-##' @title Create a comparison chart for multiple fits
-##' @param ... objects to compare
-##' @param digits number of digits to show in print
+##' @title Create comparison charts for multiple fits
+##' @param ... objects to compare, or, for the \code{\link{xtable}}
+##' functions: passed to the respective \code{\link{xtable}} function.
+##' @param digits number of digits to show in output
 ##' @param dnames names of objects given as arguments (optional)
 ##' @param show.rho.functions whether to show rho functions in output.
-##' @return comparison table
-##' @seealso \code{\link{xtable.comparison.table}}
+##' @keywords models utilities
 ##' @examples
 ##' fm1 <- lmer(Yield ~ (1|Batch), Dyestuff)
 ##' fm2 <- rlmer(Yield ~ (1|Batch), Dyestuff)
@@ -500,26 +430,92 @@ print.comparison.table <- function(x, ...) {
     print(x, ..., quote=FALSE)
 }
 
-##' This function is a wrapper to \code{table} for objects of class
-##' \code{comparison.table}. It uses the same arguments as \code{xtable()}.
+##' @rdname compare
+##' @method getInfo lmerMod
+##' @S3method getInfo lmerMod
+getInfo.lmerMod <- function(object, ...) {
+    lsum <- summary(object)
+    coefs <- lsum$coefficients
+    varcor <- lsum$varcor
+    isREML <- .isREML(object)
+    .namedVector <- function(mat) {
+        if (is.vector(mat)) return(mat)
+        names <- rownames(mat)
+        ret <- drop(mat)
+        names(ret) <- names
+        ret
+    }
+    .getVC <- function(varcor) {
+        vc <- lapply(varcor, function(grp) attr(grp, "stddev"))
+        ret <- unlist(vc, use.names = FALSE)
+        names(ret) <-
+            unlist(lapply(1:length(vc), function(i)
+                          paste(names(vc[[i]]), names(vc)[i], sep=" | ")))
+        ##.namedVector(ret)
+        ret
+    }
+    .getCorr <- function(varcor) {
+        ret <- lapply(1:length(varcor), function(i) {
+            grp <- varcor[[i]]
+            corr <- attr(grp, "correlation")
+            if (nrow(corr) == 1) return(NULL)
+            names <- outer(colnames(corr), paste("x", rownames(corr)), paste)
+            ret <- as.vector(corr[upper.tri(corr)])
+            names(ret) <- paste(as.vector(names[upper.tri(names)]),
+                                names(varcor)[i], sep = " | ")
+            ret
+        })
+        unlist(ret)
+    }
+    ret <- list(data = object@call$data,
+                coef = .namedVector(coefs[,1,drop=FALSE]),
+                stderr = .namedVector(coefs[,2,drop=FALSE]),
+                varcomp = .getVC(varcor),
+                sigma = sigma(object))
+    corrs <- .getCorr(varcor)
+    if (length(corrs) > 0) ret$correlations <- corrs
+    if (!is(object, "rlmerMod")) {
+        if (isREML) {
+            ret$REML <- deviance(object)
+        } else {
+            ret$deviance <- deviance(object)
+        }
+    }
+    ret
+}
+
+##' @rdname compare
+##' @method getInfo rlmerMod
+##' @S3method getInfo rlmerMod
+getInfo.rlmerMod <- function(object, ...) {
+    linfo <- getInfo.lmerMod(object)
+    linfo$REML <- linfo$deviance <- NULL
+    linfo$rho.e <- .sprintPsiFunc(rho.e(object), TRUE)
+    linfo$rho.sigma.e <- .sprintPsiFunc(rho.e(object, "sigma"), TRUE)
+    rho.b <- rho.b(object)
+    rho.sigma.b <- rho.b(object, "sigma")
+    for (bt in seq_along(object@blocks)) {
+        linfo[[paste("rho.b",bt,sep="_")]] <- .sprintPsiFunc(rho.b[[bt]], TRUE)
+        linfo[[paste("rho.sigma.b",bt,sep="_")]] <- .sprintPsiFunc(rho.sigma.b[[bt]], TRUE)
+    }
+    linfo
+}
+
+##' The functions \code{xtable.comparison.table} and
+##' \code{print.xtable.comparison.table} are wrapper functions for the
+##' respective \code{\link{xtable}} and \code{\link{print.xtable}}
+##' functions.
 ##' 
-##' @title Create Latex and HTML tables for output of \code{\link{compare}()}.
-##' @param x object of class "comparison.table".
+##' @rdname compare
+##' @param x object of class "comparison.table" or "xtable.comparison.table"
 ##' @param caption see \code{\link{xtable}}.
 ##' @param label see \code{\link{xtable}}.
 ##' @param align see \code{\link{xtable}}.
-##' @param digits see \code{\link{xtable}}.
 ##' @param display see \code{\link{xtable}}.
-##' @param ... passed to \code{\link{xtable}}.
-##' @seealso \code{\link{xtable}}, \code{\link{print.xtable.comparison.table}}
-##'   and \code{\link{compare}}.
+##' @seealso \code{\link{xtable}}
 ##' @examples
-##' \dontrun{
-##'   fm1 <- lmer(Yield ~ (1|Batch), Dyestuff)
-##'   fm2 <- rlmer(Yield ~ (1|Batch), Dyestuff)
-##'   require(xtable)
-##'   xtable(compare(fm1, fm2))
-##' }
+##' require(xtable)
+##' xtable(compare(fm1, fm2))
 ##' @importFrom xtable xtable
 ##' @export
 ##' @method xtable comparison.table
@@ -541,23 +537,15 @@ xtable.comparison.table <- function(x, caption=NULL, label=NULL, align=NULL,
     xtbl
 }
 
-##' Wrapper for \code{print.xtable} for objects of class
-##' \code{xtable.comparison.table}.
-##' 
-##' @title Print Export Tables for comparison tables
-##' @param x An object of class \code{xtable.comparison.table}.
+##' @rdname compare
 ##' @param add.hlines replace empty lines in comparison table by hlines.
 ##'   Supersedes \code{hline.after} argument of \code{print.xtable}.
 ##' @param latexify.namescol replace \dQuote{sigma} and \dQuote{x} in
 ##'   the first column by latex equivalents.
-##' @param include.rownames include row numbers (names are included in
-##'   the first column returned by\\ \code{xtable.comparison.table}).
-##' @param ... passed to \code{\link{print.xtable}}.
+##' @param include.rownames include row numbers (the object returned by
+##'  \code{xtable.comparison.table} includes names in the first column)
 ##' @importFrom xtable print.xtable
-##' @seealso \code{\link{print.xtable}}, \code{\link{xtable.comparison.table}},
-##'  and \code{\link{compare}}.
-##' @examples
-##' ## see example in ?xtable.comparison.table
+##' @seealso \code{\link{print.xtable}}
 ##' @method print xtable.comparison.table
 ##' @export
 print.xtable.comparison.table <- function(x, add.hlines=TRUE,

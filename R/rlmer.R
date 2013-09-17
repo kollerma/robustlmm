@@ -73,7 +73,7 @@
 ##' the appropriate function.
 ##' \itemize{
 ##' \item For simple variance components and the residual error scale
-##' use the function \code{psi2propII} to change the tuning
+##' use the function \code{\link{psi2propII}} to change the tuning
 ##' parameters. The is similar to Proposal II in the location-scale
 ##' problem (i.e., using the squared robustness weights of the
 ##' location estimate for the scale estimate; otherwise the scale
@@ -81,18 +81,18 @@
 ##'
 ##' \item For random effects modeled with correlation parameters
 ##' (referred to as nondiagonal case below), use the
-##' \code{chgDefaults} function to change the tuning parameters. The
-##' parameter estimation problem is multivariate, unlike the case
-##' without correlation where the problem was univariate. For the
-##' employed estimator, this amounts to switching from simple scale
-##' estimates to estimating correlation matrices. Therefore different
-##' weight functions have to be used. Squaring of the weights (using
-##' the function \code{psi2propII}) is no longer necessary. To yield
+##' \code{\link{chgDefaults}} function to change the tuning
+##' parameters. The parameter estimation problem is multivariate,
+##' unlike the case without correlation where the problem was
+##' univariate. For the employed estimator, this amounts to switching
+##' from simple scale estimates to estimating correlation
+##' matrices. Therefore different weight functions have to be
+##' used. Squaring of the weights (using the function
+##' \code{\link{psi2propII}}) is no longer necessary. To yield
 ##' estimates with the same efficiency, the tuning parameters for the
 ##' nondiagonal are generally larger than for the simple case. As a
 ##' rule of thumb, one may use the squared tuning parameters of the
-##' simple case for the nondiagonal case.
-##' }
+##' simple case for the nondiagonal case.  }
 ##'
 ##' Tables of tuning factors are given in the vignette
 ##' (\code{vignette("rlmer")}). For the smoothed Huber function the
@@ -164,6 +164,7 @@
 ##'   values, or function producing an lmerMod object.
 ##' @return object of class rlmerMod.
 ##' @seealso \code{\link[lme4]{lmer}}
+##' @keywords models
 ##' @examples
 ##' ## dropping of VC
 ##' system.time(rlmer(Yield ~ (1|Batch), Dyestuff2, method="DASvar"))
@@ -189,9 +190,10 @@
 ##'   rlmer(Reaction ~ Days + (Days|Subject), sleepstudy,
 ##'         rho.sigma.e = psi2propII(smoothPsi, k = 2.28),
 ##'         rho.sigma.b = chgDefaults(smoothPsi, k = 5.11, s=10))
-##' }
+## }
 ##'
 ##' @importFrom lme4 lmer
+##' @importFrom stats getCall
 ##' @export
 rlmer <- function(formula, data, ..., method = "DAStau",
                   rho.e = smoothPsi, rho.b = smoothPsi,
@@ -211,6 +213,15 @@ rlmer <- function(formula, data, ..., method = "DAStau",
         ## init <- lmer(formula=formula, data=data, REML=TRUE, ...)
     } else if (is.function(init)) {
         init <- do.call(init,list(formula=formula, data=data, REML=TRUE, ...))
+    } else {
+        ## check whether formula and data match with
+        ## the ones in the provided in init
+        if (is.null(icall <- getCall(init)))
+            stop("Object 'init' should containt a 'call' component")
+        if (!identical(as.character(lcall$formula), as.character(icall$formula)) |
+            !identical(lcall$data, icall$data))
+            warning("Arguments 'data' and 'formula' do not match with 'init': ",
+                    "using model specification from 'init'")
     }
     lobj <- as(init, "rlmerMod")
     lobj@call <- lcall

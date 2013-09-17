@@ -27,10 +27,10 @@
   Create psi_func_cached object using cached numerical
   integration for E... slots.
 }
-\details{
-  Warning: the E... slots will not be fully functional:
-  they just return the value for the current defaults and
-  ignore their arguments.
+\section{Warning}{
+  the E... slots will not be fully functional: they just
+  return the value for the current defaults and ignore
+  their arguments.
 }
 \examples{
 ## re-define cPsi as psiFuncCached.
@@ -49,4 +49,5 @@ stopifnot(all.equal(cPsi@Erho(), cPsi2@Erho()),
 \seealso{
   \code{\link{psi_func_cached-class}}
 }
+\keyword{utilities}
 

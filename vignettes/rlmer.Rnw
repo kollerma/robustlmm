@@ -360,6 +360,14 @@ $\Tbk$ such that each summand has expectation zero. For $l = 1, \dots, r$,
 %\SweaveOpts{eval=FALSE}
 
 <<initialize>>=
+
+#####################################################
+#####################################################
+## set this to true to update fitted objects cache ##
+UPDATE_CACHE <- FALSE
+#####################################################
+#####################################################
+
 options(width=80,
         str=strOptions(strict.width = "wrap", vec.len=3),
         xtable.size="\\small")
@@ -376,21 +384,50 @@ source(file.path(rlmerDoc, "plots.R"))
 ## st: function that caches the results and returns the system.time
 require(digest)
 if (!file.exists("cache")) dir.create("cache")
-st <- function(expr, update.cache=FALSE) {
+
+st <- function(expr, update.cache=UPDATE_CACHE) {
     sexpr <- substitute(expr)
     file <- file.path("cache", digest(sexpr, "sha1"))
+    cacheInfo <- list(R = paste(R.Version()[c("major", "minor")], collapse="."),
+                      robustlmm = packageVersion("robustlmm"))
+    pf <- parent.frame()
     if (file.exists(file) && !update.cache) {
-        pf <- parent.frame()
-        load(file, envir=pf)
+        var <- load(file, envir=pf)
+        obj <- get(var[1], envir=pf)
+        ## make sure version of R and robustlmm matches
+        if (!is.null(acacheInfo <- attr(obj, "cacheInfo"))) {
+            if (!isTRUE(all.equal(cacheInfo[c("R", "robustlmm")],
+                                  acacheInfo[c("R", "robustlmm")],))) {
+                ## versions differ, so recall rlmer with initList
+                call <- getCall(obj)
+                call$init <- acacheInfo[["initList"]]
+                ## do not fit, just initialize the object
+                call$init$doFit <- FALSE
+                obj <- eval(call, envir=pf)
+                assign(var, obj, envir=pf)
+            } ## else: no need to do anything
+            elapsed.time <- acacheInfo[["elapsed.time"]]
+        } else 
+            stop("invalid cache file detected: rerun st with update.cache=TRUE")
     } else {
         ## do something similar as system.time
         time <- proc.time()
         expr
         new.time <- proc.time()
         elapsed.time <- new.time - time
-        ## save created object
-        save(list=c(as.character(sexpr[[2]]), "elapsed.time"), file=file)
+        ## get it from the parent frame since we need to add attributes
+        obj <- get(var <- as.character(sexpr[[2]]), envir=pf)
+        ## prepare cacheInfo, add it as attribute to the generated object
+        cacheInfo$elapsed.time <- elapsed.time
+        cacheInfo$initList <- list(fixef=fixef(obj), u=getME(obj, "u"),
+                                   sigma=sigma(obj), theta=getME(obj, "theta"))
+        attr(obj, "cacheInfo") <- cacheInfo
+        ## update object in parent frame
+        assign(var, obj, envir=pf)
+        ## save created object to the cache file
+        save(list=var, file=file)
     }
+    ## same value as system.time()
     structure(elapsed.time, class = "proc_time")
 }
 if(packageVersion("robustbase") >= "0.9-8")  {

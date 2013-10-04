@@ -80,3 +80,14 @@ sPsi <- chgDefaults(smoothPsi, k = 1, s = 10)
 stopifnot(all.equal(rep(0, length(a)), testTau(smoothPsi, sPsi, 1, a, s), 1e-2),
           all.equal(rep(0, length(a)), testTau(smoothPsi, sPsi, 2, a, s), 1e-2))
 
+
+## to save time in checks, also test init argument here:
+initList <- list(fixef=fixef(rfm), u=getME(rfm, "u"),
+                 sigma=sigma(rfm), theta=getME(rfm, "theta"),
+                 doFit=FALSE)
+
+system.time(rfm2 <- rlmer(Yield ~ (1|Batch), Dyestuff,
+                          init=initList))
+
+rfm2@call <- rfm@call
+stopifnot(all.equal(rfm, rfm2))

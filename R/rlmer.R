@@ -161,7 +161,9 @@
 ##'   random-effects terms is returned (used to speed up tests). When
 ##'   \code{doFit = TRUE}, the default, the model is fit immediately.
 ##' @param init optional lmerMod- or rlmerMod-object to use for starting
-##'   values, or function producing an lmerMod object.
+##'   values, a list with elements \sQuote{fixef}, \sQuote{u},
+##'   \sQuote{sigma}, \sQuote{theta}, or a function producing an lmerMod
+##'   object.
 ##' @return object of class rlmerMod.
 ##' @seealso \code{\link[lme4]{lmer}}
 ##' @keywords models
@@ -202,27 +204,44 @@ rlmer <- function(formula, data, ..., method = "DAStau",
                   doFit = TRUE, init)
 {
     lcall <- match.call()
-    if (missing(init)) {
+    if (missing(init) || is.null(init) || is.list(init)) {
         lcall2 <- lcall
         lcall2[setdiff(names(formals(rlmer)), names(formals(lmer)))] <- NULL
         lcall2$doFit <- NULL
         lcall2$REML <- TRUE
         lcall2[[1]] <- as.name("lmer")
         pf <- parent.frame()
-        init <- eval(lcall2, pf)
-        ## init <- lmer(formula=formula, data=data, REML=TRUE, ...)
+        linit <- eval(lcall2, pf)
+        if (!missing(init) && is.list(init)) {
+            ## check sanity of input
+            stopifnot(length(init$fixef) == length(fixef(linit)),
+                      length(init$u) == length(getME(linit, "u")),
+                      length(init$sigma) == length(sigma(linit)),
+                      length(init$theta) == length(getME(linit, "theta")))
+            ## convert object to rlmerMod
+            linit <- as(linit, "rlmerMod")
+            ## set all of the initial parameters, but do not fit yet
+            setFixef(linit, unname(init$fixef))
+            setSigma(linit, init$sigma)
+            setTheta(linit, init$theta, fit.effects=FALSE, update.sigma=FALSE)
+            setU(linit, init$u)
+            ## trick to make st() fast:
+            if (!is.null(init$doFit)) doFit <- init$doFit
+        }
+        init <- linit
     } else if (is.function(init)) {
         init <- do.call(init,list(formula=formula, data=data, REML=TRUE, ...))
-    } else {
+    } else if (is(init, "merMod") || is(init, "rlmerMod")) {
         ## check whether formula and data match with
         ## the ones in the provided in init
         if (is.null(icall <- getCall(init)))
-            stop("Object 'init' should containt a 'call' component")
+            stop("Object 'init' should contain a 'call' component")
         if (!identical(as.character(lcall$formula), as.character(icall$formula)) |
             !identical(lcall$data, icall$data))
             warning("Arguments 'data' and 'formula' do not match with 'init': ",
                     "using model specification from 'init'")
-    }
+    } else stop("Unsuitable init object, aborting.",
+                "Expecting no, list (see ?rlmer), rlmerMod or merMod object")
     lobj <- as(init, "rlmerMod")
     lobj@call <- lcall
 
@@ -267,7 +286,7 @@ rlmer <- function(formula, data, ..., method = "DAStau",
     lobj@pp$updateMatrices()
 
 
-    if (!doFit) return(lobj)
+    if (!doFit) return(updateWeights(lobj))
 
     ## do not start with theta == 0
     if (any(theta(lobj)[lobj@lower == 0] == 0)) {

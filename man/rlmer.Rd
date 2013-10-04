@@ -67,8 +67,9 @@
   default, the model is fit immediately.}
 
   \item{init}{optional lmerMod- or rlmerMod-object to use
-  for starting values, or function producing an lmerMod
-  object.}
+  for starting values, a list with elements \sQuote{fixef},
+  \sQuote{u}, \sQuote{sigma}, \sQuote{theta}, or a function
+  producing an lmerMod object.}
 
   \item{initTheta}{parameter to initialize theta with
   (optional)}

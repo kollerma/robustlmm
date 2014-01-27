@@ -70,12 +70,12 @@ chkPsiDeriv <- function(m.psi, tol = 1e-4) {
     xn0 <- abs(x) > 1e-5
     Dpsi <- diff(psi)/dx
     DnInf <- abs(Dpsi) < 50
-    c(all.equal(diff(m.psi[,"rho"])/dx, mids(psi), tol=tol[1]), # rho'  == psi
-      all.equal(Dpsi[DnInf], mids(m.psi[,"psi'"])[DnInf], tol=tol[2]),# psi'  == psip
-      all.equal((psi/x)[xn0], m.psi[xn0,"wgt"], tol= tol[1]/10),# psi/x == wgt
+    c(all.equal(diff(m.psi[,"rho"])/dx, mids(psi), tolerance=tol[1]), # rho'  == psi
+      all.equal(Dpsi[DnInf], mids(m.psi[,"psi'"])[DnInf], tolerance=tol[2]),# psi'  == psip
+      all.equal((psi/x)[xn0], m.psi[xn0,"wgt"], tolerance=tol[1]/10),# psi/x == wgt
       all.equal(m.psi[,"wgt'"],
                 ifelse(x==0,0,m.psi[,"psi'"]/x - m.psi[,"psi"]/(x*x)),
-                tol=tol[1])) # wgt' == psi'/x - psi/x^2
+                tolerance=tol[1])) # wgt' == psi'/x - psi/x^2
 }
 
 head(x. <- seq(-5, 10, length=1501))

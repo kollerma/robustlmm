@@ -420,7 +420,8 @@ st <- function(expr, update.cache=UPDATE_CACHE) {
         ## prepare cacheInfo, add it as attribute to the generated object
         cacheInfo$elapsed.time <- elapsed.time
         cacheInfo$initList <- list(fixef=fixef(obj), u=getME(obj, "u"),
-                                   sigma=sigma(obj), theta=getME(obj, "theta"))
+                                   sigma=getME(obj, "sigma"), 
+                                   theta=getME(obj, "theta"))
         attr(obj, "cacheInfo") <- cacheInfo
         ## update object in parent frame
         assign(var, obj, envir=pf)

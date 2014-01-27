@@ -20,8 +20,8 @@ testKappaTau <- function(rho, wExp) {
 }
 
 testKappa <- function(rho) {
-    stopifnot(all.equal(0, testKappaTau(rho, 1), 1e-4),
-              all.equal(0, testKappaTau(rho, 2), 1e-4))
+    stopifnot(all.equal(0, testKappaTau(rho, 1), tolerance = 1e-4),
+              all.equal(0, testKappaTau(rho, 2), tolerance = 1e-4))
 }
 
 testKappa(huberPsi)
@@ -70,15 +70,15 @@ testTau <- function(rho, rho.sigma, wExp, a, s) {
 a <- c(0.1, 0.4, 1, 1, 0.8)
 s <- c(0.4, 0.5, 0.8, 0.1, 0.1)
 ## FIXME: increase accuracy of calcTau.
-stopifnot(all.equal(rep(0, length(a)), testTau(huberPsi, huberPsi, 1, a, s), 1e-2),
-          all.equal(rep(0, length(a)), testTau(huberPsi, huberPsi, 2, a, s), 1e-2))
-stopifnot(all.equal(rep(0, length(a)), testTau(smoothPsi, huberPsi, 1, a, s), 1e-2),
-          all.equal(rep(0, length(a)), testTau(smoothPsi, huberPsi, 2, a, s), 1e-1))
-stopifnot(all.equal(rep(0, length(a)), testTau(smoothPsi, smoothPsi, 1, a, s), 1e-2),
-          all.equal(rep(0, length(a)), testTau(smoothPsi, smoothPsi, 2, a, s), 1e-1))
+stopifnot(all.equal(rep(0, length(a)), testTau(huberPsi, huberPsi, 1, a, s), tolerance = 1e-2),
+          all.equal(rep(0, length(a)), testTau(huberPsi, huberPsi, 2, a, s), tolerance = 1e-2))
+stopifnot(all.equal(rep(0, length(a)), testTau(smoothPsi, huberPsi, 1, a, s), tolerance = 1e-2),
+          all.equal(rep(0, length(a)), testTau(smoothPsi, huberPsi, 2, a, s), tolerance = 1e-1))
+stopifnot(all.equal(rep(0, length(a)), testTau(smoothPsi, smoothPsi, 1, a, s), tolerance = 1e-2),
+          all.equal(rep(0, length(a)), testTau(smoothPsi, smoothPsi, 2, a, s), tolerance = 1e-1))
 sPsi <- chgDefaults(smoothPsi, k = 1, s = 10)
-stopifnot(all.equal(rep(0, length(a)), testTau(smoothPsi, sPsi, 1, a, s), 1e-2),
-          all.equal(rep(0, length(a)), testTau(smoothPsi, sPsi, 2, a, s), 1e-2))
+stopifnot(all.equal(rep(0, length(a)), testTau(smoothPsi, sPsi, 1, a, s), tolerance = 1e-2),
+          all.equal(rep(0, length(a)), testTau(smoothPsi, sPsi, 2, a, s), tolerance = 1e-2))
 
 
 ## to save time in checks, also test init argument here:

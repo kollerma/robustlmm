@@ -1,5 +1,5 @@
 
-R Under development (unstable) (2013-09-10 r63898) -- "Unsuffered Consequences"
+R version 3.0.2 (2013-09-25) -- "Frisbee Sailing"
 Copyright (C) 2013 The R Foundation for Statistical Computing
 Platform: x86_64-apple-darwin10.8.0 (64-bit)
 
@@ -40,14 +40,16 @@ Note: method with signature 'dsparseMatrix#dgeMatrix' chosen for function 'cross
  "CsparseMatrix#ddenseMatrix" would also be valid
 > 
 > (nmME <- eval(formals(getME)$name))
- [1] "X"                "Z"                "Zt"               "u"               
- [5] "b.s"              "b"                "Gp"               "Lambda"          
- [9] "Lambdat"          "U_b"              "Lind"             "flist"           
-[13] "beta"             "theta"            "n_rtrms"          "devcomp"         
-[17] "offset"           "lower"            "rho_e"            "rho_b"           
-[21] "rho_sigma_e"      "rho_sigma_b"      "M"                "w_e"             
-[25] "w_b"              "w_b_vector"       "w_sigma_e"        "w_sigma_b"       
-[29] "w_sigma_b_vector"
+ [1] "X"                "Z"                "Zt"               "Ztlist"          
+ [5] "y"                "mu"               "u"                "b.s"             
+ [9] "b"                "Gp"               "Tp"               "Lambda"          
+[13] "Lambdat"          "A"                "U_b"              "Lind"            
+[17] "sigma"            "flist"            "beta"             "theta"           
+[21] "n_rtrms"          "n_rfacs"          "cnms"             "devcomp"         
+[25] "offset"           "lower"            "rho_e"            "rho_b"           
+[29] "rho_sigma_e"      "rho_sigma_b"      "M"                "w_e"             
+[33] "w_b"              "w_b_vector"       "w_sigma_e"        "w_sigma_b"       
+[37] "w_sigma_b_vector" "is_REML"         
 > for (nm in nmME) {
 +     cat("\nName:", nm, "\n")
 +     str(getME(rfm, name=nm))
@@ -82,6 +84,42 @@ Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
   ..@ x       : num [1:522] 1 1 1 1 1 1 2 1 1 3 ...
   ..@ factors : list()
 
+Name: Ztlist 
+List of 3
+ $ Subject.(Intercept):Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
+  .. ..@ i       : int [1:180] 0 0 0 0 0 0 0 0 0 0 ...
+  .. ..@ p       : int [1:181] 0 1 2 3 4 5 6 7 8 9 ...
+  .. ..@ Dim     : int [1:2] 18 180
+  .. ..@ Dimnames:List of 2
+  .. .. ..$ : chr [1:18] "308" "309" "310" "330" ...
+  .. .. ..$ : NULL
+  .. ..@ x       : num [1:180] 1 1 1 1 1 1 1 1 1 1 ...
+  .. ..@ factors : list()
+ $ Subject.Days       :Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
+  .. ..@ i       : int [1:162] 0 0 0 0 0 0 0 0 0 1 ...
+  .. ..@ p       : int [1:181] 0 0 1 2 3 4 5 6 7 8 ...
+  .. ..@ Dim     : int [1:2] 18 180
+  .. ..@ Dimnames:List of 2
+  .. .. ..$ : chr [1:18] "308" "309" "310" "330" ...
+  .. .. ..$ : NULL
+  .. ..@ x       : num [1:162] 1 2 3 4 5 6 7 8 9 1 ...
+  .. ..@ factors : list()
+ $ Group.(Intercept)  :Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
+  .. ..@ i       : int [1:180] 0 1 2 3 0 1 2 3 0 1 ...
+  .. ..@ p       : int [1:181] 0 1 2 3 4 5 6 7 8 9 ...
+  .. ..@ Dim     : int [1:2] 4 180
+  .. ..@ Dimnames:List of 2
+  .. .. ..$ : chr [1:4] "a" "b" "c" "d"
+  .. .. ..$ : NULL
+  .. ..@ x       : num [1:180] 1 1 1 1 1 1 1 1 1 1 ...
+  .. ..@ factors : list()
+
+Name: y 
+ num [1:180] 250 259 251 321 357 ...
+
+Name: mu 
+ num [1:180] 254 273 293 313 332 ...
+
 Name: u 
  num [1:40] 2.34 39.68 -41.79 -34.58 -40.3 ...
 
@@ -94,6 +132,10 @@ Name: b
 
 Name: Gp 
  int [1:3] 0 36 40
+
+Name: Tp 
+ Named num [1:3] 0 3 4
+ - attr(*, "names")= chr [1:3] "beg__" "Subject" "Group"
 
 Name: Lambda 
 Formal class 'dtCMatrix' [package "Matrix"] with 7 slots
@@ -118,6 +160,17 @@ Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
   ..@ x       : num [1:58] 0.9667 0.0152 0.2309 0.9667 0.0152 ...
   ..@ factors : list()
 
+Name: A 
+Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
+  ..@ i       : int [1:522] 0 36 0 1 37 0 1 38 0 1 ...
+  ..@ p       : int [1:181] 0 2 5 8 11 14 17 20 23 26 ...
+  ..@ Dim     : int [1:2] 40 180
+  ..@ Dimnames:List of 2
+  .. ..$ : NULL
+  .. ..$ : NULL
+  ..@ x       : num [1:522] 9.67e-01 5.44e-06 9.82e-01 2.31e-01 5.44e-06 ...
+  ..@ factors : list()
+
 Name: U_b 
 Formal class 'dtCMatrix' [package "Matrix"] with 7 slots
   ..@ i       : int [1:58] 0 1 1 2 3 3 4 5 5 6 ...
@@ -132,6 +185,9 @@ Formal class 'dtCMatrix' [package "Matrix"] with 7 slots
 
 Name: Lind 
  int [1:58] 1 2 3 1 2 3 1 2 3 1 ...
+
+Name: sigma 
+ num 25.6
 
 Name: flist 
 List of 2
@@ -148,6 +204,14 @@ Name: theta
 
 Name: n_rtrms 
  int 2
+
+Name: n_rfacs 
+ int 2
+
+Name: cnms 
+List of 2
+ $ Subject: chr [1:2] "(Intercept)" "Days"
+ $ Group  : chr "(Intercept)"
 
 Name: devcomp 
 List of 2
@@ -367,7 +431,10 @@ List of 2
 
 Name: w_sigma_b_vector 
  num [1:40] 1 1 0.614 0.614 1 ...
+
+Name: is_REML 
+ logi TRUE
 > 
 > proc.time()
    user  system elapsed 
-  5.020   0.105   5.117 
+  5.688   0.146   5.829 

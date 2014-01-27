@@ -241,6 +241,38 @@ uArranged <- function(object, b.s = b.s(object)) {
     ret
 }
 
+## Construct names of individual theta/sd:cor components
+##
+## @param object a fixed model
+## @param diag.only include only diagonal elements?
+## @param old (logical) give backward-compatible results?
+## @param prefix a character vector with two elements giving the prefix
+## for diagonal (e.g. "sd") and off-diagonal (e.g. "cor") elements
+## ## @export
+tnames <- function(object,diag.only=FALSE,old=TRUE,prefix=NULL) {
+    if (old) {
+        nc <- c(unlist(mapply(function(g,e) {
+            mm <- outer(e,e,paste,sep=".")
+            diag(mm) <- e
+            mm <- if (diag.only) diag(mm) else mm[lower.tri(mm,diag=TRUE)]
+            paste(g,mm,sep=".")
+        },
+        names(object@cnms),object@cnms)))
+        return(nc)
+    } else {
+        pfun <- function(g,e) {
+            mm <- outer(e,e,paste,sep=".")
+            mm[] <- paste(mm,g,sep="|")
+            if (!is.null(prefix)) mm[] <- paste(prefix[2],mm,sep="_")
+            diag(mm) <- paste(e,g,sep="|")
+            if (!is.null(prefix))  diag(mm) <- paste(prefix[1],diag(mm),sep="_")
+            mm <- if (diag.only) diag(mm) else mm[lower.tri(mm,diag=TRUE)]
+        }
+        nc <- c(unlist(mapply(pfun,names(object@cnms),object@cnms)))
+        return(nc)
+    }
+}
+
 ##' Extract or Get Generalize Components from a Fitted Mixed Effects Model
 ##'
 ##' Extract (or \dQuote{get}) \dQuote{components} -- in a generalized
@@ -260,20 +292,35 @@ uArranged <- function(object, b.s = b.s(object)) {
 ##'     \item{X}{fixed-effects model matrix}
 ##'     \item{Z}{random-effects model matrix}
 ##'     \item{Zt}{transpose of random-effects model matrix}
+##'     \item{Ztlist}{list of components of the transpose of the random-effects model matrix,
+##'              separated by individual variance component}
+##'     \item{y}{response vector}
+##'     \item{mu}{conditional mean of the response}
 ##'     \item{u}{conditional mode of the \dQuote{spherical} random effects variable}
 ##'     \item{b.s}{synonym for \dQuote{u}}
 ##'     \item{b}{onditional mode of the random effects variable}
 ##'     \item{Gp}{groups pointer vector.  A pointer to the beginning of each group
 ##'               of random effects corresponding to the random-effects terms.}
+##'     \item{Tp}{theta pointer vector.  A pointer to the beginning
+##'               of the theta sub-vectors corresponding to the
+##'               random-effects terms, beginning with 0 and including
+##'               a final element giving the total number of random effects}
 ##'     \item{Lambda}{relative covariance factor of the random effects.}
 ##'     \item{U_b}{synonym for \dQuote{Lambda}}
 ##'     \item{Lambdat}{transpose of the relative covariance factor of the random effects.}
 ##'     \item{Lind}{index vector for inserting elements of \eqn{\theta}{theta} into the
 ##'                 nonzeros of \eqn{\Lambda}{Lambda}}
+##'     \item{A}{Scaled sparse model matrix (class
+##'      \code{"\link[Matrix:dgCMatrix-class]{dgCMatrix}"}) for
+##'      the unit, orthogonal random effects, \eqn{U},
+##'       equal to \code{getME(.,"Zt") \%*\% getME(.,"Lambdat")}}
+##'     \item{sigma}{residual standard error}
 ##'     \item{flist}{a list of the grouping variables (factors) involved in the random effect terms}
 ##'     \item{beta}{fixed-effects parameter estimates (identical to the result of \code{\link{fixef}}, but without names)}
 ##'     \item{theta}{random-effects parameter estimates: these are parameterized as the relative Cholesky factors of each random effect term}
 ##'     \item{n_rtrms}{number of random-effects terms}
+##'     \item{n_rfacs}{number of distinct random-effects grouping factors}
+##'     \item{cnms}{ the “component names”, a ‘list’.}
 ##'     \item{devcomp}{a list consisting of a named numeric vector, \dQuote{cmp}, and
 ##'                    a named integer vector, \dQuote{dims}, describing the fitted model}
 ##'     \item{offset}{model offset}
@@ -289,6 +336,7 @@ uArranged <- function(object, b.s = b.s(object)) {
 ##'     \item{w_sigma_e}{robustness weights associated with the observations when estimating sigma}
 ##'     \item{w_sigma_b}{robustness weights associated with the spherical random effects when estimating the covariance parameters, returned in the same format as \code{\link{ranef}()}}
 ##'     \item{w_sigma_b_vector}{robustness weights associated with the spherical random effects when estimating the covariance parameters, returned as one long vector}
+##'     \item{is_REML}{returns \code{TRUE} for rlmerMod-objects (for compatibility with lme4)}
 ##' }
 ##' @return Unspecified, as very much depending on the \code{\link{name}}.
 ##' @seealso \code{\link{getCall}()},
@@ -297,12 +345,15 @@ uArranged <- function(object, b.s = b.s(object)) {
 ##' see \code{methods(class="rlmerMod")}
 ##' @keywords utilities
 ##' @usage getME(object,
-##'   name = c("X", "Z", "Zt", "u", "b.s", "b", "Gp", "Lambda",
-##'            "Lambdat", "U_b", "Lind", "flist", "beta", "theta",
-##'            "n_rtrms", "devcomp", "offset", "lower", "rho_e",
-##'            "rho_b", "rho_sigma_e", "rho_sigma_b", "M", "w_e",
-##'            "w_b", "w_b_vector", "w_sigma_e", "w_sigma_b",
-##'            "w_sigma_b_vector"))
+##'   name = c("X", "Z", "Zt", "Ztlist", "y", "mu",
+##'       "u", "b.s", "b",
+##'       "Gp", "Tp", "Lambda", "Lambdat", "A",
+##'       "U_b", "Lind", "sigma", "flist", "beta",
+##'       "theta", "n_rtrms", "n_rfacs", "cnms",
+##'       "devcomp", "offset", "lower", "rho_e",
+##'       "rho_b", "rho_sigma_e", "rho_sigma_b", "M",
+##'       "w_e", "w_b", "w_b_vector", "w_sigma_e",
+##'       "w_sigma_b", "w_sigma_b_vector", "is_REML"))
 ##' @examples
 ##'
 ##' ## shows many methods you should consider *before* using getME():
@@ -315,7 +366,7 @@ uArranged <- function(object, b.s = b.s(object)) {
 ##' stopifnot(is(Z, "CsparseMatrix"),
 ##'           c(180,36) == dim(Z),
 ##' 	  all.equal(fixef(fm1), getME(fm1, "beta"),
-##' 		    check.attr=FALSE, tol = 0))
+##' 		    check.attributes=FALSE, tolerance = 0))
 ##'
 ##' ## All that can be accessed [potentially ..]:
 ##' (nmME <- eval(formals(getME)$name))
@@ -328,13 +379,15 @@ uArranged <- function(object, b.s = b.s(object)) {
 ##'
 ##' @export
 getME <- function(object,
-		  name = c("X", "Z","Zt", "u", "b.s", "b",
-		  "Gp","Lambda", "Lambdat", "U_b", "Lind",
-                  "flist", "beta", "theta","n_rtrms",
-                  "devcomp", "offset", "lower", "rho_e",
-                  "rho_b", "rho_sigma_e", "rho_sigma_b", "M",
-                  "w_e", "w_b", "w_b_vector", "w_sigma_e",
-                  "w_sigma_b", "w_sigma_b_vector"))
+		  name = c("X", "Z", "Zt", "Ztlist", "y", "mu",
+                      "u", "b.s", "b",
+                      "Gp", "Tp", "Lambda", "Lambdat", "A",
+                      "U_b", "Lind", "sigma", "flist", "beta",
+                      "theta", "n_rtrms", "n_rfacs", "cnms",
+                      "devcomp", "offset", "lower", "rho_e",
+                      "rho_b", "rho_sigma_e", "rho_sigma_b", "M",
+                      "w_e", "w_b", "w_b_vector", "w_sigma_e",
+                      "w_sigma_b", "w_sigma_b_vector", "is_REML"))
 {
     if(missing(name)) stop("'name' must not be missing")
     if (is(object, "merMod"))
@@ -347,23 +400,50 @@ getME <- function(object,
     PR   <- object@pp
     dc   <- object@devcomp
     cmp  <- dc $ cmp
+    cnms <- object@cnms
     dims <- dc $ dims
+    Tpfun <- function(cnms) {
+	ltsize <- function(n) n*(n+1)/2 # lower triangle size
+	cLen <- cumsum(ltsize(vapply(cnms,length, 1L)))
+	setNames(c(0, cLen),
+		 c("beg__", names(cnms))) ## such that diff( Tp ) is well-named
+    }
     switch(name,
 	   "X" = getX(object, t=FALSE), 
 	   "Z" = getZ(object, t=FALSE),
 	   "Zt"= getZ(object, t=TRUE),
+           
+           "Ztlist" =
+       {
+           getInds <- function(i) {
+               n <- diff(object@Gp)[i]      ## number of elements in this block
+               nt <- length(cnms[[i]]) ## number of REs
+               inds <- lapply(seq(nt),seq,to=n,by=nt)  ## pull out individual RE indices
+               inds <- lapply(inds,function(x) x + object@Gp[i])  ## add group offset
+           }
+           inds <- do.call(c,lapply(seq_along(cnms),getInds))
+           setNames(lapply(inds,function(i) PR$Zt[i,]),
+                    tnames(object,diag.only=TRUE))
+       },
+           "y" = rsp$y,
+           "mu"= rsp$mu,
            "u" =,
            "b.s" = b.s(object),
            "b" = b(object),
 	   "Lambda"= ,
            "U_b" = PR$ U_b,
 	   "Lambdat"= PR$ Lambdat(),
+           "A"= PR$Lambdat() %*% PR$Zt,
            "Lind" = PR$ Lind,
+           "sigma" = sigma(object),
            "Gp" = object@Gp,
+           "Tp" = Tpfun(cnms) ,
            "flist" = object@flist,
 	   "beta" = object@beta,
            "theta"= theta(object),
 	   "n_rtrms" = length(object@flist), 
+           "n_rfacs" = length(object@flist),
+           "cnms" = cnms,
            "devcomp" = dc,
            "offset" = rsp$offset,
            "lower" = object@lower,
@@ -378,6 +458,7 @@ getME <- function(object,
            "w_sigma_e" = wgt.e(object, use.rho.sigma=TRUE),
            "w_sigma_b" = uArrangedNames(object, wgt.b(object, center=TRUE)),
            "w_sigma_b_vector" = wgt.b(object, center=TRUE),
+           "is_REML" = TRUE,
 	   "..foo.." =# placeholder!
 	   stop(gettextf("'%s' is not implemented yet",
 			 sprintf("getME(*, \"%s\")", name))),

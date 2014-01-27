@@ -8,8 +8,7 @@ cPsi <- robustlmm:::cPsi
 
 ## simple tests for q = 1:
 test1 <- function(rho) {
-    stopifnot(all.equal(.calcE.D.re(1, rho), rho@EDpsi())
-              )
+    stopifnot(all.equal(.calcE.D.re(1, rho), rho@EDpsi()))
 }
 
 test1(cPsi)

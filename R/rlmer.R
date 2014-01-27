@@ -425,7 +425,7 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
                 cat("LHS:", as.vector(lhs), "\n")
                 cat("RHS:", as.vector(rhs), "\n")
             }
-            if (isTRUE(all.equal(rhs, lhs, attributes=FALSE, tolerance = rel.tol^2))) {
+            if (isTRUE(all.equal(rhs, lhs, check.attributes=FALSE, tolerance = rel.tol^2))) {
                 convBlks[type] <- TRUE
                 next
             }

@@ -21,12 +21,13 @@ fit <- function(formula, data, methods =  c("DASvar", "DAStau"),
              if (classic) {
                  ## compare with lmer fit
                  cat("#### Checking equality with lmer... ####\n")
-                 cat("Fixed effects: ", all.equal(fixef(fm), fixef(m), tol = 1e-4), "\n")
-                 cat("Random effects:", all.equal(ranef(fm), ranef(m), tol = 1e-4, check.attr=FALSE), "\n")
-                 cat("Theta:         ", all.equal(theta(fm), theta(m), tol = 1e-4), "\n")
-                 cat("Sigma:         ", all.equal(sigma(fm), sigma(m), 1e-4), "\n")
+                 cat("Fixed effects: ", all.equal(fixef(fm), fixef(m), tolerance = 1e-4), "\n")
+                 cat("Random effects:", all.equal(ranef(fm), ranef(m), tolerance = 1e-4,
+                                                  check.attributes=FALSE), "\n")
+                 cat("Theta:         ", all.equal(theta(fm), theta(m), tolerance = 1e-4), "\n")
+                 cat("Sigma:         ", all.equal(sigma(fm), sigma(m), tolerance = 1e-4), "\n")
                  if (packageVersion("lme4") >= "0.99999911.0") {
-                     tmp <- all.equal(fm@pp$unsc(), unname(m@pp$unsc()), tol = 1e-4)
+                     tmp <- all.equal(fm@pp$unsc(), unname(m@pp$unsc()), tolerance = 1e-4)
                      if (!isTRUE(tmp))
                          cat("Unsc:          ", tmp , "\n")
                  }

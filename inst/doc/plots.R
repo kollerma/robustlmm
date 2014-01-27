@@ -78,7 +78,7 @@ vcovFull <- function(object) {
     lC <- with(object@pp, bdiag(Diagonal(x=rep(Epsi2_e, n)), Epsi_bpsi_bt))
     MD <- Mmat(object) %*% Dmat(object)
     Vunsc <- MD %*% tcrossprod(lC, MD)
-    V <- sigma(object)^2 * Vunsc
+    V <- getME(object, "sigma")^2 * Vunsc
 }
 ## all.equal(as(vcovFull(rfm31)[1:4, 1:4], "matrix"), as(vcov(rfm31), "matrix"),
 ##           check.attr=FALSE) ## close enough??

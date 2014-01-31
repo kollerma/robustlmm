@@ -1,3 +1,6 @@
+## Test disabled
+quit()
+
 ## test calculation of matrices for the classes
 ## rlmerPredD and rlmerPred_...
 require(robustlmm)

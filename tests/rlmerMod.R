@@ -1,3 +1,6 @@
+## Test disabled
+quit()
+
 require(robustlmm)
 
 b <- robustlmm:::b

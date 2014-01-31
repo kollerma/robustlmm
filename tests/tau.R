@@ -1,3 +1,6 @@
+## Test disabled
+quit()
+
 ## test kappa functions
 require(robustlmm)
 

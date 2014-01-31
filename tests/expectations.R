@@ -1,3 +1,6 @@
+## Test disable
+quit()
+
 ## test .calcE.D.re and .calcEchi
 require(robustlmm)
 

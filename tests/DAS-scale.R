@@ -1,3 +1,6 @@
+## Test disabled
+quit()
+
 ## Test DAS-scale
 
 require(robustlmm)

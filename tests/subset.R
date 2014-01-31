@@ -1,3 +1,6 @@
+## Test disabled
+quit()
+
 ## testing subset
 require(robustlmm)
 

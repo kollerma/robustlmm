@@ -397,7 +397,7 @@ st <- function(expr, update.cache=UPDATE_CACHE) {
         ## make sure version of R and robustlmm matches
         if (!is.null(acacheInfo <- attr(obj, "cacheInfo"))) {
             if (!isTRUE(all.equal(cacheInfo[c("R", "robustlmm")],
-                                  acacheInfo[c("R", "robustlmm")],))) {
+                                  acacheInfo[c("R", "robustlmm")]))) {
                 ## versions differ, so recall rlmer with initList
                 call <- getCall(obj)
                 call$init <- acacheInfo[["initList"]]

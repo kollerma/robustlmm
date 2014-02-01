@@ -468,7 +468,7 @@ updateThetaTau <- function(object, max.iter = 100, rel.tol = 1e-6, verbose = 0) 
             deltatheta[idxTheta] <- 0
         } else {
             if (ldim > 1) {
-                ## non-diag case (use multiroot)
+                ## non-diag case
                 stop("non diagonal case for DAStau not implemented yet")
             } else {
                 ## simple 1d case

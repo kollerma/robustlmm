@@ -1,5 +1,5 @@
 
-R Under development (unstable) (2014-01-26 r64896) -- "Unsuffered Consequences"
+R Under development (unstable) (2014-03-12 r65160) -- "Unsuffered Consequences"
 Copyright (C) 2014 The R Foundation for Statistical Computing
 Platform: x86_64-apple-darwin10.8.0 (64-bit)
 
@@ -19,8 +19,8 @@ Type 'q()' to quit R.
 > require(robustlmm)
 Loading required package: robustlmm
 Loading required package: lme4
-Loading required package: lattice
 Loading required package: Matrix
+Loading required package: Rcpp
 
 Attaching package: 'robustlmm'
 
@@ -116,10 +116,14 @@ The following object is masked from 'package:lme4':
 Note: method with signature 'dsparseMatrix#dgeMatrix' chosen for function 'crossprod',
  target signature 'dsCMatrix#dgeMatrix'.
  "CsparseMatrix#ddenseMatrix" would also be valid
-Time elapsed: 4.22 0.031 4.291 0 0 
+Time elapsed: 3.814 0.027 3.844 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-1.2872 -0.6775  0.1308  0.7136  1.7416 
 
 Random effects:
  Groups   Name        Variance Std.Dev.
@@ -150,10 +154,14 @@ Rho functions used for fitting:
 -19.822   1.081  33.966 -30.283  67.013 -51.900 
 
 ######## DAStau ########
-Time elapsed: 3.181 0.037 3.219 0 0 
+Time elapsed: 3.145 0.034 3.182 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-1.2622 -0.6555  0.1215  0.6940  1.6971 
 
 Random effects:
  Groups   Name        Variance Std.Dev.
@@ -215,10 +223,14 @@ sigma               55.5
 Note: method with signature 'CsparseMatrix#Matrix#missing#replValue' chosen for function '[<-',
  target signature 'dgCMatrix#ngCMatrix#missing#numeric'.
  "Matrix#nsparseMatrix#missing#replValue" would also be valid
-Time elapsed: 2.718 0.013 2.772 0 0 
+Time elapsed: 2.611 0.01 2.625 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
+
+Scaled residuals: 
+     Min       1Q   Median       3Q      Max 
+-1.62421 -0.71050 -0.06088  0.63520  1.95517 
 
 Random effects:
  Groups   Name        Variance Std.Dev.
@@ -249,10 +261,14 @@ A B C D E F
 0 0 0 0 0 0 
 
 ######## DAStau ########
-Time elapsed: 3.764 0.046 3.811 0 0 
+Time elapsed: 3.747 0.036 3.786 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
+
+Scaled residuals: 
+     Min       1Q   Median       3Q      Max 
+-1.61559 -0.70666 -0.06044  0.63201  1.94508 
 
 Random effects:
  Groups   Name        Variance Std.Dev.
@@ -311,10 +327,14 @@ sigma               4.02
 +     rho.e = smoothPsi, rho.b = smoothPsi)
 
 ######## DASvar ########
-Time elapsed: 3.312 0.042 3.355 0 0 
+Time elapsed: 3.227 0.025 3.255 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-2.2164 -0.6474  0.0528  0.5885  3.4337 
 
 Random effects:
  Groups   Name        Variance Std.Dev.
@@ -359,10 +379,14 @@ Rho functions used for fitting:
 -2.667e-02 -7.956e-01 
 
 ######## DAStau ########
-Time elapsed: 8.752 0.073 8.867 0 0 
+Time elapsed: 8.487 0.056 8.547 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-2.1501 -0.6413  0.0585  0.5707  3.3119 
 
 Random effects:
  Groups   Name        Variance Std.Dev.
@@ -466,8 +490,8 @@ sigma                0.561
 + }
 > 
 > cat('Time elapsed: ', proc.time(),'\n') # for ``statistical reasons''
-Time elapsed:  29.921 0.33 30.382 0.002 0.003 
+Time elapsed:  28.958 0.269 29.251 0.002 0.003 
 > 
 > proc.time()
    user  system elapsed 
- 29.923   0.333  30.382 
+ 28.960   0.272  29.251 

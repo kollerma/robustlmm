@@ -81,12 +81,14 @@
   \code{compare}.
 }
 \examples{
-fm1 <- lmer(Yield ~ (1|Batch), Dyestuff)
-fm2 <- rlmer(Yield ~ (1|Batch), Dyestuff)
-compare(fm1, fm2)
-require(xtable)
-xtable(compare(fm1, fm2))
-str(getInfo(fm1))
+\dontrun{
+  fm1 <- lmer(Yield ~ (1|Batch), Dyestuff)
+  fm2 <- rlmer(Yield ~ (1|Batch), Dyestuff)
+  compare(fm1, fm2)
+  require(xtable)
+  xtable(compare(fm1, fm2))
+  str(getInfo(fm1))
+}
 }
 \seealso{
   \code{\link{xtable}}

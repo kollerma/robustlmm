@@ -22,8 +22,10 @@
   whether the weights should be used or not.
 }
 \examples{
-fm <- rlmer(Yield ~ (1|Batch), Dyestuff)
-stopifnot(all.equal(resid(fm, type="weighted"),
-                    resid(fm) * getME(fm, "w_e")))
+\dontrun{
+  fm <- rlmer(Yield ~ (1|Batch), Dyestuff)
+  stopifnot(all.equal(resid(fm, type="weighted"),
+                      resid(fm) * getME(fm, "w_e")))
+}
 }
 

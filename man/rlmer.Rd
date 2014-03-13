@@ -196,7 +196,7 @@
 }
 \examples{
 ## dropping of VC
-system.time(rlmer(Yield ~ (1|Batch), Dyestuff2, method="DASvar"))
+system.time(print(rlmer(Yield ~ (1|Batch), Dyestuff2, method="DASvar")))
 
 \dontrun{
   ## Default method "DAStau"

@@ -4,7 +4,7 @@
 \title{Plot Method for "rlmerMod" objects.}
 \usage{
   \method{plot}{rlmerMod} (x, y = NULL, which = 1:4, 
-    title = c("Response vs. Fitted Values", 
+    title = c("Fitted Values vs. Residuals", 
               "Normal Q-Q vs. Residuals", 
               "Normal Q-Q vs. Random Effects",
               "Scatterplot of Random Effects for Group \"\%s\""),
@@ -52,10 +52,12 @@
   \code{getME(object, "w_b")}.
 }
 \examples{
-rfm <- rlmer(Yield ~ (1|Batch), Dyestuff)
-plot(rfm)
-fm <- lmer(Reaction ~ Days + (Days|Subject), sleepstudy)
-plot.rlmerMod(fm)
+\dontrun{
+  rfm <- rlmer(Yield ~ (1|Batch), Dyestuff)
+  plot(rfm)
+  fm <- lmer(Reaction ~ Days + (Days|Subject), sleepstudy)
+  plot.rlmerMod(fm)
+}
 }
 \seealso{
   \code{\link{getME}}, \code{\link[ggplot2]{ggplot}}

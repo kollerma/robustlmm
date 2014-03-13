@@ -177,90 +177,96 @@ findBlocks <- function(obj, Lambdat=obj$Lambdat(), Lind=obj$Lind) {
 ## Summary / printing methods                        ##
 #######################################################
 
-##' @importFrom robustbase summarizeRobWeights
+.summary.cor.max <- 20
 
 ## Print method
 ## along the lines of printMerenv of lme4
-.printRlmerMod <- function(x, digits = max(3, getOption("digits") - 3),
+##' @S3method print summary.rlmerMod
+print.summary.rlmerMod <- function(x, digits = max(3, getOption("digits") - 3),
                            correlation = NULL, symbolic.cor = FALSE,
                            signif.stars = getOption("show.signif.stars"),
                            ranef.comp = c("Variance", "Std.Dev."),
-                           ..., so = summary.rlmerMod(x)) {
+                           show.resids = TRUE, ...) {
     ## check if doFit = FALSE is in call
-    if (!is.null(so$call$doFit) && !so$call$doFit) {
+    if (!is.null(x$call$doFit) && !x$call$doFit) {
         cat("Unfitted rlmerMod object. Use update(object, doFit=TRUE) to fit it.\n")
-         return(invisible(if (missing("x")) so else x))
+         return(invisible(x))
     }
     ## title
-    cat(so$methTitle, "\n")
+    cat(x$methTitle, "\n")
     ## these are in fromLme4.R
-    .prt.call(so$call); cat("\n")
-    .prt.VC(so$varcor, digits=digits, useScale= so$useScale,
+    .prt.call(x$call); cat("\n")
+    if (show.resids)
+        ## need residuals.merMod() rather than residuals():
+        ##  summary.merMod has no residuals method
+        .prt.resids(x$residuals, digits=digits)
+    .prt.VC(x$varcor, digits=digits, useScale= x$useScale,
 	    comp = ranef.comp, ...)
-    .prt.grps(so$ngrps, nobs= so$devcomp$dims[["n"]])
+    .prt.grps(x$ngrps, nobs= x$devcomp$dims[["n"]])
     
     ## fixed effecs
     ## this part is 1:1 from printMerenv
-    p <- nrow(so$coefficients)
+    p <- nrow(x$coefficients)
     if (p > 0) {
-        cat("\nFixed effects:\n")
-        printCoefmat(so$coefficients, zap.ind = 3, #, tst.ind = 4
-                     digits = digits, signif.stars = signif.stars)
-        if(!is.logical(correlation)) { # default
-            correlation <- p <= 20
-            if(!correlation) {
-                nam <- deparse(substitute(x)) # << TODO: improve if this is called from show()
-                cat(sprintf(paste("\nCorrelation matrix not shown by default, as p = %d > 20.",
-                                  "Use print(%s, correlation=TRUE)  or",
-                                  "    vcov(%s) if you need it\n", sep="\n"),
-                            p, nam, nam))
-            }
-        }
-        if(correlation) {
-            if(is.null(VC <- so$vcov)) VC <- vcov(x)
-            corF <- VC@factors$correlation
-            if (is.null(corF)) {
-                cat("\nCorrelation of Fixed Effects is not available\n")
-            }
-            else {
-                p <- ncol(corF)
-                if (p > 1) {
-                    rn <- rownames(so$coefficients)
-                    rns <- abbreviate(rn, minlength=11)
-                    cat("\nCorrelation of Fixed Effects:\n")
-                    if (is.logical(symbolic.cor) && symbolic.cor) {
-                        corf <- as(corF, "matrix")
-                        dimnames(corf) <- list(rns,
-                                               abbreviate(rn, minlength=1, strict=TRUE))
-                        print(symnum(corf))
-                    }
-                    else {
-                        corf <- matrix(format(round(corF@x, 3), nsmall = 3),
-                                       ncol = p,
-                                       dimnames = list(rns, abbreviate(rn, minlength=6)))
-                        corf[!lower.tri(corf)] <- ""
-                        print(corf[-1, -p, drop=FALSE], quote = FALSE)
-                    }
-                }
-            }
-        }
-    }
+	cat("\nFixed effects:\n")
+	printCoefmat(x$coefficients, zap.ind = 3, #, tst.ind = 4
+		     digits = digits, signif.stars = signif.stars)
+	if(is.null(correlation)) { # default
+	    correlation <- p <= .summary.cor.max
+	    if(!correlation) {
+		nam <- deparse(substitute(x))
+		if(length(nam) > 1 || nchar(nam) >= 32) nam <- "...."
+		message(sprintf(paste(
+		    "\nCorrelation matrix not shown by default, as p = %d > %d.",
+		    "Use print(%s, correlation=TRUE)  or",
+		    "	 vcov(%s)	 if you need it\n", sep="\n"),
+				p, .summary.cor.max, nam, nam))
+	    }
+	}
+	else if(!is.logical(correlation)) stop("'correlation' must be NULL or logical")
+	if(correlation) {
+	    if(is.null(VC <- x$vcov)) VC <- vcov(x, correlation=TRUE)
+	    corF <- VC@factors$correlation
+	    if (is.null(corF)) {
+		message("\nCorrelation of fixed effects could have been required in summary()")
+		corF <- cov2cor(VC)
+	    } ## else {
+	    p <- ncol(corF)
+	    if (p > 1) {
+		rn <- rownames(x$coefficients)
+		rns <- abbreviate(rn, minlength=11)
+		cat("\nCorrelation of Fixed Effects:\n")
+		if (is.logical(symbolic.cor) && symbolic.cor) {
+		    corf <- as(corF, "matrix")
+		    dimnames(corf) <- list(rns,
+					   abbreviate(rn, minlength=1, strict=TRUE))
+		    print(symnum(corf))
+		} else {
+		    corf <- matrix(format(round(corF@x, 3), nsmall = 3),
+				   ncol = p,
+				   dimnames = list(rns, abbreviate(rn, minlength=6)))
+		    corf[!lower.tri(corf)] <- ""
+		    print(corf[-1, -p, drop=FALSE], quote = FALSE)
+		} ## !symbolic.cor
+	    }  ## if (p > 1)
+        } ## if (correlation)
+    } ## if (p>0)
     ## robustness weights
-    summarizeRobWeights(so$wgt.e, digits=3,
+    summarizeRobWeights(x$wgt.e, digits=3,
                         header="\nRobustness weights for the residuals:")
-    summarizeRobWeights(so$wgt.b, digits=3,
+    summarizeRobWeights(x$wgt.b, digits=3,
                         header="\nRobustness weights for the random effects:")
     ## rho functions
     cat("\nRho functions used for fitting:\n")
     cat("  Residuals:\n")
-    cat("    eff:", .sprintPsiFunc(so$rho.e, short=TRUE), "\n")
-    cat("    sig:", .sprintPsiFunc(so$rho.sigma.e, short=TRUE), "\n")
-    for (bt in seq_along(so$rho.b)) {
-        cat("  Random Effects, variance component ", bt, " (", names(so$rho.b)[bt], "):\n", sep="")
-        cat("    eff:", .sprintPsiFunc(so$rho.b[[bt]], short=TRUE), "\n")
-        cat("    vcp:", .sprintPsiFunc(so$rho.sigma.b[[bt]], short=TRUE), "\n")
+    cat("    eff:", .sprintPsiFunc(x$rho.e, short=TRUE), "\n")
+    cat("    sig:", .sprintPsiFunc(x$rho.sigma.e, short=TRUE), "\n")
+    for (bt in seq_along(x$rho.b)) {
+        cat("  Random Effects, variance component ", bt, " (", names(x$rho.b)[bt], "):\n", sep="")
+        cat("    eff:", .sprintPsiFunc(x$rho.b[[bt]], short=TRUE), "\n")
+        cat("    vcp:", .sprintPsiFunc(x$rho.sigma.b[[bt]], short=TRUE), "\n")
     }
-    invisible(if (missing("x")) so else x)
+    invisible(x)
 }
 
 .methTitle <- function(object)
@@ -322,12 +328,9 @@ summary.rlmerMod <- function(object, ...) {
                    rho.e=rho.e(object),
                    rho.sigma.e=rho.e(object, "sigma"),
                    rho.b=rho.b(object),
-                   rho.sigma.b=rho.b(object, "sigma")
+                   rho.sigma.b=rho.b(object, "sigma"),
+                   residuals=residuals(object, scaled=TRUE)
                    ), class = "summary.rlmerMod")
-}
-##' @S3method print summary.rlmerMod
-print.summary.rlmerMod <- function(x, ...) {
-    .printRlmerMod(..., so = x)
 }
 
 ##' Use \code{compare} to quickly compare the estaimated parameters of
@@ -341,9 +344,14 @@ print.summary.rlmerMod <- function(x, ...) {
 ##' @param show.rho.functions whether to show rho functions in output.
 ##' @keywords models utilities
 ##' @examples
-##' fm1 <- lmer(Yield ~ (1|Batch), Dyestuff)
-##' fm2 <- rlmer(Yield ~ (1|Batch), Dyestuff)
-##' compare(fm1, fm2)
+##' \dontrun{
+##'   fm1 <- lmer(Yield ~ (1|Batch), Dyestuff)
+##'   fm2 <- rlmer(Yield ~ (1|Batch), Dyestuff)
+##'   compare(fm1, fm2)
+##'   require(xtable)
+##'   xtable(compare(fm1, fm2))
+##'   str(getInfo(fm1))
+##' }
 ##' @export
 compare <- function(..., digits = 3, dnames = NULL,
                     show.rho.functions = TRUE) {

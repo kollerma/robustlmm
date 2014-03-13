@@ -169,7 +169,7 @@
 ##' @keywords models
 ##' @examples
 ##' ## dropping of VC
-##' system.time(rlmer(Yield ~ (1|Batch), Dyestuff2, method="DASvar"))
+##' system.time(print(rlmer(Yield ~ (1|Batch), Dyestuff2, method="DASvar")))
 ##'
 ##' \dontrun{
 ##'   ## Default method "DAStau"
@@ -467,6 +467,8 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
     if (iter == max.iter)
         warning("iterations did not converge, returning unconverged estimate.")
 
+    ## FIXME: maybe write something into optinfo?
+    
     lobj
 }
 
@@ -538,5 +540,7 @@ rlmer.fit.DAS <- function(lobj, verbose, max.iter, rel.tol) {
     if (iter == max.iter)
         warning("iterations did not converge, returning unconverged estimate.")
 
+    ## FIXME: maybe write something into optinfo?
+    
     lobj
 }

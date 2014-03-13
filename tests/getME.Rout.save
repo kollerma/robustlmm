@@ -1,6 +1,6 @@
 
-R version 3.0.2 (2013-09-25) -- "Frisbee Sailing"
-Copyright (C) 2013 The R Foundation for Statistical Computing
+R Under development (unstable) (2014-03-12 r65160) -- "Unsuffered Consequences"
+Copyright (C) 2014 The R Foundation for Statistical Computing
 Platform: x86_64-apple-darwin10.8.0 (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
@@ -19,8 +19,8 @@ Type 'q()' to quit R.
 > require(robustlmm)
 Loading required package: robustlmm
 Loading required package: lme4
-Loading required package: lattice
 Loading required package: Matrix
+Loading required package: Rcpp
 
 Attaching package: 'robustlmm'
 
@@ -168,7 +168,7 @@ Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
   ..@ Dimnames:List of 2
   .. ..$ : NULL
   .. ..$ : NULL
-  ..@ x       : num [1:522] 9.67e-01 5.44e-06 9.82e-01 2.31e-01 5.44e-06 ...
+  ..@ x       : num [1:522] 0.967 0 0.982 0.231 0 ...
   ..@ factors : list()
 
 Name: U_b 
@@ -199,7 +199,7 @@ Name: beta
  num [1:2] 251.4 10.5
 
 Name: theta 
- Named num [1:4] 9.67e-01 1.52e-02 2.31e-01 5.44e-06
+ Named num [1:4] 0.9667 0.0152 0.2309 0
  - attr(*, "names")= chr [1:4] "Subject.(Intercept)" "Subject.Days.(Intercept)" "Subject.Days" "Group.(Intercept)"
 
 Name: n_rtrms 
@@ -365,14 +365,14 @@ List of 2
 Name: M 
 List of 5
  $ M_bb.:Formal class 'dgeMatrix' [package "Matrix"] with 4 slots
-  .. ..@ x       : num [1:1600] 9.105 8.529 -0.488 -0.502 -0.488 ...
+  .. ..@ x       : num [1:1600] 9.105 8.529 -0.487 -0.502 -0.487 ...
   .. ..@ Dim     : int [1:2] 40 40
   .. ..@ Dimnames:List of 2
   .. .. ..$ : NULL
   .. .. ..$ : NULL
   .. ..@ factors :List of 1
   .. .. ..$ LU:Formal class 'denseLU' [package "Matrix"] with 3 slots
-  .. .. .. .. ..@ x   : num [1:1600] 9.1052 0.9367 -0.0535 -0.0551 -0.0535 ...
+  .. .. .. .. ..@ x   : num [1:1600] 9.105 0.9367 -0.0535 -0.0551 -0.0535 ...
   .. .. .. .. ..@ perm: int [1:40] 1 2 3 4 5 6 7 8 9 10 ...
   .. .. .. .. ..@ Dim : int [1:2] 40 40
  $ M_XZ :Formal class 'dgeMatrix' [package "Matrix"] with 4 slots
@@ -383,7 +383,7 @@ List of 5
   .. .. ..$ : NULL
   .. ..@ factors : list()
  $ M_bB :Formal class 'dgeMatrix' [package "Matrix"] with 4 slots
-  .. ..@ x       : num [1:80] -6.57e-02 5.51e-16 -6.57e-02 5.67e-16 -6.57e-02 ...
+  .. ..@ x       : num [1:80] -6.57e-02 7.76e-16 -6.57e-02 7.88e-16 -6.57e-02 ...
   .. ..@ Dim     : int [1:2] 40 2
   .. ..@ Dimnames:List of 2
   .. .. ..$ : NULL
@@ -437,4 +437,4 @@ Name: is_REML
 > 
 > proc.time()
    user  system elapsed 
-  5.688   0.146   5.829 
+  4.807   0.108   4.908 

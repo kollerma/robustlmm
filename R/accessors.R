@@ -136,9 +136,11 @@ nobs.rlmerMod <- .nobsLmerMod
 ##' @param scaled scale residuals by residual standard deviation (=scale parameter)?
 ##' @param ... ignored
 ##' @examples
-##' fm <- rlmer(Yield ~ (1|Batch), Dyestuff)
-##' stopifnot(all.equal(resid(fm, type="weighted"),
-##'                     resid(fm) * getME(fm, "w_e")))
+##' \dontrun{
+##'   fm <- rlmer(Yield ~ (1|Batch), Dyestuff)
+##'   stopifnot(all.equal(resid(fm, type="weighted"),
+##'                       resid(fm) * getME(fm, "w_e")))
+##' }
 ##' @method residuals rlmerMod
 ##' @importFrom stats residuals resid
 ##' @S3method residuals rlmerMod
@@ -150,7 +152,11 @@ residuals.rlmerMod <- function(object, type = c("response", "weighted"),
                 response = object@resp$wtres,
                 weighted = wgt.e(object) * object@resp$wtres,
                 stop("unknown type of residual"))
+    if (is.null(nm <- rownames(model.frame(object)))) nm <- seq_along(r)
+    names(r) <- nm
     if (scaled) r <- r/sigma(object)
+    if (!is.null(na.action <- attr(model.frame(object),"na.action")))
+        r <- naresid(na.action,r)
     r
 }
 

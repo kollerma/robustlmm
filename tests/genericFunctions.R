@@ -44,11 +44,13 @@ ae(chgClass(coef(fm)), coef(rfm))
 stopifnot(inherits(try(deviance(rfm), silent=TRUE), "try-error"))
 stopifnot(inherits(try(extractAIC(rfm), silent=TRUE), "try-error"))
 family(rfm)
-ae(fitted(fm), fitted(rfm))
+## after version 1.1 fitted values are named
+if (packageVersion("lme4") > "1.1") ae(fitted(fm), fitted(rfm))
 ae(fixef(fm), fixef(rfm))
 stopifnot(inherits(try(logLik(rfm), silent=TRUE), "try-error"))
 ae(chgClass(ranef(fm)), ranef(rfm))
-ae(resid(fm), resid(rfm))
+## after version 1.1 fitted values are named
+if (packageVersion("lme4") > "1.1") ae(resid(fm), resid(rfm))
 ae(sigma(fm), sigma(rfm))
 ## weighted.residuals(rfm)
 
@@ -71,9 +73,11 @@ update(rfm, ~ . + Covar)
 
 ## predict method (various examples)
 ae(predict(fm), predict(rfm))
-ae(predict(fm,REform=NA), predict(rfm,REform=NA))
-newdata <- with(sleepstudy, expand.grid(Subject=unique(Subject),
-                                        Days=3:5, Group=letters[1:2]))
-ae(predict(fm,newdata), predict(rfm,newdata))
-ae(predict(fm,newdata,REform=NA), predict(rfm,newdata,REform=NA))
-ae(predict(fm,newdata,REform=~(1|Subject)), predict(rfm,newdata,REform=~(1|Subject)))
+if (packageVersion("lme4") > "1.1") {
+    ae(predict(fm,re.form=NA), predict(rfm,re.form=NA))
+    newdata <- with(sleepstudy, expand.grid(Subject=unique(Subject),
+                                            Days=3:5, Group=letters[1:2]))
+    ae(predict(fm,newdata), predict(rfm,newdata))
+    ae(predict(fm,newdata,re.form=NA), predict(rfm,newdata,re.form=NA))
+    ae(predict(fm,newdata,re.form=~(1|Subject)), predict(rfm,newdata,re.form=~(1|Subject)))
+}

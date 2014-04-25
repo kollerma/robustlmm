@@ -112,6 +112,16 @@
 ##' to specify the tuning parameters by hand using the
 ##' \code{\link{psi2propII}} and \code{\link{chgDefaults}} functions.
 ##'
+##' \item{Specifying (multiple) weight functions:}{
+##' If custom weight functions are specified using the argument
+##' \code{rho.b} (\code{rho.e}) but the argument \code{rho.sigma.b}
+##' (\code{rho.sigma.e}) is missing, then the squared weights are used
+##' for simple variance components and the regular weights are used for
+##' variance components including correlation parameters. The same
+##' tuning parameters will be used, to get higher efficiency one has
+##' to specify the tuning parameters by hand using the
+##' \code{\link{psi2propII}} and \code{\link{chgDefaults}} functions.
+##'
 ##' To specify separate weight functions \code{rho.b} and
 ##' \code{rho.sigma.b} for different variance components, it is
 ##' possible to pass a list instead of a psi_func object. The list
@@ -464,11 +474,20 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
         if (all(convBlks)) conv <- TRUE
     }
 
-    if (iter == max.iter)
-        warning("iterations did not converge, returning unconverged estimate.")
-
-    ## FIXME: maybe write something into optinfo?
+    optinfo <- list(optimizer = "rlmer.fit.DAS.nondiag",
+                    conv = list(opt = 0),
+                    feval = iter,
+                    warnings = list(),
+                    val = diff)
     
+    if (iter == max.iter) {
+        warning(wt <- "iterations did not converge, returning unconverged estimate.")
+        optinfo$warnings <- list(wt)
+        optinfo$conv$opt <- 1
+    }
+
+    lobj@optinfo <- optinfo
+
     lobj
 }
 
@@ -537,10 +556,19 @@ rlmer.fit.DAS <- function(lobj, verbose, max.iter, rel.tol) {
         theta0 <- theta1
     }
 
-    if (iter == max.iter)
-        warning("iterations did not converge, returning unconverged estimate.")
+    optinfo <- list(optimizer = "rlmer.fit.DAS",
+                    conv = list(opt = 0),
+                    feval = iter,
+                    warnings = list(),
+                    val = diff)
+    
+    if (iter == max.iter) {
+        warning(wt <- "iterations did not converge, returning unconverged estimate.")
+        optinfo$warnings <- list(wt)
+        optinfo$conv$opt <- 1
+    }
 
-    ## FIXME: maybe write something into optinfo?
+    lobj@optinfo <- optinfo
     
     lobj
 }

@@ -279,8 +279,13 @@ calcTau.nondiag <- function(object, ghZ, ghw, skbs, kappas, max.iter) {
                     conv <- FALSE
                     iter <- 0
                     while (!conv && (iter <- iter + 1) < max.iter) {
-                        qrlTbk <- qr(lTbk)
-                        if (qrlTbk$rank < s) {
+                        qrlTbk <- try(qr(lTbk))
+                        if (is(qrlTbk, "try-error")) {
+                            warning("qr(lTbk) failed:", qrlTbk, "\nlTbk was:", lTbk,
+                                    "\nSetting it to Tb()\n")
+                            conv <- TRUE
+                            lTbk <- as.matrix(TkbsI[[ind[k]]])
+                        } else if (qrlTbk$rank < s) {
                             warning("Tbk not of full rank (iter=", iter,
                                     "!!\nlTbk =", as.vector(lTbk), ", setting it to Tb()\n")
                             conv <- TRUE

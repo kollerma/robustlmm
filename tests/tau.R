@@ -93,4 +93,5 @@ system.time(rfm2 <- rlmer(Yield ~ (1|Batch), Dyestuff,
                           init=initList))
 
 rfm2@call <- rfm@call
+rfm2@optinfo <- rfm@optinfo
 stopifnot(all.equal(rfm, rfm2))

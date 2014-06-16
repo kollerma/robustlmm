@@ -50,7 +50,7 @@ stopifnot(theta(rfm4) == c(1, 0, 2),
 robustlmm:::theta(rfm5, fit.effects = TRUE, update.sigma = FALSE) <- c(1, 0, 0, 0)
 stopifnot(theta(rfm5) == c(1, 0, 0, 0))
 robustlmm:::theta(rfm5, fit.effects = TRUE, update.sigma = FALSE) <- c(1, 1, 0, 0)
-stopifnot(theta(rfm5) == c(1, 1, 1e-7, 0))
+stopifnot(theta(rfm5) == c(1, 1, 0, 0))
 robustlmm:::theta(rfm5, fit.effects = TRUE, update.sigma = FALSE) <- c(0, 1, 0, 1)
 stopifnot(theta(rfm5) == c(0, 0, 0, 1))
 

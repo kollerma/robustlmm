@@ -223,21 +223,26 @@ ranef.rlmerMod <- function(object, ...) {
 }
 
 ## return u as list arranged like ranef
+## group ranefs with the same subject
 uArrangedNames <- function(object, b.s = b.s(object)) {
-    ret <- lapply(object@idx, function(bidx) {
-        lret <- b.s[bidx]
-        dim(lret) <- dim(bidx)
-        ## add rownames
-        colnames(lret) <- names(b.s)[bidx[1,]]
-        as.data.frame(t(lret))
-    })
-    ## add names and colnames
-    names(ret) <- names(object@cnms)
-    for (i in names(ret))
-        colnames(ret[[i]]) <- object@cnms[[i]]
+    ret <- list()
+    for (id in unique(names(object@cnms))) {
+        lid <- id == names(object@cnms)
+        lr <- lapply(object@idx[lid], function(bidx) {
+            lret <- b.s[bidx]
+            dim(lret) <- dim(bidx)
+            ## add rownames
+            colnames(lret) <- names(b.s)[bidx[1,]]
+            as.data.frame(t(lret)) })
+        lr <- do.call(cbind, lr)
+        colnames(lr) <- unlist(object@cnms[lid])
+        ret <- c(ret, list(lr))
+        names(ret)[length(ret)] <- id
+    }
     ret
 }
 ## same as uArrangedNames, but do not set names
+## and do not group by id name
 uArranged <- function(object, b.s = b.s(object)) {
     ret <- lapply(object@idx, function(bidx) {
         lret <- b.s[bidx]

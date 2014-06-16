@@ -1,7 +1,7 @@
 
-R Under development (unstable) (2014-03-12 r65160) -- "Unsuffered Consequences"
+R version 3.1.0 (2014-04-10) -- "Spring Dance"
 Copyright (C) 2014 The R Foundation for Statistical Computing
-Platform: x86_64-apple-darwin10.8.0 (64-bit)
+Platform: x86_64-apple-darwin13.1.0 (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
 You are welcome to redistribute it under certain conditions.
@@ -116,7 +116,7 @@ The following object is masked from 'package:lme4':
 Note: method with signature 'dsparseMatrix#dgeMatrix' chosen for function 'crossprod',
  target signature 'dsCMatrix#dgeMatrix'.
  "CsparseMatrix#ddenseMatrix" would also be valid
-Time elapsed: 3.814 0.027 3.844 0 0 
+Time elapsed: 2.432 0.025 2.46 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -154,7 +154,7 @@ Rho functions used for fitting:
 -19.822   1.081  33.966 -30.283  67.013 -51.900 
 
 ######## DAStau ########
-Time elapsed: 3.145 0.034 3.182 0 0 
+Time elapsed: 3.147 0.035 3.182 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -223,7 +223,7 @@ sigma               55.5
 Note: method with signature 'CsparseMatrix#Matrix#missing#replValue' chosen for function '[<-',
  target signature 'dgCMatrix#ngCMatrix#missing#numeric'.
  "Matrix#nsparseMatrix#missing#replValue" would also be valid
-Time elapsed: 2.611 0.01 2.625 0 0 
+Time elapsed: 2.32 0.011 2.333 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -261,7 +261,7 @@ A B C D E F
 0 0 0 0 0 0 
 
 ######## DAStau ########
-Time elapsed: 3.747 0.036 3.786 0 0 
+Time elapsed: 3.72 0.04 3.761 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -327,7 +327,7 @@ sigma               4.02
 +     rho.e = smoothPsi, rho.b = smoothPsi)
 
 ######## DASvar ########
-Time elapsed: 3.227 0.025 3.255 0 0 
+Time elapsed: 1.743 0.016 1.76 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -368,7 +368,7 @@ Rho functions used for fitting:
     eff: smoothed Huber (k = 1.345, s = 10) 
     vcp: smoothed Huber, Proposal II (k = 1.345, s = 10) 
          a          b          c          d          e          f          g 
- 4.436e-01  4.436e-01  1.241e-01  2.030e-01 -1.084e-06 -2.536e-01 -8.075e-01 
+ 4.436e-01  4.436e-01  1.241e-01  2.030e-01 -1.094e-06 -2.536e-01 -8.075e-01 
          h          i          j          k          l          m          n 
  4.872e-01 -4.441e-01 -4.541e-01  5.688e-01  2.945e-01  8.498e-01  2.945e-01 
          o          p          q          r          s          t          u 
@@ -379,7 +379,7 @@ Rho functions used for fitting:
 -2.667e-02 -7.956e-01 
 
 ######## DAStau ########
-Time elapsed: 8.487 0.056 8.547 0 0 
+Time elapsed: 8.508 0.059 8.571 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -490,8 +490,8 @@ sigma                0.561
 + }
 > 
 > cat('Time elapsed: ', proc.time(),'\n') # for ``statistical reasons''
-Time elapsed:  28.958 0.269 29.251 0.002 0.003 
+Time elapsed:  25.793 0.27 26.078 0.002 0.003 
 > 
 > proc.time()
    user  system elapsed 
- 28.960   0.272  29.251 
+ 25.795   0.273  26.078 

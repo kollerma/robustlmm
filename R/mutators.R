@@ -80,8 +80,8 @@ setTheta <- function(object, value, eps = 1e-7, fit.effects = TRUE,
         if (all(value[idx.cov] == 0))
             value[idx.cur] <- 0
         ## if correlation != 0 and at least one nnz vc: set other vc to eps
-        else if (any(value[idx.cur & !idx.cov] != 0))
-            value[idx & idx.cov] <- eps
+        ## else if (any(value[idx.cur & !idx.cov] != 0))
+        ##     value[idx & idx.cov] <- eps
         ##cat("idx:", idx, "idx.cur:", idx.cur, "idx.cov:", idx.cov, "\n")
         offset <- offset + length(trm)
     }

@@ -464,12 +464,13 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
             deltaT <- as(backsolve(lchol(rhs), lchol(lhs)), "sparseMatrix")
             if (verbose > 1) cat("deltaT:", deltaT@x, "\n")
             ## get old parameter estimates for this block
-            Ubtilde <- as(lobj@blocks[[type]], "sparseMatrix")
-            Lind <- Ubtilde@x
+            Ubtilde <- lobj@blocks[[type]]
+            pat <- Ubtilde != 0
+            Lind <- Ubtilde[pat]
             diagLind <- diag(Ubtilde)
-            Ubtilde@x[] <- thetatilde[Lind]
+            Ubtilde[pat] <- thetatilde[Lind]
             ## update Ubtilde by deltaT
-            thetatilde[Lind] <- tcrossprod(Ubtilde, deltaT)@x
+            thetatilde[Lind] <- tcrossprod(Ubtilde, deltaT)[pat]
             ## FIXME: check boundary conditions?
             ## check if varcomp is dropped
             if (all(thetatilde[diagLind] < 1e-7)) {

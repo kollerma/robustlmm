@@ -173,6 +173,14 @@ findBlocks <- function(obj, Lambdat=obj$Lambdat(), Lind=obj$Lind) {
     list(blocks = ublocks, ind = bind, idx = bidx, dim = bdim, q = q, k = k)
 }
 
+lchol <- function(x) {
+    r <- try(chol.default(x), silent=TRUE)
+    ## if chol fails, return sqrt of diagonal
+    if (is(r, "try-error")) {
+        Diagonal(x = sqrt(diag(x)))
+    } else r
+}
+
 #######################################################
 ## Summary / printing methods                        ##
 #######################################################

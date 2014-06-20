@@ -416,14 +416,6 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
         T <- WbDelta %*% T
         bs <- sqrt(wbsEta) * lobj@pp$b.s
 
-        lchol <- function(x) {
-            r <- try(chol.default(x), silent=TRUE)
-            ## if chol fails, return sqrt of diagonal
-            if (is(r, "try-error")) {
-                Diagonal(x = sqrt(diag(x)))
-            } else r
-        }
-
         ## cycle block types
         for(type in seq_along(lobj@blocks)) {
             if (convBlks[type]) next

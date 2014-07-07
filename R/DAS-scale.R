@@ -286,20 +286,14 @@ calcTau.nondiag <- function(object, ghZ, ghw, skbs, kappas, max.iter) {
                             conv <- TRUE
                             lTbk <- as.matrix(TkbsI[[ind[k]]])
                         } else {
-                            funA <- function(u) {
-                                btilde <- u[1:2] - wgt(.d(u[1:2],2)) * Lkk %*% u[1:2] -
-                                    crossprod(Sk, u[3:4])
-                                wgtDelta(drop(crossprod(qr.solve(qrlTbk, btilde))))
-                                ## not needed: *prod(dnorm(c(u1,u2,u3,u4))) 
-                            }
-                            a <- int4d(funA)
-                            funB <- function(u) {
-                                btilde <- u[1:2] - wgt(.d(u[1:2],2)) * Lkk %*% u[1:2] -
-                                    crossprod(Sk, u[3:4])
-                                wgt.sigma(drop(crossprod(qr.solve(qrlTbk, btilde))))*
-                                    tcrossprod(btilde)
-                            }
-                            B <- matrix(int4d(funB), s)
+                            btilde <- ghZ[,1:2] - wgt(.d(ghZ[,1:2],2)) * ghZ[, 1:2] %*% Lkk -
+                                ghZ[, 3:4] %*% Sk
+                            tmp1 <- colSums(qr.solve(qrlTbk, t(btilde))^2)
+                            tmp2 <- btilde[,1] * btilde[,2]
+                            a <- sum(wgtDelta(tmp1) * ghw)
+                            B <- matrix(colSums(wgt.sigma(tmp1) * ghw *
+                                                matrix(c(btilde[,1]*btilde[,1], tmp2, tmp2,
+                                                         btilde[,2]*btilde[,2]), length(ghw))),2)
                             lTbk1 <- B/a
                             conv <- isTRUE(all.equal(lTbk, lTbk1)) ## rel.tol default 1e-8
                             ##cat(sprintf("k=%i, iter=%i, conv=%s\n", k, iter, conv))

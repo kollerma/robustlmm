@@ -179,7 +179,7 @@
 ##'   system.time(rfm.DASvar <- rlmer(Yield ~ (1|Batch), Dyestuff,
 ##'                                   method="DASvar"))
 ##'   ## compare the two
-##'   compare(rfm.DAStau, rfm.DAStau)
+##'   compare(rfm.DAStau, rfm.DASvar)
 ##' 
 ##'   ## Fit variance components with higher efficiency
 ##'   ## psi2propII yields squared weights to get robust estimates

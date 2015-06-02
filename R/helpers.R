@@ -492,9 +492,9 @@ getInfo.lmerMod <- function(object, ...) {
     if (length(corrs) > 0) ret$correlations <- corrs
     if (!is(object, "rlmerMod")) {
         if (isREML) {
-            ret$REML <- deviance(object)
+            ret$REML <- lme4::REMLcrit(object)
         } else {
-            ret$deviance <- deviance(object)
+            ret$deviance <- deviance(object, REML=FALSE)
         }
     }
     ret

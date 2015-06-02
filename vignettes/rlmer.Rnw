@@ -381,56 +381,7 @@ require(robustlmm)
 require(robustbase)
 require(lme4)
 source(file.path(rlmerDoc, "plots.R"))
-## st: function that caches the results and returns the system.time
-require(digest)
-if (!file.exists("cache")) dir.create("cache")
-
-st <- function(expr, update.cache=UPDATE_CACHE) {
-    sexpr <- substitute(expr)
-    file <- file.path("cache", digest(sexpr, "sha1"))
-    cacheInfo <- list(R = paste(R.Version()[c("major", "minor")], collapse="."),
-                      robustlmm = packageVersion("robustlmm"))
-    pf <- parent.frame()
-    if (file.exists(file) && !update.cache) {
-        var <- load(file, envir=pf)
-        obj <- get(var[1], envir=pf)
-        ## make sure version of R and robustlmm matches
-        if (!is.null(acacheInfo <- attr(obj, "cacheInfo"))) {
-            if (!isTRUE(all.equal(cacheInfo[c("R", "robustlmm")],
-                                  acacheInfo[c("R", "robustlmm")]))) {
-                ## versions differ, so recall rlmer with initList
-                call <- getCall(obj)
-                call$init <- acacheInfo[["initList"]]
-                ## do not fit, just initialize the object
-                call$init$doFit <- FALSE
-                obj <- eval(call, envir=pf)
-                assign(var, obj, envir=pf)
-            } ## else: no need to do anything
-            elapsed.time <- acacheInfo[["elapsed.time"]]
-        } else 
-            stop("invalid cache file detected: rerun st with update.cache=TRUE")
-    } else {
-        ## do something similar as system.time
-        time <- proc.time()
-        expr
-        new.time <- proc.time()
-        elapsed.time <- new.time - time
-        ## get it from the parent frame since we need to add attributes
-        obj <- get(var <- as.character(sexpr[[2]]), envir=pf)
-        ## prepare cacheInfo, add it as attribute to the generated object
-        cacheInfo$elapsed.time <- elapsed.time
-        cacheInfo$initList <- list(fixef=fixef(obj), u=getME(obj, "u"),
-                                   sigma=getME(obj, "sigma"), 
-                                   theta=getME(obj, "theta"))
-        attr(obj, "cacheInfo") <- cacheInfo
-        ## update object in parent frame
-        assign(var, obj, envir=pf)
-        ## save created object to the cache file
-        save(list=var, file=file)
-    }
-    ## same value as system.time()
-    structure(elapsed.time, class = "proc_time")
-}
+st <- system.time
 if(packageVersion("robustbase") >= "0.9-8")  {
     lqqPsi <- psiFuncCached(rho = function(x, cc) Mpsi(x, cc, "lqq", -1),
                             psi = function(x, cc) Mpsi(x, cc, "lqq", 0),
@@ -539,15 +490,10 @@ covariables from the grouping variable. In this case, we only have a random
 intercept ``1'' that varies by group ``plate'' and ``sample'',
 respectively.
 
-<<penicillin-lmer,echo=TRUE,eval=FALSE>>=
+<<penicillin-lmer,echo=TRUE>>=
 st(classical <- lmer(diameter ~ 1 + (1|plate) + (1|sample),
                      Penicillin))
-<<penicillin-lmer2,echo=FALSE>>=
-st(classical <- lmer(diameter ~ 1 + (1|plate) + (1|sample),
-                     Penicillin), update.cache=TRUE)
 @
-
-
 
 The ``st'' function is just a shortcut to ``system.time'', a function that
 measures the time required to evaluate the expression given as argument.
@@ -725,239 +671,18 @@ of the one used in the diagonal case.
 
 <<sleepstudy,echo=TRUE, eval=FALSE>>=
 st(classical <- lmer(Reaction ~ Days + (Days|Subject), sleepstudy))
-<<sleepstudy,echo=FALSE>>=
-st(classical <- lmer(Reaction ~ Days + (Days|Subject), sleepstudy),
-   update.cache=TRUE)
-<<sleepstudy3,echo=TRUE>>=
+<<sleepstudy3,echo=TRUE, eval=FALSE>>=
 st(robust <-
    rlmer(Reaction ~ Days + (Days|Subject), sleepstudy,
          rho.sigma.e = psi2propII(smoothPsi, k = 2.28),
          rho.sigma.b = chgDefaults(smoothPsi, k = 5.11, s=10)))
 summary(robust)
-<<sleepstudy-vars>>=
-wgts <- matrix(wgt.b(robust), 2)[1,]
-names(wgts) <- rownames(ranef(robust)[[1]])
-lowest <- as.numeric(names(which.min(wgts)))
-w335 <- wgts["335"]
-<<sleepstudy-ta,fig=TRUE,width=2.5,height=2.5>>=
-<<penicillin-ta>>
-<<sleepstudy-qq-resid,fig=TRUE,width=2.5,height=2.5>>=
-<<penicillin-qq-resid>>
-<<sleepstudy-qq-ranef,fig=TRUE,height=3.3>>=
-<<penicillin-qq-ranef>>
-@
+@ 
 
-The residual analysis plots are shown in
-Figure~\ref{fig:sleepstudyResidualAnalysis}. There are some points that are
-outside the bulk of the residuals and accordingly get quite a low
-robustness weight. The qq-plot of the random effects shows some structure,
-but admittedly, the sample size of $18$ is quite low.
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=0.45\textwidth]{figs/fig-ex-sleepstudy-ta}
-  \includegraphics[width=0.45\textwidth]{figs/fig-ex-sleepstudy-qq-resid}
-  \includegraphics[width=0.9\textwidth]{figs/fig-ex-sleepstudy-qq-ranef}
-  \caption{Residual analysis plots for robust fit ``robust'' of the
-    Sleepstudy example.}
-  \label{fig:sleepstudyResidualAnalysis}
-\end{figure}
-
-<<sleepstudy-ex-comparsion,fig=TRUE,height=8>>=
-val <- g.get_colors_brewer(8)
-print(ggplot(cbind(sleepstudy, wgt.e=getME(robust, "w_e")),
-             aes(Days, Reaction)) +
-      stat_smooth(method=function(formula, ..., weights)
-                  lmrob(formula, ..., setting="KS2011"),
-                  se=FALSE) +
-      augLinesPop(classical, colour=val[1], linetype = 2) +
-      augLines(classical, colour=val[1]) +
-      ##augLinesSE(classical, colour=val[1]) +
-      augLinesPop(robust, colour=val[2], linetype = 2) +
-      augLines(robust, colour=val[2]) +
-      ##augLinesSE(robust, colour=val[2]) +
-      geom_point(aes(color=wgt.e)) +
-      scale_x_continuous(breaks=c(0,2,4,6,8)) +
-      scale_colour_gradient(expression(w[e]), limits=c(lower,1)) +
-      facet_wrap(~ Subject, nrow=3) +
-      xlab("Days of sleep deprivation") +
-      ylab("Average reaction time (ms)") +
-      theme(legend.position = "bottom", legend.box = "horizontal"))
-@
-
-\begin{figure}[htpb]
-  \centering
-  \includegraphics{figs/fig-ex-sleepstudy-ex-comparsion}
-  \caption{The average reaction time of subjects versus days of sleep
-    deprivation. Each subject is shown in a separate facet. The blue lines
-    show the robust linear regression fit to the subject's data. The yellow
-    lines show the fitted values of the classical mixed effects model
-    including random effects. The green lines show the corresponding robust
-    linear mixed effects fit. The dashed lines show the population wide
-    fit, robust and classical methods almost coincide. The subjects have
-    been ordered by increasing intercept. The robust linear regression fits
-    were computed using the method \emph{lmrob} of the \Rp package
-    \emph{robustbase} \citep{robustbase} using \emph{setting=''KS2011''}. }
-  \label{fig:sleepstudyExComparison}
-\end{figure}
-
-<<sleepstudy-ex-comparsion-subsample,fig=TRUE>>=
-val <- g.get_colors_brewer(8)
-mysub <- c(308, 335, 352)
-print(ggplot(subset(cbind(sleepstudy, wgt.e=getME(robust, "w_e")),
-                    Subject %in% mysub),
-             aes(Days, Reaction)) +
-      ## stat_smooth(method=function(formula, ..., weights)
-      ##             lmrob(formula, ..., setting="KS2011"),
-      ##             se=TRUE, alpha = 0.2) +
-      augLinesPop(classical, colour=val[1], linetype = 2,
-                  size = 0.5, subset = Subject %in% mysub) +
-      augLinesPopSE(classical, colour=val[1], fill=val[1], linetype = 2,
-                    size = 0.25, alpha = 0.1, subset = Subject %in% mysub) +
-      augLines(classical, colour=val[1],
-               size = 0.5, subset = Subject %in% mysub) +
-      augLinesSE(classical, colour=val[1], fill=val[1],
-                 size = 0.25, subset = Subject %in% mysub) +
-      augLinesPop(robust, colour=val[2], linetype = 2,
-                  size = 0.5, subset = Subject %in% mysub) +
-      augLinesPopSE(robust, colour=val[2], fill=val[2], linetype = 2,
-                    size = 0.25, alpha = 0.1, subset = Subject %in% mysub) +
-      augLines(robust, colour=val[2],
-               size = 0.5, subset = Subject %in% mysub) +
-      augLinesSE(robust, colour=val[2], fill=val[2],
-                 size = 0.25, subset = Subject %in% mysub) +
-      ## augLinesPop(redesc, colour=val[3], linetype = 2,
-      ##             size = 0.5, subset = Subject %in% mysub) +
-      ## augLinesPopSE(redesc, colour=val[3], fill=val[3], linetype = 2,
-      ##               size = 0.25, alpha = 0.1, subset = Subject %in% mysub) +
-      ## augLines(redesc, colour=val[3],
-      ##          size = 0.5, subset = Subject %in% mysub) +
-      ## augLinesSE(redesc, colour=val[3], fill=val[3],
-      ##            size = 0.25, alpha = 0.1, subset = Subject %in% mysub) +
-      geom_point(aes(color=wgt.e)) +
-      scale_x_continuous(breaks=c(0,2,4,6,8)) +
-      scale_colour_gradient(expression(w[e]), limits=c(lower,1)) +
-      facet_wrap(~ Subject, nrow=1) +
-      xlab("Days of sleep deprivation") +
-      ylab("Average reaction time (ms)") +
-      theme(legend.position = "bottom", legend.box = "horizontal"))
-@
-
-\begin{figure}[htb]
-  \centering
-  \includegraphics{figs/fig-ex-sleepstudy-ex-comparsion-subsample}
-  \caption{The average reaction time of selected subjects versus days of sleep
-    deprivation. Additional to the features shown also in
-    Figure~\ref{fig:sleepstudyExComparison}, we show the pointwise
-    $95\%$ confidence intervals for the fitted values. For better
-    visibility, we omit the linear regression fit and show only the three
-    subjects with the most pronounced differences between classical and
-    robust fits.}
-  \label{fig:sleepstudyExComparisonSubsample}
-\end{figure}
-
-The fitted values for classical and the robust fits as well as the robust
-per-subject fit are shown in Figure~\ref{fig:sleepstudyExComparison}. While
-most of the subjects follow the general population fit quite closely,
-others, such as subject 335, show even a negative trend. Nevertheless, the
-robustness weights for the random effects do not show any clear
-outliers. The lowest robustness weight is assigned to subject
-$\Sexpr{lowest}$ while subject $335$ is given a weight of
-$\Sexpr{round(w335,2)}$. The three subjects with the most notable
-difference between classical and robust fit are shown again in
-Figure~\ref{fig:sleepstudyExComparisonSubsample}. The differences in
-Subject $308$ are most pronounced. The predicted slope of the classical fit
-is pulled downwards, causing the observations to lie outside or just at the
-border of the estimated confidence intervals. The confidence intervals for
-the population level estimates of the robust and classical fit are very
-similar. Compared to the total number of observations, there are only a
-very little observations with a low robustness weight. They are most
-probably not able to increase the variance components estimates.
-
-We may check this statement by fitting the same model with redescending
-$\psi$-functions. As initial estimate, we use the values of the above
-robust fit. With ``rlmer'', one can do this conveniently by using the
-``update'' function and specifying redescending $\psi$-functions. The
-object that is being updated will be used as initial fit.
-
-%% eff computed: for s=2: c(1.63, 1.09, 1.5) (rho.b)
-<<sleepstudy-fit-redescending,echo=TRUE>>=
-st(redesc <-
-   update(robust, rho.e = chgDefaults(lqqPsi, cc=c(1.47, 0.98, 1.5)),
-          rho.sigma.e = chgDefaults(lqqPsi, cc=c(2.19, 1.46, 1.5)),
-          rho.b = chgDefaults(lqqPsi, cc=c(1.47, 0.98, 1.5)),
-          rho.sigma.b = chgDefaults(lqqPsi, cc=c(5.95, 3.97, 1.5))))
-summary(redesc)
-<<sleepstudy-cmp,results=tex>>=
-print(xtable(compare(classical, robust, redesc, show.rho.functions=FALSE),
-      caption="Comparison table of the fitted models for the Sleepstudy example.",
-      label="tab:cmpSleepstudy"))
-@
-
-A comparison table of the three fits is shown in
-Table~\ref{tab:cmpSleepstudy}. The two robust fits are quire similar. The
-variance attributed to the between subjects effects is a little lower for
-the fit using redescending $\psi$-functions, while the two estimates of the
-residual standard errors are almost identical. We therefore conclude that
-the few observations with a small robustness weight were not able to unduly
-increase the estimates residual standard error.  While the estimated
-residual standard errors for both robust fits are smaller than for the
-classical fit, the estimated standard errors of the fixed effects estimates
-are a little increased (the estimated standard error for the classical fit
-is $\Sexpr{round(coef(summary(classical))[1,2],2)}$ for the intercept and
-$\Sexpr{round(coef(summary(classical))[2,2],2)}$ for ``Days'').
-
-The robust fits return a negative estimate of the correlation between the
-random intercept and slopes. When choosing smaller tuning parameters for
-the functions ``rho.b'' and ``rho.sigma.b'', the correlation is estimated
-even lower. A scatterplot of the estimated random effects is shown in
-Figure~\ref{fig:ranefSleepstudy}. With help from the coloring of the
-points, one can see a hint of a negative correlation between the two random
-effects (suppressing the points below and above the falling diagonal). This
-is picked up by the estimator. For smaller tuning parameters, the weight
-function decreases more quickly and the off-diagonal points get a lower
-weight, finally this leads to a negative estimate of the correlation.
-
-<<sleepstudy-ranef-scatterplot,fig=TRUE,width=5,height=5>>=
-plots[[4]] + 
-      scale_colour_gradient(expression(w[b])) +
-      theme(legend.position = "bottom", legend.box = "horizontal")
-@
-
-\begin{figure}[htb!]
-  \centering
-  \includegraphics[width=0.75\textwidth]{figs/fig-ex-sleepstudy-ranef-scatterplot}
-  \caption{Scatterplot of the estimated random effects for the ``redesc''
-    fit for the Sleepstudy example using redescending lqq
-    $\psi$-functions.}
-  \label{fig:ranefSleepstudy}
-\end{figure}
-
-% We show the residual analysis plots for the redescending fit in
-% Figure~\ref{fig:sleepstudyResidualAnalysisRedescending}. The outlying point
-% now have an even lower robustness weight, some of them almost zero. The
-% QQ-plots for the random effects do not show the structure anymore.
-
-% <<sleepstudy-redesc-ta,fig=TRUE,width=2.5,height=2.5>>=
-% robust.bak <- robust
-% robust <- redesc
-% <<penicillin-ta>>
-% <<sleepstudy-redesc-qq-resid,fig=TRUE,width=2.5,height=2.5>>=
-% <<penicillin-qq-resid>>
-% <<sleepstudy-redesc-qq-ranef,fig=TRUE,height=3.3>>=
-% <<penicillin-qq-ranef>>
-% robust <- robust.bak
-% @
-
-% \begin{figure}[htbp]
-%   \centering
-%   \includegraphics[width=0.45\textwidth]{figs/fig-ex-sleepstudy-redesc-ta}
-%   \includegraphics[width=0.45\textwidth]{figs/fig-ex-sleepstudy-redesc-qq-resid}
-%   \includegraphics[width=0.9\textwidth]{figs/fig-ex-sleepstudy-redesc-qq-ranef}
-%   \caption{Residual analysis plots for robust fit ``redesc'' of the
-%     Sleepstudy example using the lqq $\psi$-function.}
-%   \label{fig:sleepstudyResidualAnalysisRedescending}
-% \end{figure}
+The model takes some time to be fitted and the above chunk is therefore not
+evaluated by default. In order to reduce straining CRAN's computing
+facilities and rules, we stop with the example here. For the full example,
+pease go back to version 1.6 of the package.
 
 \clearpage
 \section{$\psi$-functions and Tables of Tuning Constants}

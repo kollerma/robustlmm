@@ -86,12 +86,15 @@ stopifnot(all.equal(rep(0, length(a)), testTau(smoothPsi, sPsi, 1, a, s), tolera
 
 ## to save time in checks, also test init argument here:
 initList <- list(fixef=fixef(rfm), u=getME(rfm, "u"),
-                 sigma=sigma(rfm), theta=getME(rfm, "theta"),
-                 doFit=FALSE)
+                 sigma=sigma(rfm), theta=getME(rfm, "theta"))
 
 system.time(rfm2 <- rlmer(Yield ~ (1|Batch), Dyestuff,
                           init=initList))
 
 rfm2@call <- rfm@call
 rfm2@optinfo <- rfm@optinfo
-stopifnot(all.equal(rfm, rfm2))
+rfm2@pp$.setTau_e <- rfm@pp$.setTau_e
+rfm2@pp$.tau_e <- rfm@pp$.tau_e
+rfm2@pp$.setTbk <- rfm@pp$.setTbk
+rfm2@pp$.Tbk <- rfm@pp$.Tbk
+stopifnot(all.equal(rfm, rfm2, tolerance = 1e-6))

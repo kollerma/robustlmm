@@ -110,6 +110,9 @@ model.matrix.rlmerMod <- function(object, ...) object@pp$X
 
 ## no refit methods
 
+##' @importFrom lme4 REMLcrit
+## don't add a function for now.
+
 ## residuals is in accessors.R
 
 ## sigma in in accessors.R
@@ -176,6 +179,8 @@ setMethod("show", "rlmerMod", function(object) print.rlmerMod(object))
 ## can import tnames if required
 
 ## getME is in helpers.R
+
+globalVariables("forceSymmetric", add=TRUE) 
 
 ##' @importFrom stats vcov
 ##' @S3method vcov rlmerMod
@@ -300,6 +305,7 @@ reFormHack <- function(re.form,ReForm,REForm,REform) {
 }
 
 ##' @importFrom stats predict
+##' @importFrom lme4 mkReTrms findbars
 ##' @S3method predict rlmerMod
 ## FIXME: This is slightly modified from lme4 version 1.0-6.
 ##        Newer versions have an improved version.

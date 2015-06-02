@@ -225,8 +225,6 @@ rlmer <- function(formula, data, ..., method = "DAStau",
             setSigma(linit, init$sigma)
             setTheta(linit, init$theta, fit.effects=FALSE, update.sigma=FALSE)
             setU(linit, init$u)
-            ## trick to make st() fast:
-            if (!is.null(init$doFit)) doFit <- init$doFit
         }
         init <- linit
     } else if (is.function(init)) {

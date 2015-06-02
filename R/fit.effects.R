@@ -1,4 +1,4 @@
-fit.effects <- function(par, object, rel.tol = 1e-8, max.iter = 1000) {
+fitEffects <- function(par, object, rel.tol = 1e-8, max.iter = 1000) {
     n <- object@pp$n
     p <- object@pp$p
     q <- object@pp$q

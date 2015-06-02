@@ -7,6 +7,8 @@
 }
 .calcE.D.re2 <- function(rho, s) .calcE.D.re(s, rho) ## switch arguments
 
+##' @importFrom Matrix Matrix Diagonal symmpart
+
 .calcE.psi_bbt <- function(rho, s) {
     if (s == 1) {
         Matrix(rho@EDpsi())
@@ -327,73 +329,30 @@ calcTau.nondiag <- function(object, ghZ, ghw, skbs, kappas, max.iter) {
 updateSigma <- function(object, max.iter = 100, rel.tol = 1e-6, fit.effects = TRUE) {
     rho.sigma.e <- object@rho.sigma.e
         
-    switch(object@method,
-           DASvar =,
-           DAStau = { ## DAStau and DASvar variant (depending on class type)
-               kappa <- object@pp$kappa_e
-               tau <- object@pp$tau_e()
-           }, { ## otherwise
-               ## get matrices for r part
-               a <- diag(object@pp$A)
-               s <- .s(object, theta = FALSE)
-               if (any(is.na(a))) {
-                   cat("a, s: ", NA, "theta:", theta(object), "\n")
-                   setSigma(object, as.numeric(NA))
-                   return(object)
-               }
-               ## calculate kappas
-               kappas <- G(,a,s,object@rho.e,rho.sigma.e,object@pp)
-               sk <- sum(kappas)
-               tau <- rep(1, object@pp$n)
-           })
-    ## cat("  tau:", tau, "\n")
-    ## cat("theta:", theta(object), "\n")
-    ## cat("   sk:", sk, "\n")
+    kappa <- object@pp$kappa_e
+    tau <- object@pp$tau_e()
     
-    ## ## old uniroot variant
-    ## fun <- function(logscale, r) {
-    ##     lr <- r/exp(logscale)
-    ##     sum(.wgtxy2(rho.sigma.e, lr, lr)) - sk
-    ## }
-    ## zero.fun <- if (fit.effects) function(logscale, r) {
-    ##     setSigma(object, exp(logscale))
-    ##     fit.effects(c(object@pp$beta, object@pp$b.s), object)
-    ##     fun(logscale, object@resp$wtres)
-    ## } else fun
-    ## res <- uniroot(zero.fun, c(log(1e-7), 100), tol = rel.tol,
-    ##                r = object@resp$wtres)
-    ## scale <- exp(res$root)
-    
-    ## new iterative reweighting
+    ## use iterative reweighting
     fun <- if (object@method %in% c("DAStau", "DASvar")) {
         wgt <- rho.sigma.e@wgt
         tau2 <- tau*tau
         function(scale, r) {
-            lr <- r/tau/scale
-            sqrt(sum(wgt(lr)*r*r)/sum(wgt(lr)*tau2)/kappa)
+            lw <- wgt(r/tau/scale)
+            sqrt(sum(lw*r*r)/sum(lw*tau2)/kappa)
         }
-    } else
-        function(scale, r) {
-            lr <- r/tau
-            sqrt(sum(.wgtxy2(rho.sigma.e, lr/scale, lr))/sk)
-        }
+    }
     fun2 <- if (fit.effects) function(scale, r) {
         setSigma(object, scale)
-        fit.effects(c(object@pp$beta, object@pp$b.s), object)
+        fitEffects(c(object@pp$beta, object@pp$b.s), object)
         fun(scale, object@resp$wtres)
     } else fun
     scale0 <- .sigma(object)
-    ## logscale0 <- log(scale0)
     converged <- FALSE
     it <- 0
     while(!converged && (it <- it + 1) < max.iter) {
         scale <- fun2(scale0, object@resp$wtres)
-        ## converged <- abs(scale/scale0 - 1) < rel.tol
         converged <- abs(scale - scale0) < rel.tol * max(rel.tol, scale0)
         scale0 <- scale
-        ## logscale <- log(scale)
-        ## converged <- abs(logscale - logscale0) < rel.tol * max(rel.tol, logscale0)
-        ## logscale0 <- logscale
     }
 
     if (it >= max.iter)

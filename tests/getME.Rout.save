@@ -1,7 +1,7 @@
 
-R Under development (unstable) (2014-03-12 r65160) -- "Unsuffered Consequences"
-Copyright (C) 2014 The R Foundation for Statistical Computing
-Platform: x86_64-apple-darwin10.8.0 (64-bit)
+R version 3.2.0 Patched (2015-04-21 r68221) -- "Full of Ingredients"
+Copyright (C) 2015 The R Foundation for Statistical Computing
+Platform: x86_64-apple-darwin13.4.0 (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
 You are welcome to redistribute it under certain conditions.
@@ -61,6 +61,7 @@ Name: X
   ..$ : chr [1:180] "1" "2" "3" "4" ...
   ..$ : chr [1:2] "(Intercept)" "Days"
  - attr(*, "assign")= int [1:2] 0 1
+ - attr(*, "msgScaleX")= chr(0) 
 
 Name: Z 
 Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
@@ -68,7 +69,7 @@ Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
   ..@ p       : int [1:41] 0 10 19 29 38 48 57 67 76 86 ...
   ..@ Dim     : int [1:2] 180 40
   ..@ Dimnames:List of 2
-  .. ..$ : NULL
+  .. ..$ : chr [1:180] "1" "2" "3" "4" ...
   .. ..$ : chr [1:40] "308" "308" "309" "309" ...
   ..@ x       : num [1:522] 1 1 1 1 1 1 1 1 1 1 ...
   ..@ factors : list()
@@ -80,7 +81,7 @@ Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
   ..@ Dim     : int [1:2] 40 180
   ..@ Dimnames:List of 2
   .. ..$ : chr [1:40] "308" "308" "309" "309" ...
-  .. ..$ : NULL
+  .. ..$ : chr [1:180] "1" "2" "3" "4" ...
   ..@ x       : num [1:522] 1 1 1 1 1 1 2 1 1 3 ...
   ..@ factors : list()
 
@@ -92,7 +93,7 @@ List of 3
   .. ..@ Dim     : int [1:2] 18 180
   .. ..@ Dimnames:List of 2
   .. .. ..$ : chr [1:18] "308" "309" "310" "330" ...
-  .. .. ..$ : NULL
+  .. .. ..$ : chr [1:180] "1" "2" "3" "4" ...
   .. ..@ x       : num [1:180] 1 1 1 1 1 1 1 1 1 1 ...
   .. ..@ factors : list()
  $ Subject.Days       :Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
@@ -101,7 +102,7 @@ List of 3
   .. ..@ Dim     : int [1:2] 18 180
   .. ..@ Dimnames:List of 2
   .. .. ..$ : chr [1:18] "308" "309" "310" "330" ...
-  .. .. ..$ : NULL
+  .. .. ..$ : chr [1:180] "1" "2" "3" "4" ...
   .. ..@ x       : num [1:162] 1 2 3 4 5 6 7 8 9 1 ...
   .. ..@ factors : list()
  $ Group.(Intercept)  :Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
@@ -110,7 +111,7 @@ List of 3
   .. ..@ Dim     : int [1:2] 4 180
   .. ..@ Dimnames:List of 2
   .. .. ..$ : chr [1:4] "a" "b" "c" "d"
-  .. .. ..$ : NULL
+  .. .. ..$ : chr [1:180] "1" "2" "3" "4" ...
   .. ..@ x       : num [1:180] 1 1 1 1 1 1 1 1 1 1 ...
   .. ..@ factors : list()
 
@@ -167,7 +168,7 @@ Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
   ..@ Dim     : int [1:2] 40 180
   ..@ Dimnames:List of 2
   .. ..$ : NULL
-  .. ..$ : NULL
+  .. ..$ : chr [1:180] "1" "2" "3" "4" ...
   ..@ x       : num [1:522] 0.967 0 0.982 0.231 0 ...
   ..@ factors : list()
 
@@ -228,23 +229,23 @@ Name: lower
 
 Name: rho_e 
 Formal class 'psi_func_cached' [package "robustlmm"] with 11 slots
-  ..@ rho  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  ..@ rho  :Formal class 'functionX' [package "robustbase"] with 1 slot
   .. .. ..@ .Data:function (x, k = 1.345, s = 10)  
-  ..@ psi  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  ..@ psi  :Formal class 'functionX' [package "robustbase"] with 1 slot
   .. .. ..@ .Data:function (x, k = 1.345, s = 10)  
-  ..@ wgt  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  ..@ wgt  :Formal class 'functionX' [package "robustbase"] with 1 slot
   .. .. ..@ .Data:function (x, k = 1.345, s = 10)  
-  ..@ Dpsi :Formal class 'functionX' [package "robustbase"] with 1 slots
+  ..@ Dpsi :Formal class 'functionX' [package "robustbase"] with 1 slot
   .. .. ..@ .Data:function (x, k = 1.345, s = 10)  
-  ..@ Dwgt :Formal class 'functionX' [package "robustbase"] with 1 slots
+  ..@ Dwgt :Formal class 'functionX' [package "robustbase"] with 1 slot
   .. .. ..@ .Data:function (x, k = 1.345, s = 10)  
   ..@ tDefs: Named num [1:2] 1.34 10
   .. ..- attr(*, "names")= chr [1:2] "k" "s"
-  ..@ Erho :Formal class 'functionXal' [package "robustbase"] with 1 slots
+  ..@ Erho :Formal class 'functionXal' [package "robustbase"] with 1 slot
   .. .. ..@ .Data:function (arg = 1)  
-  ..@ Epsi2:Formal class 'functionXal' [package "robustbase"] with 1 slots
+  ..@ Epsi2:Formal class 'functionXal' [package "robustbase"] with 1 slot
   .. .. ..@ .Data:function (arg = 1)  
-  ..@ EDpsi:Formal class 'functionXal' [package "robustbase"] with 1 slots
+  ..@ EDpsi:Formal class 'functionXal' [package "robustbase"] with 1 slot
   .. .. ..@ .Data:function (arg = 1)  
   ..@ name : chr "smoothed Huber"
   ..@ xtras: list()
@@ -252,67 +253,67 @@ Formal class 'psi_func_cached' [package "robustlmm"] with 11 slots
 Name: rho_b 
 List of 2
  $ Subject:Formal class 'psi_func_cached' [package "robustlmm"] with 11 slots
-  .. ..@ rho  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. ..@ rho  :Formal class 'functionX' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (x, k = 1.345, s = 10)  
-  .. ..@ psi  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. ..@ psi  :Formal class 'functionX' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (x, k = 1.345, s = 10)  
-  .. ..@ wgt  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. ..@ wgt  :Formal class 'functionX' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (x, k = 1.345, s = 10)  
-  .. ..@ Dpsi :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. ..@ Dpsi :Formal class 'functionX' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (x, k = 1.345, s = 10)  
-  .. ..@ Dwgt :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. ..@ Dwgt :Formal class 'functionX' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (x, k = 1.345, s = 10)  
   .. ..@ tDefs: Named num [1:2] 1.34 10
   .. .. ..- attr(*, "names")= chr [1:2] "k" "s"
-  .. ..@ Erho :Formal class 'functionXal' [package "robustbase"] with 1 slots
+  .. ..@ Erho :Formal class 'functionXal' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (arg = 1)  
-  .. ..@ Epsi2:Formal class 'functionXal' [package "robustbase"] with 1 slots
+  .. ..@ Epsi2:Formal class 'functionXal' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (arg = 1)  
-  .. ..@ EDpsi:Formal class 'functionXal' [package "robustbase"] with 1 slots
+  .. ..@ EDpsi:Formal class 'functionXal' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (arg = 1)  
   .. ..@ name : chr "smoothed Huber"
   .. ..@ xtras: list()
  $ Group  :Formal class 'psi_func_cached' [package "robustlmm"] with 11 slots
-  .. ..@ rho  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. ..@ rho  :Formal class 'functionX' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (x, k = 1.345, s = 10)  
-  .. ..@ psi  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. ..@ psi  :Formal class 'functionX' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (x, k = 1.345, s = 10)  
-  .. ..@ wgt  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. ..@ wgt  :Formal class 'functionX' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (x, k = 1.345, s = 10)  
-  .. ..@ Dpsi :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. ..@ Dpsi :Formal class 'functionX' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (x, k = 1.345, s = 10)  
-  .. ..@ Dwgt :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. ..@ Dwgt :Formal class 'functionX' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (x, k = 1.345, s = 10)  
   .. ..@ tDefs: Named num [1:2] 1.34 10
   .. .. ..- attr(*, "names")= chr [1:2] "k" "s"
-  .. ..@ Erho :Formal class 'functionXal' [package "robustbase"] with 1 slots
+  .. ..@ Erho :Formal class 'functionXal' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (arg = 1)  
-  .. ..@ Epsi2:Formal class 'functionXal' [package "robustbase"] with 1 slots
+  .. ..@ Epsi2:Formal class 'functionXal' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (arg = 1)  
-  .. ..@ EDpsi:Formal class 'functionXal' [package "robustbase"] with 1 slots
+  .. ..@ EDpsi:Formal class 'functionXal' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (arg = 1)  
   .. ..@ name : chr "smoothed Huber"
   .. ..@ xtras: list()
 
 Name: rho_sigma_e 
 Formal class 'psi_func_cached' [package "robustlmm"] with 11 slots
-  ..@ rho  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  ..@ rho  :Formal class 'functionX' [package "robustbase"] with 1 slot
   .. .. ..@ .Data:function (x, k = 2.28, s = 10)  
-  ..@ psi  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  ..@ psi  :Formal class 'functionX' [package "robustbase"] with 1 slot
   .. .. ..@ .Data:function (x, k = 2.28, s = 10)  
-  ..@ wgt  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  ..@ wgt  :Formal class 'functionX' [package "robustbase"] with 1 slot
   .. .. ..@ .Data:function (x, k = 2.28, s = 10)  
-  ..@ Dpsi :Formal class 'functionX' [package "robustbase"] with 1 slots
+  ..@ Dpsi :Formal class 'functionX' [package "robustbase"] with 1 slot
   .. .. ..@ .Data:function (x, k = 2.28, s = 10)  
-  ..@ Dwgt :Formal class 'functionX' [package "robustbase"] with 1 slots
+  ..@ Dwgt :Formal class 'functionX' [package "robustbase"] with 1 slot
   .. .. ..@ .Data:function (x, k = 2.28, s = 10)  
   ..@ tDefs: Named num [1:2] 2.28 10
   .. ..- attr(*, "names")= chr [1:2] "k" "s"
-  ..@ Erho :Formal class 'functionXal' [package "robustbase"] with 1 slots
+  ..@ Erho :Formal class 'functionXal' [package "robustbase"] with 1 slot
   .. .. ..@ .Data:function (arg = 1)  
-  ..@ Epsi2:Formal class 'functionXal' [package "robustbase"] with 1 slots
+  ..@ Epsi2:Formal class 'functionXal' [package "robustbase"] with 1 slot
   .. .. ..@ .Data:function (arg = 1)  
-  ..@ EDpsi:Formal class 'functionXal' [package "robustbase"] with 1 slots
+  ..@ EDpsi:Formal class 'functionXal' [package "robustbase"] with 1 slot
   .. .. ..@ .Data:function (arg = 1)  
   ..@ name : chr "smoothed Huber, Proposal II"
   ..@ xtras: list()
@@ -320,44 +321,44 @@ Formal class 'psi_func_cached' [package "robustlmm"] with 11 slots
 Name: rho_sigma_b 
 List of 2
  $ Subject:Formal class 'psi_func_cached' [package "robustlmm"] with 11 slots
-  .. ..@ rho  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. ..@ rho  :Formal class 'functionX' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (x, k = 2.28, s = 10)  
-  .. ..@ psi  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. ..@ psi  :Formal class 'functionX' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (x, k = 2.28, s = 10)  
-  .. ..@ wgt  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. ..@ wgt  :Formal class 'functionX' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (x, k = 2.28, s = 10)  
-  .. ..@ Dpsi :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. ..@ Dpsi :Formal class 'functionX' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (x, k = 2.28, s = 10)  
-  .. ..@ Dwgt :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. ..@ Dwgt :Formal class 'functionX' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (x, k = 2.28, s = 10)  
   .. ..@ tDefs: Named num [1:2] 2.28 10
   .. .. ..- attr(*, "names")= chr [1:2] "k" "s"
-  .. ..@ Erho :Formal class 'functionXal' [package "robustbase"] with 1 slots
+  .. ..@ Erho :Formal class 'functionXal' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (arg = 1)  
-  .. ..@ Epsi2:Formal class 'functionXal' [package "robustbase"] with 1 slots
+  .. ..@ Epsi2:Formal class 'functionXal' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (arg = 1)  
-  .. ..@ EDpsi:Formal class 'functionXal' [package "robustbase"] with 1 slots
+  .. ..@ EDpsi:Formal class 'functionXal' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (arg = 1)  
   .. ..@ name : chr "smoothed Huber, Proposal II"
   .. ..@ xtras: list()
  $ Group  :Formal class 'psi_func_cached' [package "robustlmm"] with 11 slots
-  .. ..@ rho  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. ..@ rho  :Formal class 'functionX' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (x, k = 2.28, s = 10)  
-  .. ..@ psi  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. ..@ psi  :Formal class 'functionX' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (x, k = 2.28, s = 10)  
-  .. ..@ wgt  :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. ..@ wgt  :Formal class 'functionX' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (x, k = 2.28, s = 10)  
-  .. ..@ Dpsi :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. ..@ Dpsi :Formal class 'functionX' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (x, k = 2.28, s = 10)  
-  .. ..@ Dwgt :Formal class 'functionX' [package "robustbase"] with 1 slots
+  .. ..@ Dwgt :Formal class 'functionX' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (x, k = 2.28, s = 10)  
   .. ..@ tDefs: Named num [1:2] 2.28 10
   .. .. ..- attr(*, "names")= chr [1:2] "k" "s"
-  .. ..@ Erho :Formal class 'functionXal' [package "robustbase"] with 1 slots
+  .. ..@ Erho :Formal class 'functionXal' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (arg = 1)  
-  .. ..@ Epsi2:Formal class 'functionXal' [package "robustbase"] with 1 slots
+  .. ..@ Epsi2:Formal class 'functionXal' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (arg = 1)  
-  .. ..@ EDpsi:Formal class 'functionXal' [package "robustbase"] with 1 slots
+  .. ..@ EDpsi:Formal class 'functionXal' [package "robustbase"] with 1 slot
   .. .. .. ..@ .Data:function (arg = 1)  
   .. ..@ name : chr "smoothed Huber, Proposal II"
   .. ..@ xtras: list()
@@ -383,7 +384,7 @@ List of 5
   .. .. ..$ : NULL
   .. ..@ factors : list()
  $ M_bB :Formal class 'dgeMatrix' [package "Matrix"] with 4 slots
-  .. ..@ x       : num [1:80] -6.57e-02 7.76e-16 -6.57e-02 7.88e-16 -6.57e-02 ...
+  .. ..@ x       : num [1:80] -6.57e-02 1.06e-15 -6.57e-02 1.08e-15 -6.57e-02 ...
   .. ..@ Dim     : int [1:2] 40 2
   .. ..@ Dimnames:List of 2
   .. .. ..$ : NULL
@@ -437,4 +438,4 @@ Name: is_REML
 > 
 > proc.time()
    user  system elapsed 
-  4.807   0.108   4.908 
+  4.196   0.158   4.545 

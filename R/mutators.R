@@ -55,11 +55,6 @@ setB <- function(object, value) {
 ### Set theta
 setTheta <- function(object, value, eps = 1e-7, fit.effects = TRUE,
                      update.sigma = fit.effects, ...) {
-    ## this check is disabled, since we're still optimizing for \sigma_e
-    ## if (isTRUE(all.equal(theta(object), value))) {
-    ##     ## cat("theta did not change, returning old object\n")
-    ##     return(object)
-    ## }
     stopifnot(length(value) == len(object, "theta"))
     if (!fit.effects && update.sigma)
         stop("fit.effects == FALSE implies update.sigma == FALSE")
@@ -79,10 +74,6 @@ setTheta <- function(object, value, eps = 1e-7, fit.effects = TRUE,
         ## if all vc are also 0 set correlation = 0
         if (all(value[idx.cov] == 0))
             value[idx.cur] <- 0
-        ## if correlation != 0 and at least one nnz vc: set other vc to eps
-        ## else if (any(value[idx.cur & !idx.cov] != 0))
-        ##     value[idx & idx.cov] <- eps
-        ##cat("idx:", idx, "idx.cur:", idx.cur, "idx.cov:", idx.cov, "\n")
         offset <- offset + length(trm)
     }
     ## cat("Setting theta to", value, "\n")
@@ -94,7 +85,7 @@ setTheta <- function(object, value, eps = 1e-7, fit.effects = TRUE,
             ##cat("Updated sigma to", object@pp$sigma, "\n")
         } else {
             ## cat("Starting values:", object@pp$beta, object@pp$b.s, "\n")
-            fit.effects(c(object@pp$beta, object@pp$b.s), object)
+            fitEffects(c(object@pp$beta, object@pp$b.s), object)
         }
     } else {
         ## update b.s according to the new Lambda

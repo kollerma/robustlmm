@@ -197,9 +197,9 @@ vcov.summary.rlmerMod <- function(object, correlation = TRUE, ...) {
 ##' @method VarCorr rlmerMod
 ##' @export
 VarCorrMer <- getS3method("VarCorr", "merMod")
-VarCorr.rlmerMod <- function(x, sigma, rdig)# <- 3 args from nlme
+VarCorr.rlmerMod <- function(x, ...)# <- 3 args from nlme
 {
-    val <- VarCorrMer(x, sigma, rdig)
+    val <- VarCorrMer(x, ...)
     class(val) <- "VarCorr.rlmerMod"
     val
 }

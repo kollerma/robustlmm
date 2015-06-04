@@ -1,5 +1,8 @@
 ## testing getME function
 require(robustlmm)
+formatNum <- function(x, ...)
+     format(round(x, 8), trim = TRUE, drop0trailing = TRUE, ...)
+options(str = strOptions(formatNum = formatNum))
 
 sleepstudy2 <- within(sleepstudy, Group <- letters[1:4])
 rfm <- rlmer(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2,

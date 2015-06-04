@@ -28,6 +28,9 @@ The following object is masked from 'package:lme4':
 
     getME
 
+> formatNum <- function(x, ...)
++      format(round(x, 8), trim = TRUE, drop0trailing = TRUE, ...)
+> options(str = strOptions(formatNum = formatNum))
 > 
 > sleepstudy2 <- within(sleepstudy, Group <- letters[1:4])
 > rfm <- rlmer(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2,
@@ -61,7 +64,6 @@ Name: X
   ..$ : chr [1:180] "1" "2" "3" "4" ...
   ..$ : chr [1:2] "(Intercept)" "Days"
  - attr(*, "assign")= int [1:2] 0 1
- - attr(*, "msgScaleX")= chr(0) 
 
 Name: Z 
 Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
@@ -69,7 +71,7 @@ Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
   ..@ p       : int [1:41] 0 10 19 29 38 48 57 67 76 86 ...
   ..@ Dim     : int [1:2] 180 40
   ..@ Dimnames:List of 2
-  .. ..$ : chr [1:180] "1" "2" "3" "4" ...
+  .. ..$ : NULL
   .. ..$ : chr [1:40] "308" "308" "309" "309" ...
   ..@ x       : num [1:522] 1 1 1 1 1 1 1 1 1 1 ...
   ..@ factors : list()
@@ -81,7 +83,7 @@ Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
   ..@ Dim     : int [1:2] 40 180
   ..@ Dimnames:List of 2
   .. ..$ : chr [1:40] "308" "308" "309" "309" ...
-  .. ..$ : chr [1:180] "1" "2" "3" "4" ...
+  .. ..$ : NULL
   ..@ x       : num [1:522] 1 1 1 1 1 1 2 1 1 3 ...
   ..@ factors : list()
 
@@ -93,7 +95,7 @@ List of 3
   .. ..@ Dim     : int [1:2] 18 180
   .. ..@ Dimnames:List of 2
   .. .. ..$ : chr [1:18] "308" "309" "310" "330" ...
-  .. .. ..$ : chr [1:180] "1" "2" "3" "4" ...
+  .. .. ..$ : NULL
   .. ..@ x       : num [1:180] 1 1 1 1 1 1 1 1 1 1 ...
   .. ..@ factors : list()
  $ Subject.Days       :Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
@@ -102,7 +104,7 @@ List of 3
   .. ..@ Dim     : int [1:2] 18 180
   .. ..@ Dimnames:List of 2
   .. .. ..$ : chr [1:18] "308" "309" "310" "330" ...
-  .. .. ..$ : chr [1:180] "1" "2" "3" "4" ...
+  .. .. ..$ : NULL
   .. ..@ x       : num [1:162] 1 2 3 4 5 6 7 8 9 1 ...
   .. ..@ factors : list()
  $ Group.(Intercept)  :Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
@@ -111,7 +113,7 @@ List of 3
   .. ..@ Dim     : int [1:2] 4 180
   .. ..@ Dimnames:List of 2
   .. .. ..$ : chr [1:4] "a" "b" "c" "d"
-  .. .. ..$ : chr [1:180] "1" "2" "3" "4" ...
+  .. .. ..$ : NULL
   .. ..@ x       : num [1:180] 1 1 1 1 1 1 1 1 1 1 ...
   .. ..@ factors : list()
 
@@ -168,7 +170,7 @@ Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
   ..@ Dim     : int [1:2] 40 180
   ..@ Dimnames:List of 2
   .. ..$ : NULL
-  .. ..$ : chr [1:180] "1" "2" "3" "4" ...
+  .. ..$ : NULL
   ..@ x       : num [1:522] 0.967 0 0.982 0.231 0 ...
   ..@ factors : list()
 
@@ -372,10 +374,13 @@ List of 5
   .. .. ..$ : NULL
   .. .. ..$ : NULL
   .. ..@ factors :List of 1
-  .. .. ..$ LU:Formal class 'denseLU' [package "Matrix"] with 3 slots
-  .. .. .. .. ..@ x   : num [1:1600] 9.105 0.9367 -0.0535 -0.0551 -0.0535 ...
-  .. .. .. .. ..@ perm: int [1:40] 1 2 3 4 5 6 7 8 9 10 ...
-  .. .. .. .. ..@ Dim : int [1:2] 40 40
+  .. .. ..$ LU:Formal class 'denseLU' [package "Matrix"] with 4 slots
+  .. .. .. .. ..@ x       : num [1:1600] 9.105 0.9367 -0.0535 -0.0551 -0.0535 ...
+  .. .. .. .. ..@ perm    : int [1:40] 1 2 3 4 5 6 7 8 9 10 ...
+  .. .. .. .. ..@ Dimnames:List of 2
+  .. .. .. .. .. ..$ : NULL
+  .. .. .. .. .. ..$ : NULL
+  .. .. .. .. ..@ Dim     : int [1:2] 40 40
  $ M_XZ :Formal class 'dgeMatrix' [package "Matrix"] with 4 slots
   .. ..@ x       : num [1:80] 8.46 39.11 8.5 53.81 8.46 ...
   .. ..@ Dim     : int [1:2] 2 40
@@ -384,7 +389,7 @@ List of 5
   .. .. ..$ : NULL
   .. ..@ factors : list()
  $ M_bB :Formal class 'dgeMatrix' [package "Matrix"] with 4 slots
-  .. ..@ x       : num [1:80] -6.57e-02 1.06e-15 -6.57e-02 1.08e-15 -6.57e-02 ...
+  .. ..@ x       : num [1:80] -0.0657 0 -0.0657 0 -0.0657 ...
   .. ..@ Dim     : int [1:2] 40 2
   .. ..@ Dimnames:List of 2
   .. .. ..$ : NULL
@@ -434,8 +439,8 @@ Name: w_sigma_b_vector
  num [1:40] 1 1 0.614 0.614 1 ...
 
 Name: is_REML 
- logi TRUE
+ logi 1
 > 
 > proc.time()
    user  system elapsed 
-  4.196   0.158   4.545 
+  3.504   0.111   3.605 

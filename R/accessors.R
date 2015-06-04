@@ -26,7 +26,7 @@ getX <- function(object, t = FALSE) {
 ##
 ## @title Get rho_e
 ## @param object merMod object
-## @param which add "sigma" for rho.sigma.e
+## @param which add \dQuote{sigma} for rho.sigma.e
 ## @export
 rho.e <- function(object, which = "default") {
     switch(which,
@@ -38,7 +38,7 @@ rho.e <- function(object, which = "default") {
 ##
 ## @title Get rho_b
 ## @param object merMod object
-## @param which add "sigma" for rho.sigma.e
+## @param which add \dQuote{sigma} for rho.sigma.e
 ## @export
 rho.b <- function(object, which = "default") {
     ret <- switch(which,
@@ -258,7 +258,7 @@ uArranged <- function(object, b.s = b.s(object)) {
 ## @param diag.only include only diagonal elements?
 ## @param old (logical) give backward-compatible results?
 ## @param prefix a character vector with two elements giving the prefix
-## for diagonal (e.g. "sd") and off-diagonal (e.g. "cor") elements
+## for diagonal (e.g. \dQuote{sd}) and off-diagonal (e.g. \dQuote{cor}) elements
 ## ## @export
 tnames <- function(object,diag.only=FALSE,old=TRUE,prefix=NULL) {
     if (old) {
@@ -288,14 +288,14 @@ tnames <- function(object,diag.only=FALSE,old=TRUE,prefix=NULL) {
 ##'
 ##' Extract (or \dQuote{get}) \dQuote{components} -- in a generalized
 ##' sense -- from a fitted mixed-effects model, i.e. from an object
-##' of class \code{"\linkS4class{rlmerMod}"} or \code{"\linkS4class{merMod}"}.
+##' of class \code{\linkS4class{rlmerMod}} or \code{\linkS4class{merMod}}.
 ##'
 ##' The goal is to provide \dQuote{everything a user may want} from a fitted
-##' \code{"rlmerMod"} object \emph{as far} as it is not available by methods, such
+##' \code{rlmerMod} object \emph{as far} as it is not available by methods, such
 ##' as \code{\link{fixef}}, \code{\link{ranef}}, \code{\link{vcov}}, etc.
 ##'
 ##' @param object a fitted mixed-effects model of class
-##' \code{"\linkS4class{rlmerMod}"}, i.e. typically the result of
+##' \code{\linkS4class{rlmerMod}}, i.e. typically the result of
 ##' \code{\link{rlmer}()}.
 ##' @param name a character string specifying the name of the
 ##' \dQuote{component}.  Possible values are:\cr
@@ -322,7 +322,7 @@ tnames <- function(object,diag.only=FALSE,old=TRUE,prefix=NULL) {
 ##'     \item{Lind}{index vector for inserting elements of \eqn{\theta}{theta} into the
 ##'                 nonzeros of \eqn{\Lambda}{Lambda}}
 ##'     \item{A}{Scaled sparse model matrix (class
-##'      \code{"\link[Matrix:dgCMatrix-class]{dgCMatrix}"}) for
+##'      \code{\link[Matrix:dgCMatrix-class]{dgCMatrix}}) for
 ##'      the unit, orthogonal random effects, \eqn{U},
 ##'       equal to \code{getME(.,"Zt") \%*\% getME(.,"Lambdat")}}
 ##'     \item{sigma}{residual standard error}
@@ -331,7 +331,7 @@ tnames <- function(object,diag.only=FALSE,old=TRUE,prefix=NULL) {
 ##'     \item{theta}{random-effects parameter estimates: these are parameterized as the relative Cholesky factors of each random effect term}
 ##'     \item{n_rtrms}{number of random-effects terms}
 ##'     \item{n_rfacs}{number of distinct random-effects grouping factors}
-##'     \item{cnms}{ the “component names”, a ‘list’.}
+##'     \item{cnms}{the \dQuote{component names}, a \sQuote{list}.}
 ##'     \item{devcomp}{a list consisting of a named numeric vector, \dQuote{cmp}, and
 ##'                    a named integer vector, \dQuote{dims}, describing the fitted model}
 ##'     \item{offset}{model offset}

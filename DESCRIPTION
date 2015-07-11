@@ -1,12 +1,13 @@
 Package: robustlmm
 Type: Package
 Title: Robust Linear Mixed Effects Models
-Version: 1.7-2
-Date: 2015-06-05
+Version: 1.7-3
+Date: 2015-07-11
 Author: Manuel Koller
 Maintainer: Manuel Koller <koller.manuel@gmail.com>
-Description: Robust mixed effects modeling by robustification
-    of scoring equations using the Design Adaptive Scale approach.
+Description: A method to fit linear mixed effects models robustly.
+    Robustness is achieved by modification of the scoring equations
+    combined with the Design Adaptive Scale approach.
 License: GPL-2
 URL: https://github.com/kollerma/robustlmm
 LazyLoad: yes

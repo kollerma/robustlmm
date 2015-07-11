@@ -1,5 +1,5 @@
 
-R version 3.2.0 Patched (2015-04-21 r68221) -- "Full of Ingredients"
+R version 3.2.1 Patched (2015-07-02 r68625) -- "World-Famous Astronaut"
 Copyright (C) 2015 The R Foundation for Statistical Computing
 Platform: x86_64-apple-darwin13.4.0 (64-bit)
 
@@ -20,7 +20,6 @@ Type 'q()' to quit R.
 Loading required package: robustlmm
 Loading required package: lme4
 Loading required package: Matrix
-Loading required package: Rcpp
 
 Attaching package: 'robustlmm'
 
@@ -64,6 +63,7 @@ Name: X
   ..$ : chr [1:180] "1" "2" "3" "4" ...
   ..$ : chr [1:2] "(Intercept)" "Days"
  - attr(*, "assign")= int [1:2] 0 1
+ - attr(*, "msgScaleX")= chr(0) 
 
 Name: Z 
 Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
@@ -71,7 +71,7 @@ Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
   ..@ p       : int [1:41] 0 10 19 29 38 48 57 67 76 86 ...
   ..@ Dim     : int [1:2] 180 40
   ..@ Dimnames:List of 2
-  .. ..$ : NULL
+  .. ..$ : chr [1:180] "1" "2" "3" "4" ...
   .. ..$ : chr [1:40] "308" "308" "309" "309" ...
   ..@ x       : num [1:522] 1 1 1 1 1 1 1 1 1 1 ...
   ..@ factors : list()
@@ -83,7 +83,7 @@ Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
   ..@ Dim     : int [1:2] 40 180
   ..@ Dimnames:List of 2
   .. ..$ : chr [1:40] "308" "308" "309" "309" ...
-  .. ..$ : NULL
+  .. ..$ : chr [1:180] "1" "2" "3" "4" ...
   ..@ x       : num [1:522] 1 1 1 1 1 1 2 1 1 3 ...
   ..@ factors : list()
 
@@ -95,7 +95,7 @@ List of 3
   .. ..@ Dim     : int [1:2] 18 180
   .. ..@ Dimnames:List of 2
   .. .. ..$ : chr [1:18] "308" "309" "310" "330" ...
-  .. .. ..$ : NULL
+  .. .. ..$ : chr [1:180] "1" "2" "3" "4" ...
   .. ..@ x       : num [1:180] 1 1 1 1 1 1 1 1 1 1 ...
   .. ..@ factors : list()
  $ Subject.Days       :Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
@@ -104,7 +104,7 @@ List of 3
   .. ..@ Dim     : int [1:2] 18 180
   .. ..@ Dimnames:List of 2
   .. .. ..$ : chr [1:18] "308" "309" "310" "330" ...
-  .. .. ..$ : NULL
+  .. .. ..$ : chr [1:180] "1" "2" "3" "4" ...
   .. ..@ x       : num [1:162] 1 2 3 4 5 6 7 8 9 1 ...
   .. ..@ factors : list()
  $ Group.(Intercept)  :Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
@@ -113,7 +113,7 @@ List of 3
   .. ..@ Dim     : int [1:2] 4 180
   .. ..@ Dimnames:List of 2
   .. .. ..$ : chr [1:4] "a" "b" "c" "d"
-  .. .. ..$ : NULL
+  .. .. ..$ : chr [1:180] "1" "2" "3" "4" ...
   .. ..@ x       : num [1:180] 1 1 1 1 1 1 1 1 1 1 ...
   .. ..@ factors : list()
 
@@ -170,7 +170,7 @@ Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
   ..@ Dim     : int [1:2] 40 180
   ..@ Dimnames:List of 2
   .. ..$ : NULL
-  .. ..$ : NULL
+  .. ..$ : chr [1:180] "1" "2" "3" "4" ...
   ..@ x       : num [1:522] 0.967 0 0.982 0.231 0 ...
   ..@ factors : list()
 
@@ -443,4 +443,4 @@ Name: is_REML
 > 
 > proc.time()
    user  system elapsed 
-  3.504   0.111   3.605 
+  3.681   0.116   3.791 

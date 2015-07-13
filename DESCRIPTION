@@ -1,8 +1,8 @@
 Package: robustlmm
 Type: Package
 Title: Robust Linear Mixed Effects Models
-Version: 1.7-3
-Date: 2015-07-11
+Version: 1.7-4
+Date: 2015-07-12
 Author: Manuel Koller
 Maintainer: Manuel Koller <koller.manuel@gmail.com>
 Description: A method to fit linear mixed effects models robustly.

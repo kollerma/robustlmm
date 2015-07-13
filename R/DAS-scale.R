@@ -1,4 +1,12 @@
-# calculate the expected value to be used in D.re
+##' @importFrom stats dchisq integrate cov2cor as.formula asOneSidedFormula deviance
+##' @importFrom stats dnorm getCall model.frame model.offset model.response
+##' @importFrom stats model.weights napredict naresid ppoints printCoefmat
+##' @importFrom stats qnorm quantile reorder setNames symnum terms.formula
+##' @importFrom stats uniroot update.formula
+##' @importFrom utils packageVersion stack
+##' @importFrom methods as is slot validObject
+##' @importFrom grDevices devAskNewPage 
+## calculate the expected value to be used in D.re
 .calcE.D.re <- function(s, rho) {
     if (s == 1) return(rho@EDpsi())
     tfun <- function(v) rho@Dwgt(.d2(v,s))*.Dd2(v,s)*v*dchisq(v, s)

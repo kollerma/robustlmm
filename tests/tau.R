@@ -1,8 +1,17 @@
-## Test disabled
+if(!robustbase:::doExtras()) ## Test disabled {unless we set environment.var.}
 quit()
 
 ## test kappa functions
 require(robustlmm)
+
+## Some session / library diagnostics for "us" (the package developers):
+sessionInfo()
+.libPaths()
+packageDescription("robustbase")
+packageDescription("lme4")
+packageDescription("robustlmm")
+## --------------------------------------------------------------------
+
 
 calcKappaTau <- robustlmm:::calcKappaTau
 calcTau <- robustlmm:::calcTau
@@ -33,7 +42,7 @@ testKappa(smoothPsi)
 E2 <- function(fun, ...) {
     int1 <- function(x, y, ...) fun(x, y, ...)*dnorm(x)*dnorm(y)
     int2 <- Vectorize(function(y, ...) integrate(int1, -Inf, Inf, y=y, ...)$value)
-    integrate(int2, -Inf, Inf, ...)$value    
+    integrate(int2, -Inf, Inf, ...)$value
 }
 
 rfm <- rlmer(Yield ~ (1|Batch), Dyestuff)
@@ -44,7 +53,7 @@ testTau <- function(rho, rho.sigma, wExp, a, s) {
     rho.sigma2 <- if (wExp == 2) psi2propII(rho.sigma) else rho.sigma
     kappa <- calcKappaTau(rho.sigma2, 1)
     i <- 1
-    
+
     fun <- switch(wExp + 1,
                   { ## wExp.e == 0:
                       wgt <- function(x) ifelse(x == 0, rho.e@Dpsi(0)/2, rho@rho(x)/(x*x))
@@ -63,7 +72,7 @@ testTau <- function(rho, rho.sigma, wExp, a, s) {
 
     tau <- calcTau(a, s, rho, rho.sigma2, rfm@pp, kappa)
     print(tau)
-    
+
     ret <- tau
     for (i in seq_along(a)) ret[i] <- E2(fun, tau = tau[i])
 

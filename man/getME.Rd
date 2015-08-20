@@ -1,28 +1,28 @@
 \name{getME}
-\alias{getME}
-\alias{theta}
 \title{Extract or Get Generalize Components from a Fitted Mixed Effects Model}
+\alias{getME.rlmerMod}
+\alias{theta}
 \usage{
-  getME(object,
-        name = c("X", "Z", "Zt", "Ztlist", "y", "mu",
-                 "u", "b.s", "b", "Gp", "Tp", "Lambda",
-                 "Lambdat","A", "U_b", "Lind", "sigma",
-                 "flist", "beta", "theta", "n_rtrms",
-                 "n_rfacs", "cnms", "devcomp", "offset",
-                 "lower", "rho_e", "rho_b", "rho_sigma_e",
-                 "rho_sigma_b", "M", "w_e", "w_b",
-                 "w_b_vector", "w_sigma_e", "w_sigma_b",
-                 "w_sigma_b_vector", "is_REML"))
+\S3method{getME}{rlmerMod}(object,
+      name = c("X", "Z", "Zt", "Ztlist", "y", "mu",
+               "u", "b.s", "b", "Gp", "Tp", "Lambda",
+               "Lambdat","A", "U_b", "Lind", "sigma",
+               "flist", "beta", "theta", "n_rtrms",
+               "n_rfacs", "cnms", "devcomp", "offset",
+               "lower", "rho_e", "rho_b", "rho_sigma_e",
+               "rho_sigma_b", "M", "w_e", "w_b",
+               "w_b_vector", "w_sigma_e", "w_sigma_b",
+               "w_sigma_b_vector", "is_REML"), \dots)
 
   theta(object)
 }
 \arguments{
   \item{object}{a fitted mixed-effects model of class
-  \code{"\linkS4class{rlmerMod}"}, i.e. typically the
-  result of \code{\link{rlmer}()}.}
+    \code{"\linkS4class{rlmerMod}"}, i.e. typically the
+    result of \code{\link{rlmer}()}.}
 
   \item{name}{a character string specifying the name of the
-  \dQuote{component}.  Possible values are:\cr \describe{
+    \dQuote{component}.  Possible values are:\cr \describe{
   \item{X}{fixed-effects model matrix} \item{Z}{random-effects model
   matrix} \item{Zt}{transpose of random-effects model matrix}
   \item{Ztlist}{list of components of the transpose of the
@@ -77,8 +77,16 @@
   associated with the spherical random effects when estimating the
   covariance parameters, returned as one long vector}
   \item{is_REML}{returns \code{TRUE} for rlmerMod-objects (for
-  compatibility with lme4)} }} } \value{ Unspecified, as very much
-  depending on the \code{\link{name}}.  } \description{ Extract (or
+    compatibility with lme4)}
+}% describe
+}% name
+  \item{...}{potentially further arguments passed to and from methods;
+    none here at the moment.}
+}
+\value{ Unspecified, as very much
+  depending on the \code{\link{name}}.
+}
+\description{ Extract (or
   \dQuote{get}) \dQuote{components} -- in a generalized sense -- from
   a fitted mixed-effects model, i.e. from an object of class
   \code{"\linkS4class{rlmerMod}"} or \code{"\linkS4class{merMod}"}.
@@ -107,7 +115,7 @@ stopifnot(is(Z, "CsparseMatrix"),
 		    check.attributes=FALSE, tolerance = 0))
 
 ## All that can be accessed [potentially ..]:
-(nmME <- eval(formals(getME)$name))
+(nmME <- eval(formals(robustlmm:::getME.rlmerMod)$name))
 \dontshow{
 ## internal consistency check ensuring that all work:
 ## "try(.)" because some are not yet implemented:
@@ -117,7 +125,7 @@ str(parts <- sapply(nmME, function(nm) try(getME(fm1, nm)),
 stopifnot(all.equal(theta(fm1), getME(fm1, "theta")))
 }
 \seealso{
-  \code{\link{getCall}()}, More standard methods for
+  \code{\link{getCall}()}; more standard methods for
   rlmerMod objects, such as \code{\link{ranef}},
   \code{\link{fixef}}, \code{\link{vcov}}, etc.: see
   \code{methods(class="rlmerMod")}

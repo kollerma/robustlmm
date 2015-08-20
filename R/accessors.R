@@ -66,7 +66,7 @@ Lambda <- function(object) {
 ## @title Get U_b
 ## @param object merMod object
 U_b <- function(object) {
-   if (class(object)[1] == "lmerMod") t(object@pp$Lambdat) else object@pp$U_b 
+   if (class(object)[1] == "lmerMod") t(object@pp$Lambdat) else object@pp$U_b
 }
 
 ## Get Lind
@@ -100,7 +100,7 @@ getZeroU <- function(object) object@pp$zeroB
 ## \item theta: length of vector theta
 ## \item r, e: number of observations
 ## }
-## 
+##
 ## @title length
 ## @param x merMod object
 ## @param what length is requested
@@ -128,8 +128,8 @@ nobs.rlmerMod <- .nobsLmerMod
 ##' The per-observation residuals are returned, i.e.,
 ##' the difference of the observation and the fitted value
 ##' including random effects. With type one can specify whether
-##' the weights should be used or not. 
-##' 
+##' the weights should be used or not.
+##'
 ##' @title Get residuals
 ##' @param object rlmerMod object
 ##' @param type type of residuals
@@ -141,7 +141,6 @@ nobs.rlmerMod <- .nobsLmerMod
 ##'   stopifnot(all.equal(resid(fm, type="weighted"),
 ##'                       resid(fm) * getME(fm, "w_e")))
 ##' }
-##' @method residuals rlmerMod
 ##' @importFrom stats residuals resid
 ##' @S3method residuals rlmerMod
 residuals.rlmerMod <- function(object, type = c("response", "weighted"),
@@ -348,7 +347,11 @@ tnames <- function(object,diag.only=FALSE,old=TRUE,prefix=NULL) {
 ##'     \item{w_sigma_b}{robustness weights associated with the spherical random effects when estimating the covariance parameters, returned in the same format as \code{\link{ranef}()}}
 ##'     \item{w_sigma_b_vector}{robustness weights associated with the spherical random effects when estimating the covariance parameters, returned as one long vector}
 ##'     \item{is_REML}{returns \code{TRUE} for rlmerMod-objects (for compatibility with lme4)}
+##'
+##'      %% -- keep at the very end:
+##'      \item{\code{"ALL"}:}{get all of the above as a \code{\link{list}}.}
 ##' }
+##' @param ... potentially further arguments; not here.
 ##' @return Unspecified, as very much depending on the \code{\link{name}}.
 ##' @seealso \code{\link{getCall}()},
 ##' More standard methods for rlmerMod objects, such as \code{\link{ranef}},
@@ -379,18 +382,20 @@ tnames <- function(object,diag.only=FALSE,old=TRUE,prefix=NULL) {
 ##' 	  all.equal(fixef(fm1), getME(fm1, "beta"),
 ##' 		    check.attributes=FALSE, tolerance = 0))
 ##'
-##' ## All that can be accessed [potentially ..]:
-##' (nmME <- eval(formals(getME)$name))
+##' ## All that can be accessed [potentially ..]: %- MM: geME.merMod() now has option "ALL"
+##' (nmME <- eval(formals(robustlmm:::getME.rlmerMod)$name))
 ##' \dontshow{
 ##' ## internal consistency check ensuring that all work:
 ##' ## "try(.)" because some are not yet implemented:
 ##' str(parts <- sapply(nmME, function(nm) try(getME(fm1, nm)),
 ##'                     simplify=FALSE))
 ##' }% dont..
-##'
-##' @export
-getME <- function(object,
-		  name = c("X", "Z", "Zt", "Ztlist", "y", "mu",
+##' % S3 generic now imported:
+##' @importFrom lme4 getME
+##' @S3method getME rlmerMod
+getME.rlmerMod <-
+    function(object,
+             name = c("X", "Z", "Zt", "Ztlist", "y", "mu",
                       "u", "b.s", "b",
                       "Gp", "Tp", "Lambda", "Lambdat", "A",
                       "U_b", "Lind", "sigma", "flist", "beta",
@@ -398,14 +403,18 @@ getME <- function(object,
                       "devcomp", "offset", "lower", "rho_e",
                       "rho_b", "rho_sigma_e", "rho_sigma_b", "M",
                       "w_e", "w_b", "w_b_vector", "w_sigma_e",
-                      "w_sigma_b", "w_sigma_b_vector", "is_REML"))
+                      "w_sigma_b", "w_sigma_b_vector", "is_REML"), ...)
 {
     if(missing(name)) stop("'name' must not be missing")
-    if (is(object, "merMod"))
-        return(lme4::getME(object, name))
-    ## else: assume it's rlmerMod
-    stopifnot(length(name <- as.character(name)) == 1,
-	      is(object, "rlmerMod"))
+    ## Deal with multiple names -- "FIXME" is inefficiently redoing things
+    if (length(name <- as.character(name)) > 1) {
+        names(name) <- name
+        return(lapply(name, getME, object = object))
+    }
+    if(name == "ALL") ## recursively get all provided components
+        return(sapply(eval(formals()$name),
+                      getME.rlmerMod, object=object, simplify=FALSE))
+    stopifnot(is(object, "rlmerMod"))
     name <- match.arg(name)
     rsp  <- object@resp
     PR   <- object@pp
@@ -420,10 +429,10 @@ getME <- function(object,
 		 c("beg__", names(cnms))) ## such that diff( Tp ) is well-named
     }
     switch(name,
-	   "X" = getX(object, t=FALSE), 
+	   "X" = getX(object, t=FALSE),
 	   "Z" = getZ(object, t=FALSE),
 	   "Zt"= getZ(object, t=TRUE),
-           
+
            "Ztlist" =
        {
            getInds <- function(i) {
@@ -452,7 +461,7 @@ getME <- function(object,
            "flist" = object@flist,
 	   "beta" = object@beta,
            "theta"= theta(object),
-	   "n_rtrms" = length(object@flist), 
+	   "n_rtrms" = length(object@flist),
            "n_rfacs" = length(object@flist),
            "cnms" = cnms,
            "devcomp" = dc,

@@ -1,7 +1,7 @@
 
-R version 3.2.1 Patched (2015-07-02 r68625) -- "World-Famous Astronaut"
+R version 3.2.2 Patched (2015-08-20 r69127) -- "Fire Safety"
 Copyright (C) 2015 The R Foundation for Statistical Computing
-Platform: x86_64-apple-darwin13.4.0 (64-bit)
+Platform: x86_64-pc-linux-gnu (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
 You are welcome to redistribute it under certain conditions.
@@ -20,13 +20,6 @@ Type 'q()' to quit R.
 Loading required package: robustlmm
 Loading required package: lme4
 Loading required package: Matrix
-
-Attaching package: 'robustlmm'
-
-The following object is masked from 'package:lme4':
-
-    getME
-
 > formatNum <- function(x, ...)
 +      format(round(x, 8), trim = TRUE, drop0trailing = TRUE, ...)
 > options(str = strOptions(formatNum = formatNum))
@@ -41,7 +34,7 @@ Note: method with signature 'dsparseMatrix#dgeMatrix' chosen for function 'cross
  target signature 'dtCMatrix#dgeMatrix'.
  "CsparseMatrix#ddenseMatrix" would also be valid
 > 
-> (nmME <- eval(formals(getME)$name))
+> (nmME <- eval(formals(robustlmm:::getME.rlmerMod)$name))
  [1] "X"                "Z"                "Zt"               "Ztlist"          
  [5] "y"                "mu"               "u"                "b.s"             
  [9] "b"                "Gp"               "Tp"               "Lambda"          
@@ -220,7 +213,7 @@ Name: devcomp
 List of 2
  $ cmp : Named num [1:10] NA NA NA NA NA ...
   ..- attr(*, "names")= chr [1:10] "ldL2" "ldRX2" "wrss" "ussq" ...
- $ dims: Named int [1:12] 180 180 2 178 4 40 1 2 0 2 ...
+ $ dims: Named int [1:12] 180 180 2 178 40 4 1 2 0 2 ...
   ..- attr(*, "names")= chr [1:12] "N" "n" "p" "nmp" ...
 
 Name: offset 
@@ -440,7 +433,79 @@ Name: w_sigma_b_vector
 
 Name: is_REML 
  logi 1
+> str(g.all <- getME(rfm, "ALL"),
++     max.level = 2)
+List of 38
+ $ X               : num [1:180, 1:2] 1 1 1 1 1 1 1 1 1 1 ...
+  ..- attr(*, "dimnames")=List of 2
+  ..- attr(*, "assign")= int [1:2] 0 1
+  ..- attr(*, "msgScaleX")= chr(0) 
+ $ Z               :Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
+ $ Zt              :Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
+ $ Ztlist          :List of 3
+  ..$ Subject.(Intercept):Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
+  ..$ Subject.Days       :Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
+  ..$ Group.(Intercept)  :Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
+ $ y               : num [1:180] 250 259 251 321 357 ...
+ $ mu              : num [1:180] 254 273 293 313 332 ...
+ $ u               : num [1:40] 2.34 39.68 -41.79 -34.58 -40.3 ...
+ $ b.s             : num [1:40] 2.34 39.68 -41.79 -34.58 -40.3 ...
+ $ b               : Named num [1:40] 2.26 9.2 -40.4 -8.62 -38.96 ...
+  ..- attr(*, "names")= chr [1:40] "308" "308" "309" "309" ...
+ $ Gp              : int [1:3] 0 36 40
+ $ Tp              : Named num [1:3] 0 3 4
+  ..- attr(*, "names")= chr [1:3] "beg__" "Subject" "Group"
+ $ Lambda          :Formal class 'dtCMatrix' [package "Matrix"] with 7 slots
+ $ Lambdat         :Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
+ $ A               :Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
+ $ U_b             :Formal class 'dtCMatrix' [package "Matrix"] with 7 slots
+ $ Lind            : int [1:58] 1 2 3 1 2 3 1 2 3 1 ...
+ $ sigma           : num 25.6
+ $ flist           :List of 2
+  ..$ Subject: Factor w/ 18 levels "308","309","310",..: 1 1 1 1 1 1 1 1 1 1 ...
+  ..$ Group  : Factor w/ 4 levels "a","b","c","d": 1 2 3 4 1 2 3 4 1 2 ...
+  ..- attr(*, "assign")= int [1:2] 1 2
+ $ beta            : num [1:2] 251.4 10.5
+ $ theta           : Named num [1:4] 0.9667 0.0152 0.2309 0
+  ..- attr(*, "names")= chr [1:4] "Subject.(Intercept)" "Subject.Days.(Intercept)" "Subject.Days" "Group.(Intercept)"
+ $ n_rtrms         : int 2
+ $ n_rfacs         : int 2
+ $ cnms            :List of 2
+  ..$ Subject: chr [1:2] "(Intercept)" "Days"
+  ..$ Group  : chr "(Intercept)"
+ $ devcomp         :List of 2
+  ..$ cmp : Named num [1:10] NA NA NA NA NA ...
+  .. ..- attr(*, "names")= chr [1:10] "ldL2" "ldRX2" "wrss" "ussq" ...
+  ..$ dims: Named int [1:12] 180 180 2 178 40 4 1 2 0 2 ...
+  .. ..- attr(*, "names")= chr [1:12] "N" "n" "p" "nmp" ...
+ $ offset          : num [1:180] 0 0 0 0 0 0 0 0 0 0 ...
+ $ lower           : num [1:4] 0 -Inf 0 0
+ $ rho_e           :Formal class 'psi_func_cached' [package "robustlmm"] with 11 slots
+ $ rho_b           :List of 2
+  ..$ Subject:Formal class 'psi_func_cached' [package "robustlmm"] with 11 slots
+  ..$ Group  :Formal class 'psi_func_cached' [package "robustlmm"] with 11 slots
+ $ rho_sigma_e     :Formal class 'psi_func_cached' [package "robustlmm"] with 11 slots
+ $ rho_sigma_b     :List of 2
+  ..$ Subject:Formal class 'psi_func_cached' [package "robustlmm"] with 11 slots
+  ..$ Group  :Formal class 'psi_func_cached' [package "robustlmm"] with 11 slots
+ $ M               :List of 5
+  ..$ M_bb.:Formal class 'dgeMatrix' [package "Matrix"] with 4 slots
+  ..$ M_XZ :Formal class 'dgeMatrix' [package "Matrix"] with 4 slots
+  ..$ M_bB :Formal class 'dgeMatrix' [package "Matrix"] with 4 slots
+  ..$ M_BB :Formal class 'dgeMatrix' [package "Matrix"] with 4 slots
+  ..$ M_bb :Formal class 'dgeMatrix' [package "Matrix"] with 4 slots
+ $ w_e             : num [1:180] 1 1 0.812 1 1 ...
+ $ w_b             :List of 2
+  ..$ Subject:'data.frame':	18 obs. of  2 variables:
+  ..$ Group  :'data.frame':	4 obs. of  1 variable:
+ $ w_b_vector      : num [1:40] 0.859 0.859 0.634 0.634 0.756 ...
+ $ w_sigma_e       : num [1:180] 1 1 1 1 1 ...
+ $ w_sigma_b       :List of 2
+  ..$ Subject:'data.frame':	18 obs. of  2 variables:
+  ..$ Group  :'data.frame':	4 obs. of  1 variable:
+ $ w_sigma_b_vector: num [1:40] 1 1 0.614 0.614 1 ...
+ $ is_REML         : logi 1
 > 
 > proc.time()
    user  system elapsed 
-  3.681   0.116   3.791 
+  3.458   0.235   3.704 

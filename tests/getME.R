@@ -11,8 +11,10 @@ rfm <- rlmer(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2,
              rho.sigma.b = psi2propII(smoothPsi, k=2.28),
              doFit=FALSE)
 
-(nmME <- eval(formals(getME)$name))
+(nmME <- eval(formals(robustlmm:::getME.rlmerMod)$name))
 for (nm in nmME) {
     cat("\nName:", nm, "\n")
     str(getME(rfm, name=nm))
 }
+str(g.all <- getME(rfm, "ALL"),
+    max.level = 2)

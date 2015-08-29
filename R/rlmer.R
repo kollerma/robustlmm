@@ -166,6 +166,7 @@
 ##'   object.
 ##' @return object of class rlmerMod.
 ##' @seealso \code{\link[lme4]{lmer}}
+##' @author Manuel Koller, with thanks to Vanda Lourenço for improvements.
 ##' @keywords models
 ##' @examples
 ##' ## dropping of VC

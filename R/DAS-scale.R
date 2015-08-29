@@ -173,6 +173,7 @@ calcKappaTauB <- function(object) {
 ## @param method method to compute tau with
 ## @param rel.tol relative tolerance for calculating tau
 ## @param max.it maximum number of iterations allowed
+
 calcTau <- function(a, s, rho.e, rho.sigma.e, pp,
                     kappa, tau = rep(1, length(a)), method="DAStau",
                     rel.tol = 1e-6, max.it = 200) {
@@ -196,13 +197,18 @@ calcTau <- function(a, s, rho.e, rho.sigma.e, pp,
     for (i in seq_along(a)) {
         ## check if we already calculated this
         check <- FALSE
+        a_i <- a[i]
+        s_i <- s[i]
         j <- 0
-        while(!check && (j <- j + 1) < i) {
-            if (isTRUE(all.equal(c(a[i], s[i]), c(a[j], s[j])))) {
+        while ((j <- j + 1) < i) {
+            ## if( (a_i == a[j]) && (s_i == s[j]) ) {
+            if( abs(a_i - a[j]) < 1e-8 && abs(s_i - s[j]) < 1e-8 ) {
                 check <- TRUE
                 tau[i] <- tau[j]
+                break
             }
         }
+
         if (!check) {
             ##cat(sprintf("calculating tau[%i]: a[%i] = %g, s[%i] = %g...\n", i, i, a[i], i, s[i]))
             it <- 0
@@ -210,7 +216,7 @@ calcTau <- function(a, s, rho.e, rho.sigma.e, pp,
             while(!conv && (it <- it + 1) < max.it && tau[i] <= 1) {
                 ##print(tau[i])
                 tau0 <- tau[i]
-                tau[i] <- fun(tau0, a[i], s[i])
+                tau[i] <- fun(tau0, a_i, s_i)
                 conv <- abs(tau[i] - tau0) < rel.tol * max(rel.tol, tau0)
             }
             if (it >= max.it) {

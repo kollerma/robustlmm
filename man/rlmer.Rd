@@ -194,6 +194,7 @@
   \code{lmer}. A set of correlated random effects count as
   just one group. } }
 }
+\author{Manuel Koller, with thanks to Vanda \enc{Lourenço}{Lourenco} for improvements.}
 \examples{
 ## dropping of VC
 system.time(print(rlmer(Yield ~ (1|Batch), Dyestuff2, method="DASvar")))

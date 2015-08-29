@@ -1,4 +1,4 @@
-if(!robustbase:::doExtras()) ## Test disabled {unless we set environment.var.}
+## Test disabled
 quit()
 
 ## test kappa functions

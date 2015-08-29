@@ -1,6 +1,7 @@
 \name{getME}
 \title{Extract or Get Generalize Components from a Fitted Mixed Effects Model}
 \alias{getME.rlmerMod}
+\alias{getME}
 \alias{theta}
 \usage{
 \S3method{getME}{rlmerMod}(object,

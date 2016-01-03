@@ -1,6 +1,6 @@
 
-R version 3.2.2 (2015-08-14) -- "Fire Safety"
-Copyright (C) 2015 The R Foundation for Statistical Computing
+R Under development (unstable) (2016-01-02 r69837) -- "Unsuffered Consequences"
+Copyright (C) 2016 The R Foundation for Statistical Computing
 Platform: x86_64-apple-darwin13.4.0 (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
@@ -108,7 +108,7 @@ Loading required package: Matrix
 Note: method with signature 'dsparseMatrix#dgeMatrix' chosen for function 'crossprod',
  target signature 'dsCMatrix#dgeMatrix'.
  "CsparseMatrix#ddenseMatrix" would also be valid
-Time elapsed: 2.136 0.037 2.186 0 0 
+Time elapsed: 1.971 0.038 2.031 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -146,7 +146,7 @@ Rho functions used for fitting:
 -19.822   1.081  33.966 -30.283  67.013 -51.900 
 
 ######## DAStau ########
-Time elapsed: 1.753 0.021 1.776 0 0 
+Time elapsed: 1.803 0.028 1.847 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -215,7 +215,7 @@ sigma               55.5
 Note: method with signature 'CsparseMatrix#Matrix#missing#replValue' chosen for function '[<-',
  target signature 'dgCMatrix#ngCMatrix#missing#numeric'.
  "Matrix#nsparseMatrix#missing#replValue" would also be valid
-Time elapsed: 2.116 0.023 2.148 0 0 
+Time elapsed: 1.881 0.014 1.9 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -253,7 +253,7 @@ A B C D E F
 0 0 0 0 0 0 
 
 ######## DAStau ########
-Time elapsed: 2.182 0.018 2.207 0 0 
+Time elapsed: 2.017 0.019 2.046 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -319,7 +319,7 @@ sigma               4.02
 +     rho.e = smoothPsi, rho.b = smoothPsi)
 
 ######## DASvar ########
-Time elapsed: 1.81 0.023 1.873 0 0 
+Time elapsed: 1.772 0.045 1.86 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -371,7 +371,7 @@ Rho functions used for fitting:
 -2.667e-02 -7.956e-01 
 
 ######## DAStau ########
-Time elapsed: 1.825 0.014 1.842 0 0 
+Time elapsed: 1.675 0.021 1.701 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -482,8 +482,8 @@ sigma                0.561
 + }
 > 
 > cat('Time elapsed: ', proc.time(),'\n') # for ``statistical reasons''
-Time elapsed:  15.006 0.249 15.342 0.002 0.003 
+Time elapsed:  14.046 0.273 14.454 0.002 0.003 
 > 
 > proc.time()
    user  system elapsed 
- 15.008   0.252  15.342 
+ 14.048   0.276  14.455 

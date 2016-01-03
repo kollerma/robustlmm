@@ -232,7 +232,8 @@ calcTau <- function(a, s, rho.e, rho.sigma.e, pp,
     tau
 }
 
-calcTau.nondiag <- function(object, ghZ, ghw, skbs, kappas, max.iter) {
+calcTau.nondiag <- function(object, ghZ, ghw, skbs, kappas, max.iter,
+                            rel.tol = 1e-4, verbose = 0) {
     ## define 4d integration function
     int4d <- function(fun) drop(apply(ghZ, 1, fun) %*% ghw)
     ## initial values
@@ -250,6 +251,8 @@ calcTau.nondiag <- function(object, ghZ, ghw, skbs, kappas, max.iter) {
     Tbks <- list()
     ## cycle block types
     for (type in seq_along(object@blocks)) {
+        if (verbose > 5)
+            cat("computing tau for blocktype", type, "...\n")
         bidx <- object@idx[[type]]
         s <- nrow(bidx)
         ind <- which(object@ind == type) ## (in terms of blocks on diagonal)
@@ -281,11 +284,15 @@ calcTau.nondiag <- function(object, ghZ, ghw, skbs, kappas, max.iter) {
                 Lkk <- as.matrix(object@pp$L[lbidx, lbidx])
                 Sk <- as.matrix(skbs[[ind[k]]])
                 ## check for almost equal blocks
-                if (!(isTRUE(all.equal(lastSk, Sk)) && isTRUE(all.equal(lastLkk, Lkk)))) {
+                ## if (!(isTRUE(all.equal(lastSk, Sk)) && isTRUE(all.equal(lastLkk, Lkk)))) {
+                diff <- if (any(dim(lastSk) != dim(Sk))) 1 else
+                    abs(c(lastSk - Sk, lastLkk - Lkk))
+                if (any(diff >= rel.tol * max(diff, rel.tol))) {
                     ## Find Tbk for this new block...
                     lastSk <- Sk
                     lastLkk <- Lkk
-                    ##cat("TbkI:", lTbk, "\n")
+                    if (verbose > 5)
+                        cat("TbkI for k =", k, ":", lTbk, "\n")
                     conv <- FALSE
                     iter <- 0
                     while (!conv && (iter <- iter + 1) < max.iter) {
@@ -307,13 +314,32 @@ calcTau.nondiag <- function(object, ghZ, ghw, skbs, kappas, max.iter) {
                             tmp1 <- colSums(qr.solve(qrlTbk, t(btilde))^2)
                             tmp2 <- btilde[,1] * btilde[,2]
                             a <- sum(wgtDelta(tmp1) * ghw)
+                            if (abs(a) < 1e-7) {
+                                a <- lasta
+                            } else {
+                                lasta <- a
+                            }
                             B <- matrix(colSums(wgt.sigma(tmp1) * ghw *
                                                 matrix(c(btilde[,1]*btilde[,1], tmp2, tmp2,
                                                          btilde[,2]*btilde[,2]), length(ghw))),2)
                             lTbk1 <- B/a
-                            conv <- isTRUE(all.equal(lTbk, lTbk1)) ## rel.tol default 1e-8
-                            ##cat(sprintf("k=%i, iter=%i, conv=%s\n", k, iter, conv))
-                            ##cat("Tbk:", lTbk1, "\n")
+                            ## conv <- isTRUE(all.equal(lTbk, lTbk1)) ## rel.tol default 1e-8
+                            diff <- abs(c(lTbk - lTbk1))
+                            conv <- all(diff < rel.tol * max(diff, rel.tol))
+                            if (verbose > 5) {
+                                cat(sprintf("k=%i, iter=%i, conv=%s\n", k, iter, conv))
+                                cat("Tbk:", lTbk1, "\n")
+                                if (verbose > 6) {
+                                    cat("B:", B, "\n")
+                                    cat("a:", a, "\n")
+                                    cat("qrlTbk:", qrlTbk$qr, "\n")
+                                    cat("btilde[1,]:", btilde[1,], "\n")
+                                    cat("qr.solve()[,1]:", qr.solve(qrlTbk, t(btilde))[,1], "\n")
+                                    cat("fivenum(tmp1):", fivenum(tmp1), "\n")
+                                    cat("wgtDelta(fivenum(tmp1)):", wgtDelta(fivenum(tmp1)), "\n")
+                                    cat("fivenum(wgtDelta(tmp1)):", fivenum(wgtDelta(tmp1)), "\n")
+                                }
+                            }
                             lTbk <- lTbk1
                         }
                     }

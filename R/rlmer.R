@@ -363,6 +363,14 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
     q <- lobj@pp$q
     ## false convergence indicator
     fc <- rep(FALSE, length(lobj@blocks))
+    if (verbose > 0) {
+        theta0 <- theta(lobj)
+        if (verbose > 2) {
+            coef0 <- lobj@pp$beta
+            b.s0 <- b.s(lobj)
+            sigma0 <- lobj@pp$sigma
+        }
+    }
     ## iterate
     while(!conv && (iter <- iter + 1) < max.iter) {
         if (verbose > 0) cat("---- Iteration", iter, " ----\n")
@@ -373,7 +381,8 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
         q <- len(lobj, "b")
         T <- switch(method,
                     DASvar=lobj@pp$Tb(),
-                    DAStau=calcTau.nondiag(lobj, ghZ, ghw, .S(lobj), kappas, max.iter),
+                    DAStau=calcTau.nondiag(lobj, ghZ, ghw, .S(lobj), kappas, max.iter,
+                                           rel.tol = rel.tol, verbose = verbose),
                     stop("Non-diagonal case only implemented for DASvar"))
         ## compute robustness weights and add to t and bs
         T[nzT] <- 0
@@ -421,6 +430,10 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
             if (all(abs(bs[bidx]) < 1e-7)) {
                 if (verbose > 1)
                     cat("Block", type, "dropped (all = 0), stopping iterations.\n")
+                 Ubtilde <- lobj@blocks[[type]]
+                pat <- Ubtilde != 0
+                Lind <- Ubtilde[pat]
+                thetatilde[Lind] <- 0
                 convBlks[type] <- TRUE
                 next
             }
@@ -443,7 +456,9 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
                 cat("RHS:", as.vector(rhs), "\n")
                 cat("sum(abs(LHS - RHS)):", sum(abs(lhs - rhs)), "\n")
             }
-            if (isTRUE(all.equal(rhs, lhs, check.attributes=FALSE, tolerance = rel.tol))) {
+            ## if (isTRUE(all.equal(rhs, lhs, check.attributes=FALSE, tolerance = rel.tol))) {
+            diff <- abs(rhs - lhs)
+            if (all(diff < rel.tol * max(diff, rel.tol))) {
                 if (verbose > 1)
                     cat("Estimating equations satisfied for block", type,
                         ", stopping iterations.\n")
@@ -471,9 +486,9 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
             diff <- abs(thetatilde[Lind] - theta(lobj)[Lind])
             if (verbose > 3)
                 cat("criterion:", sum(diff), ">=",
-                    rel.tol * max(c(diff, rel.tol)), ":",
-                    sum(diff) < rel.tol * max(c(diff, rel.tol)), "\n")
-            if (sum(diff) < rel.tol * max(c(diff, rel.tol))) {
+                    rel.tol * max(diff, rel.tol), ":",
+                    sum(diff) < rel.tol * max(diff, rel.tol), "\n")
+            if (sum(diff) < rel.tol * max(diff, rel.tol)) {
                 convBlks[type] <- TRUE
                 ## check if estimating equations are satisfied
                 if (checkFalseConvergence) {
@@ -486,16 +501,30 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
                 next
             }
         }
-        if (verbose > 1) {
-            cat("difference:", format(thetatilde - theta(lobj), nsmall=20, scientific=FALSE),
-                "\n")
-            cat("new theta:", format(thetatilde, nsmall=20, scientific=FALSE), "\n")
-        }
         ## set theta
         setTheta(lobj, thetatilde, fit.effects = TRUE,
                  update.sigma = FALSE)
         ## update sigma without refitting effects
         updateSigma(lobj, fit.effects = FALSE)
+        if (verbose > 0) {
+            cat("delta theta:", format(theta0 - thetatilde, nsmall=20, scientific=FALSE),
+                "\n")
+            theta0 <- thetatilde
+            if (verbose > 1) {
+                cat(sprintf("delta coef:  %.12f\n", sum(abs(coef0 - lobj@pp$beta))))
+                cat(sprintf("delta u:     %.12f\n", sum(abs(b.s0 - b.s(lobj)))))
+                cat(sprintf("delta sigma: %.12f\n", abs(sigma0 - lobj@pp$sigma)))
+                coef0 <- lobj@pp$beta
+                b.s0 <- b.s(lobj)
+                sigma0 <- lobj@pp$sigma
+                if (verbose > 2) {
+                    cat("theta:", format(thetatilde, nsmall=20, scientific=FALSE), "\n")
+                    cat("coef:   ", lobj@pp$beta,"\n")
+                    cat("b.s:    ", b.s(lobj), "\n")
+                    cat("sigmae: ", lobj@pp$sigma, "\n")
+                }
+            }
+        }
         if (all(convBlks)) conv <- TRUE
     }
 

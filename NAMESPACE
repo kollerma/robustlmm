@@ -41,7 +41,8 @@ importFrom(lme4,nobars)
 importFrom(lme4,REMLcrit)
 ## S3 generic for sigma():  exported from 'stats' for R >= 3.3.0; from 'lme4' for R <= 3.2.x
 if(getRversion() >= "3.3.0") {
-   importFrom(stats, sigma)
+    importFrom(stats, sigma)
+    importFrom(stats, fivenum)
 } else {
    importFrom(lme4, sigma)
 }

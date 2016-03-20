@@ -1,6 +1,12 @@
 Robust linear mixed effects models
 ==================================
 
+[![Build Status](https://travis-ci.org/robustlmm/robustlmm.svg?branch=master)](https://travis-ci.org/robustlmm/robustlmm)
+[![cran version](http://www.r-pkg.org/badges/version/robustlmm)](http://cran.rstudio.com/web/packages/robustlmm)
+[![downloads](http://cranlogs.r-pkg.org/badges/robustlmm)](http://cranlogs.r-pkg.org/badges/robustlmm)
+[![total downloads](http://cranlogs.r-pkg.org/badges/grand-total/robustlmm)](http://cranlogs.r-pkg.org/badges/grand-total/robustlmm)
+[![Research software impact](http://depsy.org/api/package/cran/robustlmm/badge.svg)](http://depsy.org/package/r/robustlmm)
+
 The R-package `robustlmm` provides functions for estimating linear mixed
 effects models in a robust way.
 

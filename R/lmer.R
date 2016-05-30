@@ -11,13 +11,13 @@
 ##' }
 ##' @importFrom lme4 mkMerMod
 ##' @export
-lmerNoFit <- function(..., initTheta) {
+lmerNoFit <- function(formula, data = NULL, ..., initTheta) {
     if (packageVersion("lme4") >= "0.99999911.0") {
         mc <- match.call()
         mc[[1]] <- quote(lmer)
         ## trick it...
-        fm <- lmer(...)
-        devfun <- lmer(..., devFunOnly=TRUE)
+        fm <- lmer(formula, data, ...)
+        devfun <- lmer(formula, data, ..., devFunOnly=TRUE)
         if (!missing(initTheta)) devfun(initTheta)
         fakeOpt <- list(fval=devfun(environment(devfun)$pp$theta),
                         conv=1,

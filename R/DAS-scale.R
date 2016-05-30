@@ -8,9 +8,9 @@
 ##' @importFrom grDevices devAskNewPage 
 ## calculate the expected value to be used in D.re
 .calcE.D.re <- function(s, rho) {
-    if (s == 1) return(rho@EDpsi())
-    tfun <- function(v) rho@Dwgt(.d2(v,s))*.Dd2(v,s)*v*dchisq(v, s)
-    tfun2 <- function(v) rho@wgt(.d2(v,s))*dchisq(v, s)
+    if (s == 1) return(rho$EDpsi())
+    tfun <- function(v) rho$Dwgt(.d2(v,s))*.Dd2(v,s)*v*dchisq(v, s)
+    tfun2 <- function(v) rho$wgt(.d2(v,s))*dchisq(v, s)
     integrate(tfun, 0, Inf)$value / s + integrate(tfun2, 0, Inf)$value
 }
 .calcE.D.re2 <- function(rho, s) .calcE.D.re(s, rho) ## switch arguments
@@ -19,9 +19,9 @@
 
 .calcE.psi_bbt <- function(rho, s) {
     if (s == 1) {
-        Matrix(rho@EDpsi())
+        Matrix(rho$EDpsi())
     } else {
-        wgt <- rho@wgt
+        wgt <- rho$wgt
         fun <- function(v) wgt(.d2(v,s))*v*dchisq(v,s)
         tmp <- integrate(fun, 0, Inf)$value / s
         Diagonal(x=rep(tmp, s))
@@ -30,9 +30,9 @@
 
 .calcE.psi_bpsi_bt <- function(rho, s) {
     if (s == 1) {
-        Matrix(rho@Epsi2())
+        Matrix(rho$Epsi2())
     } else {
-        wgt <- rho@wgt
+        wgt <- rho$wgt
         fun <- function(v) wgt(.d2(v,s))^2*v*dchisq(v, s)
         tmp <- integrate(fun, 0, Inf)$value / s
         Diagonal(x=rep(tmp, s))
@@ -59,9 +59,9 @@ G <- function(tau = rep(1, length(a)), a, s, rho, rho.sigma, pp) {
         stop("length of vectors a and s not equal")
 
     ret <- numeric(length(a))
-    psi <- rho.sigma@psi
+    psi <- rho.sigma$psi
     for (i in 1:length(a)) {
-        x <- (pp$ghZ - a[i]*rho@psi(pp$ghZ) - s[i]*pp$ghZt)/tau[i]
+        x <- (pp$ghZ - a[i]*rho$psi(pp$ghZ) - s[i]*pp$ghZt)/tau[i]
         ret[i] <- sum(psi(x)*x*pp$ghW)
     }
     ret
@@ -90,7 +90,7 @@ G <- function(tau = rep(1, length(a)), a, s, rho, rho.sigma, pp) {
     M1[is.na(M1)] <- 0
     M2[is.na(M2)] <- 0
     ## calculate s:
-    ret <- pp$rho_e@Epsi2() * rowSums(M1^2)
+    ret <- pp$rho_e$Epsi2() * rowSums(M1^2)
     if (any(!pp$zeroB)) ret <- ret + drop(M2^2 %*% diag(pp$Epsi_bpsi_bt))
     sqrt(ret)
 }
@@ -116,7 +116,7 @@ G <- function(tau = rep(1, length(a)), a, s, rho, rho.sigma, pp) {
             ret <- c(ret, list(drop(lchol(symmpart(
                 ## Matrix K_{\theta,k} consists of the
                 ## rows belonging block k and all columns
-                object@rho.e@Epsi2() * tcrossprod(object@pp$K()[ind, , drop=FALSE]) +
+                object@rho.e$Epsi2() * tcrossprod(object@pp$K()[ind, , drop=FALSE]) +
                 ## Matrix L_{\theta,-k} consists of the
                 ## rows belonging to block k and all but columns
                 ## except the ones belonging to block k
@@ -141,9 +141,9 @@ G <- function(tau = rep(1, length(a)), a, s, rho, rho.sigma, pp) {
 ## @rdname calcKappa
 calcKappaTau <- function(rho, s=1) {
     if (s > 38) return(1) ## otherwise there might be numerical problems
-    psi <- rho@psi
+    psi <- rho$psi
     if (s == 1) {
-        wgt <- rho@wgt
+        wgt <- rho$wgt
         tfun <- function(e) psi(e)*e*dnorm(e) ## do not subtract 1 here
         tfun2 <- function(e) wgt(e)*dnorm(e)  ## or use .d2, resp.
         integrate(tfun, -Inf, Inf)$value / integrate(tfun2, -Inf, Inf)$value
@@ -185,13 +185,13 @@ calcTau <- function(a, s, rho.e, rho.sigma.e, pp,
         tau <- sqrt(diag(Tau))
         if (method == "DASvar") return(tau)
     }
-    psi <- rho.e@psi
+    psi <- rho.e$psi
     psiZ <- psi(pp$ghZ)
     ## function to find root from
     fun <- function(tau, a, s) {
         t <- (pp$ghZ-a*psiZ-s*pp$ghZt)/tau
-        sqrt(sum(rho.sigma.e@psi(t)*t*(tau*tau)*pp$ghW) /
-             (kappa*sum(rho.sigma.e@wgt(t)*pp$ghW)))
+        sqrt(sum(rho.sigma.e$psi(t)*t*(tau*tau)*pp$ghW) /
+             (kappa*sum(rho.sigma.e$wgt(t)*pp$ghW)))
     }
 
     for (i in seq_along(a)) {
@@ -270,9 +270,9 @@ calcTau.nondiag <- function(object, ghZ, ghw, skbs, kappas, max.iter,
                            object@pp, kappas[type])
             Tbks <- c(Tbks, as.list(tmp))
         } else if (s == 2) { ## 2d case
-            wgt <- object@rho.b[[type]]@wgt
-            wgt.sigma <- object@rho.sigma.b[[type]]@wgt
-            psi.sigma <- object@rho.sigma.b[[type]]@psi
+            wgt <- object@rho.b[[type]]$wgt
+            wgt.sigma <- object@rho.sigma.b[[type]]$wgt
+            psi.sigma <- object@rho.sigma.b[[type]]$psi
             skappa <- s*object@pp$kappa_b[type]
             wgtDelta <- function(u) (psi.sigma(u) - psi.sigma(u-skappa))/s
             lastSk <- lastkk <- matrix()
@@ -374,7 +374,7 @@ updateSigma <- function(object, max.iter = 100, rel.tol = 1e-6, fit.effects = TR
     
     ## use iterative reweighting
     fun <- if (object@method %in% c("DAStau", "DASvar")) {
-        wgt <- rho.sigma.e@wgt
+        wgt <- rho.sigma.e$wgt
         tau2 <- tau*tau
         function(scale, r) {
             lw <- wgt(r/tau/scale)
@@ -468,7 +468,7 @@ updateThetaTau <- function(object, max.iter = 100, rel.tol = 1e-6, verbose = 0) 
                 delta0 <- 1
                 converged <- FALSE
                 it <- 0
-                wgt <- object@rho.sigma.b[[block]]@wgt
+                wgt <- object@rho.sigma.b[[block]]$wgt
                 while(!converged && (it <- it + 1) < max.iter) {
                     w <- wgt(lds/delta0)
                     delta <- sqrt(sum(w*us*us)/sum(w*tau2[lind])/kappas[block])

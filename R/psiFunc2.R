@@ -1,78 +1,26 @@
-##' Create psi_func_cached object using cached numerical integration for
-##' E... slots.
-##'
-##' @title psiFuncCached constructor
-##' @param rho rho-function
-##' @param psi psi-function
-##' @param wgt wgt-function
-##' @param Dwgt derivative of weight function
-##' @param Dpsi derivative of psi
-##' @param name descriptor of this function family
-##' @param ... default values for tuning constants
-##' @return psi_func_cached-class object
-##' @section Warning: the E... slots will not be fully functional: they just
-##' return the value for the current defaults and ignore their
-##' arguments.
-##' @seealso \code{\link{psi_func_cached-class}}
-##' @keywords utilities
-##' @examples
-##' ## re-define cPsi as psiFuncCached.
-##' F0 <- function(x=1, .) rep.int(0, length(x))
-##' F1 <- function(x=1, .) rep.int(1, length(x))
-##' cPsi2 <- psiFuncCached(rho = function(x, .) x^2 / 2,
-##'                        psi = function(x, .) x,
-##'                        wgt = F1, Dwgt = F0, Dpsi = F1, 
-##'                        name = "classic (x^2/2)",
-##'                        . = Inf ## dummy, need at least one parameter
-##'                        )
-##' stopifnot(all.equal(cPsi@@Erho(), cPsi2@@Erho()),
-##'           all.equal(cPsi@@Epsi2(), cPsi2@@Epsi2()),
-##'           all.equal(cPsi@@EDpsi(), cPsi2@@EDpsi()))
-##' @export
-psiFuncCached <- function(rho,psi,wgt,Dwgt,Dpsi,name=NULL, ...) {
-    lent <- length(dotsargs <- list(...))
-    ## '...'  must contain all tuning parameters and their defaults:
-    stopifnot(length(nt <- names(dotsargs)) == lent,
-              all(nchar(nt)) >= 1)
-    if(lent >= 1) {
-        ## rho, psi,... checking: must have argument names
-        argn <- c("x", nt)
-        for(fnam in list("rho", "psi", "wgt", "Dwgt", "Dpsi")) {
-            f <- get(fnam, inherits = FALSE)
-            ef <- environment(f)
-            nf <- names(ff <- formals(f)) # "x" and "k" for Huber's
-            if(!identical(nf, argn))
-                stop("arguments of function '",fnam,"' are (",
-                     paste(nf,  collapse=","),") but should be (",
-                     paste(argn,collapse=","),").")
-            
-            formals(f)[-1] <- dotsargs
-            environment(f) <- ef
-            assign(fnam, f, inherits = FALSE)
-        }
-    }
+loadModule("psi_function_module", TRUE)
 
-    Erho.val <- integrate(function(x) rho(x)*dnorm(x),-Inf, Inf,
-                          rel.tol = .Machine$double.eps^0.5)$value
-    Epsi2.val <- integrate(function(x) psi(x)^2*dnorm(x),-Inf, Inf,
-                           rel.tol = .Machine$double.eps^0.5)$value
-    EDpsi.val <- integrate(function(x) Dpsi(x)*dnorm(x),-Inf, Inf,
-                           rel.tol = .Machine$double.eps^0.5)$value
-    
-    new("psi_func_cached",
-        rho = new("functionX", rho),
-        psi = new("functionX", psi),
-        wgt = new("functionX", wgt),
-        Dpsi= new("functionX", Dpsi),
-        Dwgt= new("functionX", Dwgt),
-        ## tNams = if(lent) nt else character(0),
-        tDefs = if(lent) unlist(dotsargs) else numeric(0),
-        Erho= Erho <- new("functionXal", function(arg=1) rep(Erho.val, length(arg))),
-        Epsi2= Epsi2 <- new("functionXal", function(arg=1) rep(Epsi2.val, length(arg))),
-        EDpsi= EDpsi <- new("functionXal", function(arg=1) rep(EDpsi.val, length(arg))),
-        name= name
-        )
+if (FALSE) {
+  
+  classes <- c("Rcpp_PsiFunction", "Rcpp_HuberPsi", "Rcpp_SmoothPsi",
+               "Rcpp_PsiFunction to Prop II PsiFunction wrapper")
+  
+  setMeth <- function(f, def, ...) {
+    for (class in classes) {
+      cat("setLoadAction(function(ns) setMethod(\"", f, "\", signature(\"", class, "\"), ", 
+          substitute(def), "))\n", sep = "")
+    }
+  }
+
+  
 }
+
+
+## TODO:
+## to avoid test is(..., "refClass")
+## but this fails:
+## setLoadAction(setIs("Rcpp_SmoothPsi", "Rcpp_PsiFunction"))
+## setLoadAction(setIs("Rcpp_PsiFunction to Prop II PsiFunction wrapper", "Rcpp_PsiFunction"))
 
 ##' Change the default arguments for a psi_func_cached object
 ##'
@@ -80,58 +28,36 @@ psiFuncCached <- function(rho,psi,wgt,Dwgt,Dpsi,name=NULL, ...) {
 ##' @param ... arguments to change
 ##' @keywords utilities
 ##' @examples
-##' hPsi <- chgDefaults(huberPsi, k=2)
-##' curve(huberPsi@@psi(x), 0, 3)
-##' curve(hPsi@@psi(x), 0, 3, color="blue", add=TRUE)
-##' @export
-setMethod("chgDefaults", signature("psi_func_cached"),
-          function(object, ...) {
-              ##cat("~~~~ chgDefaults of psi_func_cached ~~~~~\n")
-              lent <- length(dotsargs <- list(...))
-              ## '...'  must contain all tuning parameters and their defaults:
-              stopifnot(length(nt <- names(dotsargs)) == lent,
-                        all(nchar(nt)) >= 1)
-              if(lent >= 1) {
-                  ## rho "..." must conform to rho, etc:
-                  nf <- names(ff <- formals(object@rho))
-                  if(!identical(nf[-1], nt))
-                     stop("invalid tuning parameter names: ",
-                          paste(nt,    collapse=",")," instead of ",
-                          paste(nf[-1],collapse=","),".")
+##' sPsi <- chgDefaults(smoothPsi, k=2)
+##' curve(smoothPsi$psi(x), 0, 3)
+##' curve(sPsi$psi(x), 0, 3, color="blue", add=TRUE)
+##' @exportMethod chgDefaults Rcpp_SmoothPsi
+##' @exportMethod chgDefaults Rcpp_PsiFunction
+##' @exportMethod chgDefaults `Rcpp_PsiFunction to Prop II PsiFunction wrapper`
 
-                  for(fnam in list("rho", "psi", "wgt", "Dwgt", "Dpsi")) {
-                      f <- slot(object, fnam)
-                      ef <- environment(f)
-                      formals(f)[-1] <- dotsargs
-                      environment(f) <- ef
-                      ## lowlevel {faster than}: slot(..) <- new("functionX", f)
-                      slot(object, fnam)@.Data <- f
-                  }
-                  object@tDefs <- unlist(dotsargs)
-              }
-
-              Erho.val <- integrate(function(x) object@rho(x)*dnorm(x),-Inf, Inf,
-                                    rel.tol = .Machine$double.eps^0.5)$value
-              Epsi2.val <- integrate(function(x) object@psi(x)^2*dnorm(x),-Inf, Inf,
-                                     rel.tol = .Machine$double.eps^0.5)$value
-              EDpsi.val <- integrate(function(x) object@Dpsi(x)*dnorm(x),-Inf, Inf,
-                                     rel.tol = .Machine$double.eps^0.5)$value
-              object@Erho <- new("functionXal", function(arg=1) rep(Erho.val, length(arg)))
-              object@Epsi2 <- new("functionXal", function(arg=1) rep(Epsi2.val, length(arg)))
-              object@EDpsi <- new("functionXal", function(arg=1) rep(EDpsi.val, length(arg)))
-              
-              object
-          })
+.chgDefaults <- function(object, ...) {
+  if (identical(object, cPsi))
+    return(cPsi)
+  clone <- object$copy()
+  if (length(list(...)) > 0)
+    clone$chgDefaults(c(...))
+  return(clone)
+}
+## setMeth("chgDefaults", .chgDefaults)
+setLoadAction(function(ns) setMethod("chgDefaults", signature("Rcpp_PsiFunction"), .chgDefaults))
+setLoadAction(function(ns) setMethod("chgDefaults", signature("Rcpp_HuberPsi"), .chgDefaults))
+setLoadAction(function(ns) setMethod("chgDefaults", signature("Rcpp_SmoothPsi"), .chgDefaults))
+setLoadAction(function(ns) setMethod("chgDefaults", signature("Rcpp_PsiFunction to Prop II PsiFunction wrapper"), .chgDefaults))
 
 .sprintPsiFunc <- function(x, short=FALSE) {
-    v <- x@tDefs
+    v <- x$tDefs()
     n <- names(v)
     ## do not print a single dummy parameter "."
     if (length(n) == 1 && n == ".") {
         v <- numeric(0)
         n <- character(0)
     }
-    name <- x@name
+    name <- x$name()
     if (short) name <- gsub('\\s?(psi|function|\\(.*\\))', '', name)
     if (length(v) >= 1) {
         paste(name, " (",
@@ -139,12 +65,6 @@ setMethod("chgDefaults", signature("psi_func_cached"),
               sep="")
     } else name
 }
-
-## from example(psiFunc)
-F0 <- function(x=1, .) rep.int(0, length(x))
-F1 <- function(x=1, .) rep.int(1, length(x))
-FF1 <- function(.) rep.int(1, length(.))
-FF1.2 <- function(.) rep.int(1/2, length(.))
 
 ##' \eqn{\psi}{Psi}-functions are used by \code{\link{rlmer}}
 ##' in the estimating equations and to compute robustness
@@ -158,13 +78,13 @@ FF1.2 <- function(.) rep.int(1/2, length(.))
 ##' the \code{rho} slot equals quadratic function. Accordingly,
 ##' the robustness weights will always be 1 when using \code{cPsi}.
 ##'
-##' The \bold{Huber \eqn{\psi}{psi}-function \code{huberPsi}} is identical to
-##' the one in the package \code{robustbase}. The \code{psi} slot equals
-##' the identity function within \eqn{\pm k}{+-k} (where \eqn{k}{k} is
-##' the tuning parameter). Outside this interval it is equal to
-##' \eqn{\pm k}{+-k}. The \code{rho} slot equals the quadratic
-##' function within \eqn{\pm k}{+-k} and a linear function outside.
-##'
+## The \bold{Huber \eqn{\psi}{psi}-function \code{huberPsi}} is identical to
+## the one in the package \code{robustbase}. The \code{psi} slot equals
+## the identity function within \eqn{\pm k}{+-k} (where \eqn{k}{k} is
+## the tuning parameter). Outside this interval it is equal to
+## \eqn{\pm k}{+-k}. The \code{rho} slot equals the quadratic
+## function within \eqn{\pm k}{+-k} and a linear function outside.
+##
 ##' The \bold{smoothed Huber \eqn{\psi}{psi}-function} is very similar to
 ##' the regular Huber \eqn{\psi}{psi}-function.
 ##' Instead of a sharp bend like the Huber function,
@@ -173,146 +93,40 @@ FF1.2 <- function(.) rep.int(1/2, length(.))
 ##' of the original Huber function. The second tuning
 ##' constant, s, determines the smoothness of the bend.
 ##'
-##' @title Classical, Huber and smoother Huber psi- or rho-functions
+##' @title Classical, smoothed Huber psi- and rho-functions
 ##' @name psi-functions
 ##' @rdname psi-functions
-##' @aliases cPsi huberPsi smoothPsi
+##' @aliases cPsi smoothPsi SmoothPsi PsiFunction
 ##' @usage ## see examples
 ##' @seealso \code{\link{chgDefaults}} and \code{\link{psi2propII}}
 ##' for changing tuning parameters;
-##' \code{\link{psi_func_cached-class}} and
-##' \code{\link{psi_func-class}} for a more detailed description of the
-##' slots; \code{\link{psiFuncCached}} for a constructor function to
-##' create custom \eqn{\psi}{psi}-functions.
+##' \code{\link{PsiFunction}} and
+##' \code{\link{SmoothPsi}} for a more detailed description of the
+##' slots; 
 ##' @examples
 ##' plot(cPsi)
-##' plot(huberPsi)
+##' plot(huberPsiRcpp)
 ##' plot(smoothPsi)
-##' curve(cPsi@@psi(x), -3, 3)
-##' curve(smoothPsi@@psi(x, 1.345, 10), -3, 3, add=TRUE, col="red")
-##' curve(huberPsi@@psi(x, 1.345), -3, 3, add=TRUE, col="blue")
+##' curve(cPsi$psi(x), -3, 3)
+##' curve(smoothPsi$psi(x, 1.345, 10), -3, 3, add=TRUE, col="red")
+##' curve(huberPsiRcpp$psi(x, 1.345), -3, 3, add=TRUE, col="blue")
 ##' @export cPsi
-cPsi <- psiFunc(rho = function(x, .) x^2 / 2, psi = function(x, .) x,
-                 wgt = F1, Dwgt = F0, Dpsi = F1, Erho = FF1.2,
-                 Epsi2 = FF1, EDpsi = FF1,
-                 name = "classic (x^2/2)", . = Inf)
+setLoadAction(function(ns) assign("cPsi", new(PsiFunction), envir = ns))
 
-##' @exportMethod plot
-##' @export huberPsi
-##' @export
-smoothPsi <- psiFuncCached(rho = function(x, k, s) {
-                                a <- s^(1/(s+1))
-                                c <- k - a^(-s)
-                                d <- c - a
-                                ax <- abs(x)
-                                ifelse(ax <= c, x^2/2, c^2/2 + k*(ax-c) -
-                                       ((ax-d)^(1-s) - a^(1-s))/(1-s))
-                            },
-                            psi = function(x, k, s) {
-                                a <- s^(1/(s+1))
-                                c <- k - a^(-s)
-                                d <- c - a
-                                ax <- abs(x)
-                                ifelse(ax <= c, x, sign(x)*(k - (ax-d)^(-s)))
-                            },
-                            Dpsi = function(x, k, s) {
-                                a <- s^(1/(s+1))
-                                c <- k - a^(-s)
-                                d <- c - a
-                                ax <- abs(x)
-                                ifelse(ax <= c, 1, s*(ax-d)^(-s-1))
-                            },
-                            wgt = function(x, k, s) {
-                                a <- s^(1/(s+1))
-                                c <- k - a^(-s)
-                                d <- c - a
-                                ax <- abs(x)
-                                ifelse(ax <= c, 1, (k - (ax-d)^(-s))/ax)
-                            },
-                            Dwgt = function(x, k, s) {
-                                a <- s^(1/(s+1))
-                                c <- k - a^(-s)
-                                d <- c - a
-                                ax <- abs(x)
-                                ifelse(ax <= c, 0,
-                                       (ax - d)^(-s-1)*s/x -
-                                       (k - (ax-d)^(-s))/(x*ax))
-                            },
-                            k = 1.345, s = 10,
-                            name = "smoothed Huber")
+##' @export huberPsiRcpp
+setLoadAction(function(ns) assign("huberPsiRcpp", new(HuberPsi), envir = ns))
 
-
-.psi2propII <- function(object, ...) {
-    ## do not do anything for cPsi
-    if (identical(object, cPsi)) return(object)
-    
-    ## Convert a regular psi-function into a proposal II psi function
-    ## (with squared weights)
-    f <- formals(object@psi)
-    nf <- names(f)
-    args <- paste(nf, collapse=",")
-    x <- nf[1]
-
-    ## wgt
-    fun <- paste("function(",args,") object@wgt(", args, ")^2")
-    wgt <- eval(parse(text=fun))
-    formals(wgt) <- f
-    ## Dwgt
-    fun <- paste("function(",args,") 2*object@wgt(", args, ")*object@Dwgt(",args,")")
-    Dwgt <- eval(parse(text=fun))
-    formals(Dwgt) <- f
-    ## psi
-    fun <- paste("function(",args,") object@wgt(", args, ")*object@psi(",args,")")
-    psi <- eval(parse(text=fun))
-    formals(psi) <- f
-    ## Dpsi
-    fun <- paste("function(",args,") object@wgt(", args, ")*object@Dpsi(",args,
-                 ") + object@Dwgt(", args, ")*object@psi(",args,")")
-    Dpsi <- eval(parse(text=fun))
-    formals(Dpsi) <- f
-    ## rho
-    intRho <- function(psi, x, ...) {
-        ret <- x
-        for (i in seq_along(x)) {
-            if (is.infinite(x[i])) next
-            ret[i] <- integrate(psi, 0, x[i], ..., rel.tol = .Machine$double.eps^0.5)$value
-        }
-        ret
-    }
-    fun <- paste("function(",args,") intRho(psi,",args,")")
-    rho <- eval(parse(text=fun))
-    formals(rho) <- f
-
-    ret <- do.call(psiFuncCached, c(list(wgt=wgt, Dwgt=Dwgt, psi=psi, Dpsi=Dpsi, rho=rho),
-                                    f[-1], name=paste(object@name, ", Proposal II", sep="")))
-    ## if ... is given: pass it to chgDefaults
-    chgArgs <- list(...)
-    if (length(chgArgs) > 0) {
-        if (is.null(names(chgArgs))) stop("Extra arguments in ... need to be named")
-        ## extend list, all arguments need to be passed to chgDefaults
-        for (name in names(ret@tDefs))
-            if (is.null(chgArgs[[name]])) chgArgs[[name]] <- ret@tDefs[[name]]
-        ret <- do.call("chgDefaults", c(list(ret), chgArgs))
-    }
-    return(ret)
-}
-
-## hP2 <- psi2propII(huberPsi)
-## x <- -3:10
-## all.equal(hP2@wgt(x), huberPsi@wgt(x)^2)
-## all.equal(hP2@Dwgt(x), 2*huberPsi@wgt(x)*huberPsi@Dwgt(x))
-## all.equal(hP2@psi(x), huberPsi@wgt(x)^2*x)
-## all.equal(hP2@Dpsi(x), 2*huberPsi@wgt(x)*huberPsi@Dwgt(x)*x + huberPsi@wgt(x)^2)
-## all.equal(hP2@Dpsi(x), huberPsi@Dwgt(x)*huberPsi@psi(x) + huberPsi@wgt(x)*huberPsi@Dpsi(x))
+##' @export smoothPsi
+setLoadAction(function(ns) assign("smoothPsi", new(SmoothPsi), envir = ns))
 
 ##' Converts the psi_func object into a function that corresponds
 ##' to Proposal II, i.e., a function of the squared weights.
 ##' The other elements of the psi_func object are adapted accordingly.
 ##'
 ##' @title Convert to Propsal II weight function
-##' @param object psi_func object to convert
+##' @param object instance of Rcpp_PsiFunction class to convert
 ##' @param ... optional, new default arguments passed to chgDefaults.
-##' @aliases psi2propII,psi_func-method
+##' @aliases psi2propII,Rcpp_SmoothPsi
 ##' @keywords utilities
 ##' @examples
 ##' par(mfrow=c(2,1))
@@ -320,7 +134,93 @@ smoothPsi <- psiFuncCached(rho = function(x, k, s) {
 ##' plot(psi2propII(smoothPsi))
 ##' @export
 setGeneric("psi2propII", function(object, ...) standardGeneric("psi2propII"))
-##' @exportMethod psi2propII
-setMethod("psi2propII", signature("psi_func_cached"), .psi2propII)
-##' @exportMethod psi2propII
-setMethod("psi2propII", signature("psi_func"), .psi2propII)
+##' @exportMethod psi2propII Rcpp_PsiFunction
+##' @exportMethod psi2propII Rcpp_SmoothPsi
+##' @exportMethod psi2prioII `Rcpp_PsiFunction to Prop II PsiFunction wrapper`
+
+.psi2propII <- function(object, ...) {
+  if (identical(object, cPsi))
+    return(cPsi)
+  clone <- object$copy()
+  clone$chgDefaults(object$tDefs())
+  if (length(list(...)) > 0)
+    clone$chgDefaults(c(...))
+  return(new(`PsiFunction to Prop II PsiFunction wrapper`, clone))
+}
+## setMeth("psi2propII", .psi2propII)
+setLoadAction(function(ns) setMethod("psi2propII", signature("Rcpp_PsiFunction"), .psi2propII))
+setLoadAction(function(ns) setMethod("psi2propII", signature("Rcpp_HuberPsi"), .psi2propII))
+setLoadAction(function(ns) setMethod("psi2propII", signature("Rcpp_SmoothPsi"), .psi2propII))
+setLoadAction(function(ns) setMethod("psi2propII", signature("Rcpp_PsiFunction to Prop II PsiFunction wrapper"), .psi2propII))
+
+## set show method
+##' @exportMethod show Rcpp_PsiFunction
+##' @exportMethod show Rcpp_SmoothPsi
+##' @exportMethod show `Rcpp_PsiFunction to Prop II PsiFunction wrapper`
+.show <- function(object) cat(object$show(), "\n")
+## setMeth("show", .show)
+setLoadAction(function(ns) setMethod("show", signature("Rcpp_PsiFunction"), .show))
+setLoadAction(function(ns) setMethod("show", signature("Rcpp_HuberPsi"), .show))
+setLoadAction(function(ns) setMethod("show", signature("Rcpp_SmoothPsi"), .show))
+setLoadAction(function(ns) setMethod("show", signature("Rcpp_PsiFunction to Prop II PsiFunction wrapper"), .show))
+
+## copied here from robustbase, version 0.92-5
+matplotPsi <- function(x, m.psi, psi, par, main = "full",
+                       col = c("black", "red3", "blue3", "dark green"),
+                       leg.loc = "right", lty = 1, ...) {
+  ## Original Author: Martin Maechler, Date: 13 Aug 2010, 10:17
+  ## Modified by Manuel Koller, Date: 7 Jan 2013
+  fExprs <- quote(list(rho(x), psi(x), {psi*minute}(x),
+                       w(x) == psi(x)/x, {w*minute}(x)))
+  ## build legend
+  map <- if (is.null(colnames(m.psi))) {
+    1:(ncol(m.psi)+1)
+  } else {
+    c(1, c(rho=2, psi=3, Dpsi=4, wgt=5, Dwgt=6)[colnames(m.psi)])
+  }
+  fExprs <- fExprs[map]
+  ## ... title
+  if(is.character(main)) {
+    shortMain <- (main == "short")
+    elist <- list(FF = if(shortMain) fExprs[[2]] else fExprs,
+                  PSI = psi, PPP = paste(formatC(par), collapse=","))
+    tit <- if(shortMain)
+      substitute(FF ~ "etc, with"  ~ psi*"-type" == PSI(PPP), elist)
+    else
+      substitute(FF ~~ ~~ " with "~~ psi*"-type" == PSI(PPP), elist)
+  } else tit <- NULL
+  ## plot
+  matplot(x, m.psi, col=col, lty=lty, type="l", main = tit,
+          ylab = quote(f(x)), xlab = quote(x), ...)
+  abline(h=0,v=0, lty=3, col="gray30")
+  fE <- fExprs; fE[[1]] <- as.name("expression")
+  legend(leg.loc, inset=.02, eval(fE), col=col, lty=lty, bty="n")
+  invisible(cbind(x=x, m.psi))
+}
+
+plotPsi <- function(x, y, which = c("rho", "psi", "Dpsi", "wgt", "Dwgt"),
+                    main = "full",
+                    col = c("black", "red3", "blue3", "dark green", "light green"),
+                    leg.loc = "right", ...) {
+  ## x: psi_func object
+  ## y: points to plot at (x-Axis in plot)
+  which <- match.arg(which, several.ok = TRUE)
+  if(missing(y)) y <- seq(-5, 10, length=1501)
+  tmp <- lapply(which, function(name) 
+    eval(substitute(`$`(x, ..name)(y), list(..name = name))))
+  m.psi <- do.call(cbind, tmp)
+  colnames(m.psi) <- which
+  matplotPsi(y, m.psi, x$name(), x$tDefs(),
+             main=main, col=col, leg.loc=leg.loc, ...)
+}
+
+##' @importFrom robustbase matplotPsi
+##' @exportMethod plot
+##' @exportMethod plot Rcpp_PsiFunction
+##' @exportMethod plot Rcpp_SmoothPsi
+##' @exportMethod plot `Rcpp_PsiFunction to Prop II PsiFunction wrapper`
+## setMeth("plot", plotPsi)
+setLoadAction(function(ns) setMethod("plot", signature("Rcpp_PsiFunction"), plotPsi))
+setLoadAction(function(ns) setMethod("plot", signature("Rcpp_HuberPsi"), plotPsi))
+setLoadAction(function(ns) setMethod("plot", signature("Rcpp_SmoothPsi"), plotPsi))
+setLoadAction(function(ns) setMethod("plot", signature("Rcpp_PsiFunction to Prop II PsiFunction wrapper"), plotPsi))

@@ -1,8 +1,9 @@
 \name{psi-functions}
+\alias{psi-functions}
 \alias{cPsi}
-\alias{huberPsi}
+\alias{huberPsiRcpp}
 \alias{smoothPsi}
-\title{Classical, Huber and smoother Huber psi- or rho-functions}
+\title{Classical, Huber and smoothed Huber psi- or rho-functions}
 \description{
   \eqn{\psi}{Psi}-functions are used by \code{\link{rlmer}}
   in the estimating equations and to compute robustness
@@ -19,7 +20,7 @@
   function. Accordingly, the robustness weights will always
   be 1 when using \code{cPsi}.
 
-  The \bold{Huber \eqn{\psi}{psi}-function \code{huberPsi}}
+  The \bold{Huber \eqn{\psi}{psi}-function \code{huberPsiRcpp}}
   is identical to the one in the package \code{robustbase}.
   The \code{psi} slot equals the identity function within
   \eqn{\pm k}{+-k} (where \eqn{k}{k} is the tuning
@@ -39,18 +40,16 @@
 }
 \examples{
 plot(cPsi)
-plot(huberPsi)
+plot(huberPsiRcpp)
 plot(smoothPsi)
-curve(cPsi@psi(x), -3, 3)
-curve(smoothPsi@psi(x, 1.345, 10), -3, 3, add=TRUE, col="red")
-curve(huberPsi@psi(x, 1.345), -3, 3, add=TRUE, col="blue")
+curve(cPsi$psi(x), -3, 3)
+curve(smoothPsi$psi(x), -3, 3, add=TRUE, col="red")
+curve(huberPsiRcpp$psi(x), -3, 3, add=TRUE, col="blue")
 }
 \seealso{
   \code{\link{chgDefaults}} and \code{\link{psi2propII}}
   for changing tuning parameters;
-  \code{\link{psi_func_cached-class}} and
   \code{\link{psi_func-class}} for a more detailed
-  description of the slots; \code{\link{psiFuncCached}} for
-  a constructor function to create custom
-  \eqn{\psi}{psi}-functions.
+  description of the slots; \code{PsiFunction} C++ class for
+  a base class to create custom \eqn{\psi}{psi}-functions.
 }

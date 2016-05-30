@@ -1,11 +1,6 @@
-
-##' @importClassesFrom robustbase psi_func
-##' @exportClass psi_func_cached
-setClass("psi_func_cached", contains = c("psi_func"))
-
 ##' @importFrom Matrix bdiag
 ##' @importFrom methods new setAs setClass setRefClass setMethod
-##' @importFrom robustbase huberPsi psiFunc summarizeRobWeights
+##' @importFrom robustbase summarizeRobWeights
 ##' @importMethodsFrom robustbase chgDefaults plot
 ##' @importMethodsFrom Matrix diag solve determinant t crossprod tcrossprod as.vector drop rowSums rowMeans colSums colMeans chol which
 
@@ -59,8 +54,8 @@ setRefClass("rlmerPredD",
                      M_ZZ0   = "Matrix",       ## M_ZZ = U_b\tr %*% M_ZZ0 %*% U_b
                      M_XX.M_ZZ0 = "Matrix",    ## M_XX^-1 %*% M_XZ0
                      M_ZX0M_XX.M_ZZ0 = "Matrix", ## crossprod(M_XZ0, M_XX^M_ZZ0)
-                     rho_e   = "psi_func",
-                     rho_sigma_e = "psi_func",
+                     rho_e   = "refClass",
+                     rho_sigma_e = "refClass",
                      rho_b   = "list",
                      rho_sigma_b = "list",
                      dim     = "numeric",
@@ -217,11 +212,11 @@ setRefClass("rlmerPredD",
                          rho_sigma_e <<- object@rho.sigma.e
                          rho_b <<- object@rho.b
                          rho_sigma_b <<- object@rho.sigma.b
-                         D_e <<- Diagonal(x=rep.int(rho_e@EDpsi(), n))
+                         D_e <<- Diagonal(x=rep.int(rho_e$EDpsi(), n))
                          tmp <- btapply(rho_b, .calcE.D.re2, rep=object@ind[object@k])
                          D_b <<- Diagonal(x=tmp)
-                         Lambda_b <<- Diagonal(x=rho_e@EDpsi() / tmp)
-                         Lambda_bD_b <<- Diagonal(x=rep(rho_e@EDpsi(), q))
+                         Lambda_b <<- Diagonal(x=rho_e$EDpsi() / tmp)
+                         Lambda_bD_b <<- Diagonal(x=rep(rho_e$EDpsi(), q))
                          sqrtD_e <<- Diagonal(x=sqrt(D_e@x))
                          M_XX <<- crossprod(sqrtD_e %*% .U_eX)
                          tmp1 <- sqrtD_e %*% .U_eZ
@@ -229,7 +224,7 @@ setRefClass("rlmerPredD",
                          M_ZZ0 <<- crossprod(tmp1)
                          M_XX.M_ZZ0 <<- solve(M_XX, M_XZ0)
                          M_ZX0M_XX.M_ZZ0 <<- crossprod(M_XZ0, M_XX.M_ZZ0)
-                         Epsi2_e <<- rho_e@Epsi2()
+                         Epsi2_e <<- rho_e$Epsi2()
                          ## calculate Epsi_bbt
                          Epsi_bbt <<- bdiag(btapply(rho_b, .calcE.psi_bbt, rep=object@ind))
                          ## calculate Epsi_bpsi_bt
@@ -291,10 +286,10 @@ setRefClass("rlmerPredD",
                          if (set.unsc) return(cache.unsc)
                          r <- M()
                          tmp <- if (all(zeroB)) { ## all theta == 0
-                             Epsi2_e / rho_e@EDpsi() *
+                             Epsi2_e / rho_e$EDpsi() *
                                  tcrossprod(solve(M_XX, t(sqrtD_e %*% .U_eX)))
                          } else {
-                             Epsi2_e / rho_e@EDpsi() *
+                             Epsi2_e / rho_e$EDpsi() *
                                  with(r, M_BB - crossprod(M_bB, Lambda_bD_b %*% M_bB)) +
                                  if (isDiagonal(U_b)) {
                                      crossprod(Diagonal(x=sqrt(Epsi2_b)) %*% Lambda_b %*% r$M_bB)
@@ -354,7 +349,7 @@ setRefClass("rlmerPredD_DAS",
                  },
                  initRho = function(object) {
                      callSuper(object)
-                     EDpsi_e <<- rho_e@EDpsi()
+                     EDpsi_e <<- rho_e$EDpsi()
                      kappa_e <<- calcKappaTau(rho_sigma_e, 1)
                      kappa_b <<- calcKappaTauB(object)
                  },
@@ -537,8 +532,8 @@ setClass("rlmerMod",
                         pp      = "rlmerPredD",
                         optinfo = "list",
                         ## from rlmerResp:
-                        rho.e   = "psi_func",
-                        rho.sigma.e = "psi_func",
+                        rho.e   = "refClass",
+                        rho.sigma.e = "refClass",
                         method  = "character",
                         ## from rreTrms:
                         b.r     = "numeric",
@@ -584,10 +579,10 @@ setClass("rlmerMod",
                  return("the length of list rho.b must be the same as the number ob block types")
              if (length(object@rho.b) != length(object@rho.sigma.b))
                  return("the lists rho.b and rho.sigma.b must be of the same length")
-             if (!all(sapply(object@rho.b, inherits, "psi_func")))
-                 return("the entries of rho.b must be of class psi_func or inherited")
-             if (!all(sapply(object@rho.sigma.b, inherits, "psi_func")))
-                 return("the entries of rho.sigma.b must be of class psi_func or inherited")
+             if (!all(sapply(object@rho.b, inherits, "refClass")))
+                 return("the entries of rho.b must be of class refClass or inherited")
+             if (!all(sapply(object@rho.sigma.b, inherits, "refClass")))
+                 return("the entries of rho.sigma.b must be of class refClass or inherited")
              TRUE
          },
          S3methods = TRUE)

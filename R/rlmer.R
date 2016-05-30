@@ -406,11 +406,11 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
             if (s > 1) {
                 ## for eta, we would actually need a little smaller
                 ## tuning constants than for delta to get the same efficiency
-                wbsEta <- c(wbsEta, lobj@rho.sigma.b[[type]]@wgt(db[lidx]))
-                wbsDelta <- c(wbsDelta, (lobj@rho.sigma.b[[type]]@psi(db[lidx]) -
-                                         lobj@rho.sigma.b[[type]]@psi(db[lidx] - s*kappas[type]))/s)
+                wbsEta <- c(wbsEta, lobj@rho.sigma.b[[type]]$wgt(db[lidx]))
+                wbsDelta <- c(wbsDelta, (lobj@rho.sigma.b[[type]]$psi(db[lidx]) -
+                                         lobj@rho.sigma.b[[type]]$psi(db[lidx] - s*kappas[type]))/s)
             } else {
-                lw <- lobj@rho.sigma.b[[type]]@wgt(db[lidx])
+                lw <- lobj@rho.sigma.b[[type]]$wgt(db[lidx])
                 wbsEta <- c(wbsEta, lw)
                 wbsDelta <- c(wbsDelta, lw*kappas[type]) ## adding kappa to wbsDelta in 1d case
             }

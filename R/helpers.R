@@ -121,7 +121,7 @@ wgt.b <- function(object, sigma = object@pp$sigma, center = FALSE) {
     ret <- numeric()
     for (bt in seq_along(object@blocks)) {
         bind <- as.vector(object@idx[[bt]])
-        ret <- c(ret, rho[[bt]]@wgt(db[bind]))
+        ret <- c(ret, rho[[bt]]$wgt(db[bind]))
     }
     ret
 }
@@ -132,8 +132,8 @@ wgt.b <- function(object, sigma = object@pp$sigma, center = FALSE) {
 ## @rdname wgt
 ## @export
 wgt.e <- function(object, sigma = object@pp$sigma, use.rho.sigma = FALSE)
-    if (use.rho.sigma) object@rho.sigma.e@wgt(dist.e(object, sigma)) else
-       object@rho.e@wgt(dist.e(object, sigma))
+    if (use.rho.sigma) object@rho.sigma.e$wgt(dist.e(object, sigma)) else
+       object@rho.e$wgt(dist.e(object, sigma))
 
 ### Calculate robustness weights * squared effect
 ### Return sensible result in the infinite case
@@ -142,8 +142,8 @@ wgt.e <- function(object, sigma = object@pp$sigma, use.rho.sigma = FALSE)
     .wgtxy(rho, x, y*y)
 ## wgt(x) * y
 .wgtxy <- function(rho, x, y) {
-    ret <- rho@wgt(x) * y
-    ret[is.infinite(x) & is.infinite(y)] <- if (rho@psi(Inf) == 0) 0 else Inf
+    ret <- rho$wgt(x) * y
+    ret[is.infinite(x) & is.infinite(y)] <- if (rho$psi(Inf) == 0) 0 else Inf
     ret
 }
 

@@ -112,6 +112,7 @@ formatcom={\color{Soutput}}, fontsize=\footnotesize}
 }
 
 \begin{document}
+\SweaveOpts{concordance=TRUE}
 
 \author{Manuel Koller\\[1em]
   \small{Seminar f\"ur Statistik, ETH Z\"urich}\\
@@ -382,41 +383,6 @@ require(robustbase)
 require(lme4)
 source(file.path(rlmerDoc, "plots.R"))
 st <- system.time
-if(packageVersion("robustbase") >= "0.9-8")  {
-    lqqPsi <- psiFuncCached(rho = function(x, cc) Mpsi(x, cc, "lqq", -1),
-                            psi = function(x, cc) Mpsi(x, cc, "lqq", 0),
-                            Dpsi = function(x, cc) Mpsi(x, cc, "lqq", 1),
-                            wgt = function(x, cc) Mwgt(x, cc, "lqq"),
-                            Dwgt = function(x, cc) 
-                            (Mpsi(x, cc, "lqq", 1) - Mwgt(x, cc, "lqq"))/x,
-                            name = "lqq",
-                            cc = c(-0.5, 1.5, 0.95, NA))
-    
-    bisquarePsi <- psiFuncCached(rho = function(x, k) Mpsi(x, k, "biweight", -1),
-                                 psi = function(x, k) Mpsi(x, k, "biweight", 0),
-                                 Dpsi = function(x, k) Mpsi(x, k, "biweight", 1),
-                                 wgt = function(x, k) (1 - (x/k)^2)^2*(abs(x) <= k),
-                                 Dwgt = function(x, k) (-(4*(1-(x/k)^2))*x/k^2)*(abs(x) <= k),
-                                 name = "bisquare",
-                                 k = 4.68)
-} else {
-    lqqPsi <- psiFuncCached(rho = function(x, cc) robustbase:::lmrob.psifun(x, cc, "lqq", -1),
-                            psi = function(x, cc) robustbase:::lmrob.psifun(x, cc, "lqq", 0),
-                            Dpsi = function(x, cc) robustbase:::lmrob.psifun(x, cc, "lqq", 1),
-                            wgt = function(x, cc) robustbase:::lmrob.wgtfun(x, cc, "lqq"),
-                            Dwgt = function(x, cc) (robustbase:::lmrob.psifun(x, cc, "lqq", 1) -
-                                robustbase:::lmrob.wgtfun(x, cc, "lqq"))/x,
-                            name = "lqq",
-                            cc = c(-0.5, 1.5, 0.95, NA))
-    
-    bisquarePsi <- psiFuncCached(rho = function(x, k) tukeyPsi1(x, k, -1),
-                                 psi = function(x, k) tukeyPsi1(x, k, 0),
-                                 Dpsi = function(x, k) tukeyPsi1(x, k, 1),
-                                 wgt = function(x, k) (1 - (x/k)^2)^2*(abs(x) <= k),
-                                 Dwgt = function(x, k) (-(4*(1-(x/k)^2))*x/k^2)*(abs(x) <= k),
-                                 name = "bisquare",
-                                 k = 4.68)
-}
 ## make the functions wgt.e and wgt.b accessible again...
 wgt.e <- robustlmm:::wgt.e
 wgt.b <- robustlmm:::wgt.b
@@ -710,7 +676,7 @@ for this and the lqq $\psi$-function are given in Tables
 xs <- seq.int(0, 3, length.out=100)
 data <- data.frame(x = xs,
                    Huber = huberPsi@psi(xs),
-                   `Smoothed` = smoothPsi@psi(xs))
+                   `Smoothed` = smoothPsi$psi(xs))
 print(ggplot(melt(data, 1),
              aes(x, value, color=variable)) + geom_line() +
       scale_colour_hue(expression(paste(psi, "-function"))) +
@@ -734,10 +700,10 @@ print(ggplot(melt(data, 1),
 require(robustlmm)
 
 ## location
-avarBeta <- function(psi) psi@Epsi2()/psi@EDpsi()^2
+avarBeta <- function(psi) psi$Epsi2()/psi$EDpsi()^2
 effBeta <- function(psi) 1 / avarBeta(psi)
 findEffBeta <- function(psi, eff) {
-    tDefs <- psi@tDefs
+    tDefs <- psi$tDefs()
     if (length(tDefs) == 0) return(NULL)
     lavar <- function(c) {
         tDefs[1] <- c

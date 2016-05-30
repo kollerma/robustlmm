@@ -22,8 +22,8 @@ calcMatrices <- function(object, numpoints=13) {
     
     ## D_e and D_b matrices, as well as
     ## Epsi2_e, Epsi2_b, Epsi_bbt and Epsi_bpsi_bt
-    D_e <- Diagonal(x=rep(object@rho.e@EDpsi(), n))
-    Epsi2_e <- object@rho.e@Epsi2()
+    D_e <- Diagonal(x=rep(object@rho.e$EDpsi(), n))
+    Epsi2_e <- object@rho.e$Epsi2()
     tmp <- numeric(0)
     t2 <- t3 <- list()
     for (l in seq_along(object@dim)) {
@@ -38,7 +38,7 @@ calcMatrices <- function(object, numpoints=13) {
     Epsi_bbt <- bdiag(t2)
     Epsi_bpsi_bt <- bdiag(t3)
     Epsi2_b <- diag(Epsi_bpsi_bt)
-    Lambda_b <- solve(D_b) * object@rho.e@EDpsi()
+    Lambda_b <- solve(D_b) * object@rho.e$EDpsi()
     
     ## Matrices we need for calculating the Jacobian
     DX <- D_e %*% X

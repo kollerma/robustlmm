@@ -9,7 +9,7 @@
     max.iter = 40 * (r + 1)^2, verbose = 0, doFit = TRUE,
     init)
 
-  lmerNoFit(..., initTheta)
+  lmerNoFit(formula, data = NULL, ..., initTheta)
 }
 \arguments{
   \item{formula}{a two-sided linear formula object

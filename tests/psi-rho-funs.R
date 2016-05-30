@@ -1,32 +1,32 @@
 require(robustlmm)
 
 ## initialize device
-pdf("psi-rho-funs.pdf")
+if (!interactive()) pdf("psi-rho-funs.pdf")
 
 ## Test E... slots
 t.fun <- function(obj) {
-    rho <- obj@rho
-    psi <- obj@psi
-    Dpsi <- obj@Dpsi
+    rho <- obj$rho
+    psi <- obj$psi
+    Dpsi <- obj$Dpsi
     c(Erho=
       all.equal(integrate(function(x) rho(x)*dnorm(x), -Inf, Inf,
                           rel.tol = .Machine$double.eps^0.5)$value,
-                obj@Erho()),
+                obj$Erho()),
       Epsi2=
       all.equal(integrate(function(x) psi(x)^2*dnorm(x), -Inf, Inf,
                           rel.tol = .Machine$double.eps^0.5)$value,
-                obj@Epsi2()),
+                obj$Epsi2()),
       EDpsi=
       all.equal(integrate(function(x) Dpsi(x)*dnorm(x), -Inf, Inf,
                           rel.tol = .Machine$double.eps^0.5)$value,
-                obj@EDpsi()))
+                obj$EDpsi()))
 }
 
-stopifnot(t.fun(huberPsi))
+stopifnot(t.fun(smoothPsi))
 
 t.plot.slot <- function(slot) {
-    curve(slot(huberPsi, slot)(x), -5, 5,)
-    curve(slot(smoothPsi, slot)(x), -5, 5, add = TRUE)
+  curve(eval(substitute(`$`(huberPsiRcpp, ..slot), list(..slot = slot)))(x), -5, 5)
+  curve(eval(substitute(`$`(smoothPsi, ..slot), list(..slot = slot)))(x), -5, 5, add = TRUE)
 }
 
 t.plot.slot("rho")
@@ -44,16 +44,15 @@ p.psiFun <- function(x, object,
                      leg.loc = "right", ...)
 {
     ## Author: Martin Maechler, Date: 13 Aug 2010, 10:17
-    m.psi <- cbind(rho    = object@rho(x),
-                   psi    = object@psi(x),
-                   "psi'" = object@Dpsi(x),
-                   wgt    = object@wgt(x),
-                   "wgt'" = object@Dwgt(x))
+    m.psi <- cbind(rho    = object$rho(x),
+                   psi    = object$psi(x),
+                   "psi'" = object$Dpsi(x),
+                   wgt    = object$wgt(x),
+                   "wgt'" = object$Dwgt(x))
     fExprs <- quote(list(rho(x), psi(x), {psi*minute}(x), w(x) == psi(x)/x))
     matplot(x, m.psi, col=col, lty=1, type="l",
             main = substitute(FFF ~~ ~~ " with "~~ psi*"-type" == PSI(PPP),
-                              list(FFF = fExprs, psi = object@name,
-                                   PPP = paste(formals(object@rho)[-1], collapse=", "))),
+                              list(FFF = fExprs, psi = object$name)),
             ylab = quote(f(x)), xlab = quote(x), ...)
     abline(h=0,v=0, lty=3, col="gray30")
     fE <- fExprs; fE[[1]] <- as.name("expression")
@@ -80,14 +79,14 @@ chkPsiDeriv <- function(m.psi, tol = 1e-4) {
 
 head(x. <- seq(-5, 10, length=1501))
 ## [separate lines, for interactive "play": ]
-stopifnot(chkPsiDeriv(p.psiFun(x., huberPsi)))
+stopifnot(chkPsiDeriv(p.psiFun(x., huberPsiRcpp)))
 head(x. <- seq(-5, 10, length=2501))
 chkPsiDeriv(p.psiFun(x., smoothPsi))
 stopifnot(chkPsiDeriv(p.psiFun(x., smoothPsi)))
 head(x. <- seq(-5, 10, length=1501))
 
-## intPsi <- Vectorize(function(x) integrate(function(y) smoothPsi@psi(y), 0, x)$value)
+## intPsi <- Vectorize(function(x) integrate(function(y) smoothPsi$psi(y), 0, x)$value)
 ## curve(intPsi, 0, 10)
-## curve(smoothPsi@rho(x), 0, 10, add=TRUE)
+## curve(smoothPsi$rho(x), 0, 10, add=TRUE)
 
 cat('Time elapsed: ', proc.time(),'\n') # for ``statistical reasons''

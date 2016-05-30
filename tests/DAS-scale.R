@@ -48,8 +48,8 @@ G2 <- Vectorize(function(tau=1, a, s, rho, rho.sigma,
     
     ## inner integration over z
     inner <- function(e) {
-        x <- (e - a*rho@psi(e) - s*ghz)/tau
-        sum(rho.sigma@wgt(x)*x^2*ghw)
+        x <- (e - a*rho$psi(e) - s*ghz)/tau
+        sum(rho.sigma$wgt(x)*x^2*ghw)
     }                
     ## outer integration over e
     sum(sapply(ghz, inner)*ghw)
@@ -57,8 +57,8 @@ G2 <- Vectorize(function(tau=1, a, s, rho, rho.sigma,
 
 G.int <- Vectorize(function(tau=1, a, s, rho, rho.sigma) {
     fun <- function(z, e) {
-        x <- (e - a*rho@psi(e) - s*z)/tau
-        rho.sigma@wgt(x)*x^2*dnorm(e)*dnorm(z)
+        x <- (e - a*rho$psi(e) - s*z)/tau
+        rho.sigma$wgt(x)*x^2*dnorm(e)*dnorm(z)
     }
     inner <- Vectorize(function(e) integrate(fun, -Inf, Inf, e = e)$value)
     integrate(inner, -Inf, Inf)$value
@@ -202,10 +202,10 @@ r2 <- rnorm(20)
 
 smoothProp2 <- psi2propII(smoothPsi)
 
-stopifnot(all.equal(.wgtxy2(smoothPsi, r1, r1), smoothPsi@psi(r1)*r1),
-          all.equal(.wgtxy2(smoothProp2, r1, r1), smoothPsi@psi(r1)^2),
-          all.equal(.wgtxy2(smoothPsi, r1, r2), smoothPsi@wgt(r1)*r2*r2),
-          all.equal(.wgtxy2(smoothProp2, r1, r2), smoothPsi@wgt(r1)^2*r2*r2))
+stopifnot(all.equal(.wgtxy2(smoothPsi, r1, r1), smoothPsi$psi(r1)*r1),
+          all.equal(.wgtxy2(smoothProp2, r1, r1), smoothPsi$psi(r1)^2),
+          all.equal(.wgtxy2(smoothPsi, r1, r2), smoothPsi$wgt(r1)*r2*r2),
+          all.equal(.wgtxy2(smoothProp2, r1, r2), smoothPsi$wgt(r1)^2*r2*r2))
           
 
 cat('Time elapsed: ', proc.time(),'\n') # for ``statistical reasons''

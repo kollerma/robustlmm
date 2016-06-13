@@ -31,7 +31,7 @@ setU <- function(object, value) {
     object@pp$setU(value)
     invisible(object)
 }
-## keep u<- for backwards compatiblity
+## keep u<- for backwards compatibility
 `u<-` <- function(object, value) {
     setU(object, value)
     object@b.s <- object@pp$b.s

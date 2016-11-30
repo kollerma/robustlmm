@@ -227,4 +227,3 @@ rlmer(Yield ~ (1|Batch), Dyestuff, init = lmerNoFit)
   \code{\link[lme4]{lmer}}, \code{vignette("rlmer")}
 }
 \keyword{models}
-

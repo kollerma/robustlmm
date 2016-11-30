@@ -29,5 +29,15 @@
   package to make switching between the two packages easy. 
   
   Details on the implementation and example analyses are provided in the
-  package vignette available via \code{vignette("rlmer")}.
+  package vignette available via \code{vignette("rlmer")} (Koller 2016).
  }
+\references{
+  Manuel Koller (2016).
+  robustlmm: An R Package for Robust Estimation of Linear Mixed-Effects Models. 
+  Journal of Statistical Software, 75(6), 1-24. doi:10.18637/jss.v075.i06
+  
+  Manuel Koller (2013).
+  Robust estimation of linear mixed models.
+  (Doctoral dissertation, Diss., Eidgenössische Technische Hochschule ETH Zürich, Nr. 20997, 2013).
+}
+ 

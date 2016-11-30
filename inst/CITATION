@@ -1,0 +1,20 @@
+bibentry(bibtype = "Article",
+  title        = "{robustlmm}: An {R} Package for Robust Estimation of Linear Mixed-Effects Models",
+  author       = person(given = "Manuel",
+                        family = "Koller",
+                        email = "koller.manuel@gmail.com"),
+  journal      = "Journal of Statistical Software",
+  year         = "2016",
+  volume       = "75",
+  number       = "6",
+  pages        = "1--24",
+  doi          = "10.18637/jss.v075.i06",
+
+  header       = "To cite robustlmm in publications use:",
+  textVersion  =
+  paste("Manuel Koller (2016).",
+        "robustlmm: An R Package for Robust Estimation of Linear Mixed-Effects Models.",
+        "Journal of Statistical Software, 75(6), 1-24.",
+        "doi:10.18637/jss.v075.i06")
+)
+

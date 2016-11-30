@@ -1,936 +1,833 @@
-% -*- mode: noweb; noweb-default-code-mode: R-mode; -*-
-\documentclass[11pt, a4paper]{article}
+\documentclass[article]{jss}
+\usepackage{rlmer}
 
-%\VignetteIndexEntry{Examples and some details on the method}
+%\VignetteIndexEntry{robustlmm: An R Package for Robust Estimation of Linear Mixed-Effects Models}
 %\VignetteDepends{ggplot2, reshape2, xtable, robustlmm, digest, robustbase, lme4}
 
-\usepackage[a4paper, text={16cm,25cm}]{geometry}
-\usepackage[utf8]{inputenc}
-\usepackage{natbib}
-\usepackage{amsmath,amssymb,amsthm}
-\usepackage{graphicx}
-\usepackage{multirow}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% declarations for jss.cls %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% replace all tildes by hats
-\renewcommand{\tilde}{\widehat}
-\let\wtilde\widetilde
-\renewcommand{\widetilde}{\widehat}
+\author{Manuel Koller\\
+  University of Bern}
+\title{\pkg{robustlmm}: An \proglang{R} Package for Robust Estimation of Linear Mixed-Effects Models}
+\Plaintitle{robustlmm: An R Package For Robust Estimation of Linear Mixed
+  Effects Models}
 
-%% Some shortcuts
-\newcommand{\abs}[1]    {\left| #1 \right|}
-\newcommand*{\Rp}{\textsf{R}$\;$}
-\newcommand{\T}[1]      {\texttt{#1}}
-\newcommand{\fn}[1]{\kern-1pt\left(#1\right)\kern+0.5pt}
-\newcommand{\fns}[1]{\kern-0.5pt(#1)}
-\newcommand{\bld}[1]{\boldsymbol{#1}}
-\renewcommand{\vec}[1]{\bld{#1}}
-\newcommand{\vp}[1][e]{\Vec{\psi}_{#1}}
-\newcommand{\tv}[2][]{{\widetilde{\vec{#2}}_{#1}}}
-\newcommand{\hv}[2][]{{\widehat{\Vec{#2}}_{#1}}}
-\newcommand{\s}[1][\rho]{#1^{(\sigma)}}
-\newcommand{\si}[2][w]{#1^{(\sigma)}_{#2}\kern-1pt}
-\newcommand{\vbs}{\vec b^{*}}
-\newcommand{\vbstr}{\vec b^{*\intercal}}
-\newcommand{\tvbs}{\widetilde{\vec{b}}^{\raisebox{-0.75ex}{\scriptsize *}}}
-\newcommand{\hvbs}{\widehat{\vec{b}}^{\raisebox{-0.75ex}{\scriptsize *}}}
-\newcommand{\hvbstr}{\widehat{\Vec{b}}^{\raisebox{-0.3ex}{\scriptsize\ensuremath{*\intercal}}}}
-\newcommand{\bs}{b^{*}}
-\newcommand{\bsQ}{b^{*2}}
-\newcommand{\hbs}{\widehat{b}^{*}}
-\newcommand{\es}{\varepsilon^{*}}
-\newcommand{\ves}{\vec\varepsilon^{*}}
-\newcommand{\tves}{\widetilde{\vec{\varepsilon}}^{\raisebox{-0.75ex}{\scriptsize *}}}
-\newcommand{\hves}{\widehat{\vec{\varepsilon}}^{\raisebox{-0.75ex}{\scriptsize *}}}
-\newcommand{\hes}{\widehat{\varepsilon}^{*}}
-\newcommand{\U}[2][-0.15ex]{\bld{U}_{\hspace{#1}#2\hspace{0.25ex}}}
-\newcommand{\V}[2][-0.15ex]{\bld{V}_{\hspace{#1}#2\hspace{0.25ex}}}
-\newcommand{\Ue}{\U{e}}
-\newcommand{\Ub}{\U{b}}
-\newcommand{\Ubth}{\U{b}\fn{\vec\theta}}
-\newcommand{\Vbth}{\V{b}\fn{\vec\theta}}
-\newcommand{\W}[1][b]{\text{\textbf{W}}_{\hspace{-0.5ex}#1\hspace{0.25ex}}}
-\newcommand{\w}[2][b]{w_{#1}^{(#2)}}
-\newcommand{\kbtau}{\kappa_b^{(\tau)}}
-\newcommand{\tr}{^{\intercal}}
-\newcommand{\trinv}{^{-\raisebox{0.3ex}{\scriptsize$\intercal$}}}
-\newcommand{\invsq}{^{-1/2}}
-\newcommand{\diag}{\mbox{\textbf{Diag}}}
-\newcommand{\ERWSymbol}{\mathbb{E}}
-\newcommand{\makeright}[2]{\ifx#1\left\right#2\else#1#2\fi}
-\newcommand{\Xsub}[2]{{#1}_{\mathrm{\scriptscriptstyle #2}}}
-\newcommand{\ERW}[2][\left] {\ERWSymbol    #1[ #2 \makeright{#1}{]}}
-\newcommand{\ERWi}[3][\left] {\Xsub{\ERWSymbol}{#2}    #1[ #3
-    \makeright{#1}{]}}
-\newcommand{\Tbk}{\bld{T}_{\hspace{-0.5ex}b,k\hspace{0.25ex}}}
-\newcommand{\Q}[1]{\bld{Q}_{\hspace{-0.15ex}{#1}}}
-\newcommand{\Qlkhth}{\Q{l,k}\fns{\hv\theta}}
-\newcommand{\Qlhth}{\Q{l}\fns{\hv\theta}}
-\DeclareMathOperator{\N}{\mathcal{N}}
-\DeclareMathOperator{\trace}{tr}
-\DeclareMathOperator{\eff}{eff}
-\DeclareMathOperator{\sign}{sign}
+\Abstract{As any real-life data, data modeled by linear mixed-effects
+  models often contain outliers or other contamination. Even little
+  contamination can drive the classic estimates far away from what they
+  would be without the contamination. At the same time, datasets that
+  require mixed-effects modeling are often complex and large. This makes it
+  difficult to spot contamination. Robust estimation methods aim to solve
+  both problems: to provide estimates where contamination has only little
+  influence and to detect and flag contamination.
 
-%% Sweave stuff
-\usepackage{color}
-\usepackage[noae]{Sweave}
-\definecolor{Sinput}{rgb}{0,0,0.56}
-\definecolor{Soutput}{rgb}{0.56,0,0}
-\DefineVerbatimEnvironment{Sinput}{Verbatim}{%
-formatcom={\color{Sinput}}, fontsize=\footnotesize}
-\DefineVerbatimEnvironment{Soutput}{Verbatim}{%
-formatcom={\color{Soutput}}, fontsize=\footnotesize}
-\fvset{listparameters={\setlength{\topsep}{0pt}}}
-\renewenvironment{Schunk}{\vspace{\topsep}}{\vspace{\topsep}}
+  We introduce an \Rp package, \pkg{robustlmm}, to robustly fit linear
+  mixed-effects models. The package's functions and methods are designed to
+  closely equal those offered by \pkg{lme4}, the \Rp package that
+  implements classic linear mixed-effects model estimation in \Rpns. The
+  robust estimation method in \pkg{robustlmm} is based on the random
+  effects contamination model and the central contamination
+  model. Contamination can be detected at all levels of the data. The
+  estimation method does not make any assumption on the data's grouping
+  structure except that the model parameters are estimable. \pkg{robustlmm}
+  supports hierarchical and non-hierarchical (e.g., crossed) grouping
+  structures. The robustness of the estimates and their asymptotic
+  efficiency is fully controlled through the function interface. Individual
+  parts (e.g., fixed effects and variance components) can be tuned
+  independently.
 
-%% Set width of plots
-\setkeys{Gin}{width=\textwidth}
+  In this tutorial, we show how to fit robust linear mixed-effects models
+  using \pkg{robustlmm}, how to assess the model fit, how to detect
+  outliers, and how to compare different fits.}  
 
-%% remark environment
-\newtheoremstyle{note}% name
-  {3pt}%      Space above
-  {3pt}%      Space below
-  {\small}%         Body font
-  {\parindent}%         Indent amount (empty = no indent, \parindent = para indent)
-  {\itshape}% Thm head font
-  {.}%        Punctuation after thm head
-  {.5em}%     Space after thm head: " " = normal interword space;
-        %       \newline = linebreak
-  {}%         Thm head spec (can be left empty, meaning `normal')
+\Keywords{robust statistics, mixed-effects model, hierarchical model,
+  ANOVA, \proglang{R}, crossed, random effect}
+\Plainkeywords{robust statistics, mixed-effects model, hierarchical model,
+  ANOVA, R, crossed, random effect}
 
-\theoremstyle{note}
-\newtheorem*{remark}{Remark}
-\newtheorem*{remarks}{Remarks}
+%% publication information
+%% NOTE: Typically, this can be left commented and will be filled out by the technical editor
+\Volume{75}
+\Issue{6}
+\Month{November}
+\Year{2016}
+\Submitdate{2015-04-09}
+\Acceptdate{2015-10-11}
 
-%% hyperreferences
-\usepackage{hyperref}
-\hypersetup{
-    colorlinks,
-    citecolor=black,
-    filecolor=black,
-    linkcolor=black,
-    urlcolor=black
+%% The address of (at least) one author should be given
+%% in the following format:
+\Address{
+  Manuel Koller\\
+  Institute for Social and Preventive Medicine\\
+  Universit\"at Bern\\
+  3012 Bern, Switzerland\\
+  E-mail: \email{koller.manuel@gmail.com}\\
+  URL: \url{http://www.ispm.unibe.ch/}
 }
+
+%% end of declarations %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\SweaveOpts{prefix.string=text}
+
+\Abstract{As any real-life data, data modeled by linear mixed-effects models often contain outliers or other contamination. Even little contamination can drive the classic estimates far away from what they would be without the contamination. At the same time, datasets that require mixed-effects modeling are often complex and large. This makes it difficult to spot contamination. Robust estimation methods aim to solve both problems: to provide estimates where contamination has only little influence and to detect and flag contamination.
+
+We introduce an \Rp package, \pkg{robustlmm}, to robustly fit linear mixed-effects models. The package's functions and methods are designed to closely equal those offered by \pkg{lme4}, the \Rp package that implements classic linear mixed-effects model estimation in \Rpns. The robust estimation method in \pkg{robustlmm} is based on the random effects contamination model and the central contamination model. Contamination can be detected at all levels of the data. The estimation method does not make any assumption on the data's grouping structure except that the model parameters are estimable. \pkg{robustlmm} supports hierarchical and non-hierarchical (e.g., crossed) grouping structures. The robustness of the estimates and their asymptotic efficiency is fully controlled through the function interface. Individual parts (e.g., fixed effects and variance components) can be tuned independently.
+
+In this tutorial, we show how to fit robust linear mixed-effects models using \pkg{robustlmm}, how to assess the model fit, how to detect outliers, and how to compare different fits.}
+
+%\usepackage{Sweave}
 
 \begin{document}
 \SweaveOpts{concordance=TRUE}
 
-\author{Manuel Koller\\[1em]
-  \small{Seminar f\"ur Statistik, ETH Z\"urich}\\
-  \small{and}\\
-  \small{Institute of Social and Preventive Medicine, University of Bern}}
-\title{\T{robustlmm}: Robust Estimating Equations and Examples}
-\maketitle
+\baselineskip 15pt
 
-This vignette attempts to give some background on the robust estimation
-method implemented in ``rlmer''. Moreover, two example analyses are
-included that aim to facilitate the first time user to start working with
-this package. The text presented here is basically a summary of
-\citet{koller2013}. In said reference, a detailed derivation of the methods
-underlying ``rlmer'' can be found.
+\section{Introduction}
 
-The model and some notation is introduced in Section~\ref{sec:model}. The
-robust estimating equations are given in Section~\ref{sec:eeq}. Then two
-examples are analyzed in Sections \ref{sec:penicillin} and
-\ref{sec:sleepstudy}. Both datasets are also analyzed in
-\citet{bates2011lme4}. For the convenience of the reader, the description
-of the datasets found there has been included here. Finally, in
-Section~\ref{sec:tc} we provide tables of tuning constants and the
-definition of the \emph{smoothed Huber $\psi$-function}.
+\label{introduction}
 
-\section{The Model}
-\label{sec:model}
-Following \citet{bates2011lme4}, we work with the formulation
-of mixed effects models in terms of spherical random effects,
-\begin{equation}
-  \label{eq:mixedModelSpherical}
-  \begin{split}
-    \vec y = \bld X\vec\beta + \bld Z\Ubth\vbs + \Ue\ves\;, \\
-    \vbs \sim \bld{\N}\fn{\vec 0, \sigma^2\bld I_q}\;, \quad
-    \ves \sim \bld{\N}\fn{\vec 0, \sigma^2\bld I_n}\;, \quad
-    \vbs \perp \ves\;,
-  \end{split}
-\end{equation}
-where $q$ is the number of random effects (the length of $\vbs$) and $n$ is
-the number of observations (length of $\vec y$). The vector $\vec\theta$
-parameterizes the lower triangular part $\Ubth$ of the Cholesky
-decomposition of the covariance matrix of the random effects $\Vbth$, i.e.,
-$\Vbth = \Ubth\Ubth\tr$. We assume the random effects to be ordered in a
-way such that correlated random effects are grouped toghether. The
-covariance matrix $\Vbth$ is therefore block diagonal. We use the index $i$
-for observations, $j$ for random effects and $k$ for blocks of random
-effects. For notatinal simplicity, we assume that there is only one type of
-blocks. Generalizing the estimating equations given below is
-straightforward and left to the reader.
+Linear mixed-effects models are powerful tools to model data with multiple levels of random variation, sometimes called variance components. Data with multiple levels of random variation may have contamination or outliers on any of these levels. To detect and deal with contamination, we developed a method that fits linear mixed-effects models robustly \citep{koller2014roblmm, koller2013diss}. We have implemented the methods in the \Rpns-package \pkg{robustlmm} \citep{robustlmm} that we introduce here.
 
-\section{Robust Estimating Equations}
-\label{sec:eeq}
-\subsection{Fixed and Random Effects}
-Let $k\fn{j}$ be a function that maps random effect $j$ to the
-corresponding block $k$, then the squared Mahalanobis distances of the
-estimated random effects are
-\begin{equation*}
-  \vec d = \left(d\fn{b_{k\fn{j}}/\sigma}\right)_{j=1,\dots,q}\;,
-  \quad \mbox{where} \quad
-  d\fn{b_k} = \vbstr_k\vbs_k\;.
-\end{equation*}
-Then we may define the robustness weight for the $j$th random effect as
-$w_b\fns{d_j}$. We use standard (location and linear regression) robustness
-weights:
-\begin{equation*}
-    w_b\fn{d} = \left\{
-      \begin{array}{cl}
-        {\psi_b\fn{\sqrt{d}}}/\sqrt{d} & \mbox{ if } d \neq 0\;, \\
-        \psi_b'\fn{0} & \mbox{ if } d = 0\;.
-      \end{array}
-    \right.
-\end{equation*}
-It is convenient to represent the robustness weights as (diagonal)
-weighting matrix,
-\begin{equation*}
-  \W\fn{\vec d} =
-  \diag\fn{w_b\fn{d_{k\fn{j}}}}_{j=1,\dots,q}\;.
-\end{equation*}
-The robust estimating equations are then
-\begin{equation}
-  \label{eq:robustEEq}
-  \begin{split}
-    \bld X\tr\Ue\trinv \bld\psi_e\fn{{\tves}/{\sigma}}
-    = {} & 0\;, \\
-    \Ub\tr\bld Z\tr\Ue\trinv \bld\psi_e\fn{{\tves}/{\sigma}} -
-    \bld\Lambda_b \W\fn{\tv d}{\tvbs}/{\sigma}
-    = {} & 0\;,
-  \end{split}
-\end{equation}
-where $\bld\Lambda_b = \diag\fn{\lambda_{e}/\lambda_{b,j}}_{j=1,\dots,q}$
-is a diagonal matrix with elements depending on the block size
-$s_{k\fn{j}}$, $\lambda_e = \ERWi{0}{\psi'_e\fn{\es}}$ and
-$\lambda_{b,j} = \wtilde\lambda\fn{s_{k\fn{j}}}$,
-\begin{equation*}
-  \wtilde\lambda\fn{s} = \ERWi{0}{\frac{\partial}{\partial \bs_1}
-    \left(
-      w_b\fn{\vbstr\vbs}\vbs_1
-  \right)}\; \quad \vbs \sim \bld{\N}\fn{\vec 0, \bld I_s}\;.
-\end{equation*}
+The variability introduced at the random effects level generally affects multiple observations simultaneously. In a one-way anova dataset, for example, a group level random effect influences the observed value of all the observations that belong to the corresponding group. If this group level random effect were an outlier with respect to the other group levels, this would lead to a whole group of outliers on the level of observations (see, e.g., plate~g in Figure~\ref{fig:penicillinContaminated}). When using classic estimation methods, even one such outlier might inflate the between-group variability estimate and distort the results (see example discussed in Section~\ref{usage}). In such a case it would be natural to assume that the group's random effect (or mean) is an outlier rather than all observations are outliers in the same direction. This concept of allowing potential contamination on different sources of variability leads to the ``random effects contamination model''. With this model, we make the assumption of long-tailed or ``gross error'' distributions for the random effects as well and not just for the random errors. The effect of the contamination is then propagated via the design matrices to the actual observations.
 
-\subsection{Scale}
-We apply the Design Adaptive Scale approach following \citet{ks2011}. We get
-\begin{equation}
-  \label{eq:sigmaDAS}
-  \sum_{i=1}^n\tau_{e,i}^2\si{e}\fn{\frac{\hes_i}{\tau_{e,i}\widehat\sigma}}
-  \left[
-    \left(\frac{\hes_i}{\tau_{e,i}\widehat\sigma}\right)^2 - \s[\kappa]_e
-  \right] = 0\;,
-\end{equation}
-where the superscript $\s[\cdot]$ is used to distinguish the weighting
-functions used for the scale and covariance parameters from the ones for the
-fixed effects. Just as in the linear regression case, we define
-$\tau_{e,i}$ as the value that zeroes the expectation of the $i$-th summand
-in \eqref{eq:sigmaDAS}. The expectation is
-\begin{equation}
-  \label{eq:tau_ei}
-  \ERW{\si{e}\fn{\frac{\hes_i}{\tau_{e,i}\widehat\sigma}}
-    \left(\frac{\hes_i}{\tau_{e,i}\widehat\sigma}\right)^2 -
-    \s[\kappa]_e \si{e}\fn{\frac{\hes_i}{\tau_{e,i}\widehat\sigma}}} = 0\;,
-\end{equation}
-where the distribution of the residuals is approximated using a linear
-expansion of $\tv\beta$ and $\tvbs$ around their true values
-\citep[Appendix~C]{koller2013}, and $\s[\kappa]_e$ is
-\begin{equation*}
-  \s[\kappa]_e =
-  {\ERWi{0}{\si{e}\fn{\varepsilon}\varepsilon^2}}\Big/
-  {\ERWi{0}{\si{e}\fn{\varepsilon}}}\;.
-\end{equation*}
+Levels of random variability can be hierarchical or crossed, or both, depending on the grouping structure in the data. This implies that the effect of a single outlier on the random effects level is not always as straight forward as in the above mentioned one-way anova example. The effect may be different for each observation as the result of an outlier for a single observation is combined with all the other random effects that affect this observation. This complex relationship between the source of contamination and what is effectively realized in the data can make it very hard or even impossible to spot contamination. This is where robust methods step in and help clear the picture.
 
-The weighting functions used for the scale estimates are the squared
-robustness weights used for the estimation of the fixed and random effects,
-$\si{e}\fns{x} = (\si[\psi]{e}\fns{x}/x)^2$, $\si{e}\fns{0} =
-\si[\psi]{e}'\fns{0}$, for convex $\rho$-functions. For redescending
-$\rho$-functions, it is not necessary to use the squared robustness
-weights, using the same weights as for the fixed and random effects still
-gives robust estimates (assuming $\psi\fns{x}x$ is bounded). When using the
-squared weights, it is crucial to use a different set of tuning parameters
-for estimating the scale and covariance parameters. Tables of tuning
-parameters can be found in Section~\ref{sec:tc}.
+Basing the robust estimator on the ``random effects contamination model'' allows not only multiple sources of contamination, it also avoids unnecessary assumptions about the data's grouping structure. The only assumption on the grouping structure, that is also required for classic estimation, is that the model parameters are estimable. Other contamination models usually assume that contamination is introduced and dealt with at the lowest level only -- the level of the observations. In mixed-effects models, observations generally correlate with one another, and robust methods must respect these correlations. These dependencies between observations require other contamination models to make strict assumptions about the grouping structure. The random effects contamination model assumes that contamination occurs directly at the source of random variability, before the grouping structure is introduced, thus circumventing the complexity introduced by the data structure and avoids unnecessary assumptions.
 
-\subsection{Covariance Parameters}
-For the covariance parameters, we have to treat the diagonal and the
-non-diagonal $\Ub$ case separately.
+Classic estimation of linear mixed-effects models is mainly provided by two functions in \Rp (Table~\ref{tab:functions}). The function \code{lme} in the \Rp package \pkg{nlme} \citep{nlme} supports a variety of random effects and error level covariance structures. It is designed for hierarchical data structures, so incorporating crossed random effects is not straightforward. The function \code{lmer} from the \pkg{lme4} package \citep{lme4} is not limited in that respect: it supports arbitrary grouping structures and efficiently deals with large data by making heavy use of memory-saving sparse representations of matrices. Special random effects and error level covariance structures like, e.g., compound symmetry or AR(1) correlation models, are, however, not yet supported.  Linear quantile mixed effects estimation is implemented in the \code{lqmm} function from the \pkg{lqmm} package \citep{lqmm}. This is not a robust method per se, but allows for median-based estimation. The function supports only one grouping level but allows the correlation structure of the random effects to be specified.
 
-\subsubsection{Diagonal Case}
-In the case of diagonal $\Ubth$, the estimation of $\tv\theta$ is
-essentially a scale estimation problem on $\tvbs$. It can be robustified
-just like the estimating equation for $\hat\sigma$ \eqref{eq:sigmaDAS}. The
-robust estimating equations are
-\begin{equation}
-  \label{eq:thetaDAS}
-  \sum_{j=1}^q\tau_{b,j}^2\si{b}\fn{\frac{\hbs_j}{\tau_{b,i}\widehat\sigma}}
-  \left[
-    \left(\frac{\hbs_j}{\tau_{b,j}\widehat\sigma}\right)^2 - \s[\kappa]_b
-  \right] = 0\;,
-\end{equation}
-with $\tau_{b,i}$ such that
-\begin{equation*}
-  %\label{eq:tau_bi}
-  \ERW{\si{b}\fn{\frac{\hbs_i}{\tau_{b,i}\widehat\sigma}}
-    \left[\left(\frac{\hbs_i}{\tau_{b,i}\widehat\sigma}\right)^2 -
-    \s[\kappa]_b\right]} = 0\;,
-\end{equation*}
-and normalizing constant
-\begin{equation*}
-  \s[\kappa]_b = {\ERWi{0}{\si{b}\fn{\bs}\bsQ}}\Big/
-  {\ERWi{0}{\si{b}\fn{\bs}}}\;.
-\end{equation*}
-
-\subsubsection{Non-diagonal Case}
-For non-diagonal $\Ubth$ we have to take care of the block structure. The
-normalizing constant $\tau_{b,i}^2$ has to be replaced by a matrix $\Tbk$
-which is defined for each block $k$. Analogue to the estimator for the
-covariance matrix and location problem, we have to use two different weight
-functions, one for the size of the matrix $\w{\tau}$ and another one for
-the shape $\w{\eta}$. For details, we refer to \citet{stahel1987estimation}
-and \citet[Chapter~5]{HamFRRS86}. As is done in the cited references, we
-introduce a third weight function $\w{\delta}$ to simplify notation. For
-block types with dimension $s > 1$, let
-\begin{equation*}
-  \w{\delta}\fn{d} = \left(d\w{\eta}\fn{d} -
-    \left(d-s\kbtau\right)\w{\tau}\fn{d-s\kbtau}\right)\Big/s\;,
-\end{equation*}
-where $\kbtau$ is defined such that
-\begin{equation*}
-  \ERW{\left(u - s\kbtau\right)\w{\tau}\fn{u - s\kbtau}} = 0 \quad
-  \mbox{for }u\sim\chi^2_s.
-\end{equation*}
-
-\begin{remark}
-  The optimal $B$-robust estimator derived in \citet{stahel1987estimation}
-  is given by $\w{\tau}\fn{d} = \min\fn{1/b_\tau, 1/d}$ and $\w{\eta}\fn{d}
-  = \min{\fn{1/b_\eta, 1/d}}$. Other weight functions may be chosen, as
-  long as $\psi\fn{d} = dw\fn{d}$ is a $\psi$-function. For $\w{\tau}$ and
-  $\w{\eta}$ given above, this would be the Huber $\psi$-function. For low
-  dimensions $s$ one may choose $\w{\tau} = \w{\eta}$. In higher
-  dimensions, the efficiency loss for the estimated size is negligible.
-  Hence one may choose a smaller tuning parameter for $\w{\eta}$. For
-  $s=2$, and Huber or smoothed Huber $\psi$-functions (see
-  Section~\ref{sec:tc}), one may use the squared tuning parameter of $\s_e$
-  for $\w{\tau}$ to get approximately the same efficiency for $\hv\theta$
-  as for $\widehat\sigma$.  Tables of tuning parameters for higher
-  dimensions for the Huber and the lqq $\psi$-functions can be found in
-  Section~\ref{sec:tc}.
-\end{remark}
-
-The robust estimating equation in the non-diagonal case can then be defined
-as follows. For $l = 1,\dots,r$,
-\begin{equation}
-  \label{eq:thetaDASNonDiag}
-  \begin{split}
-    \sum_{k=1}^K\bigg[
-    \w{\eta}\fn{d\fn{{\Tbk\invsq\hvbs_k}/{\widehat\sigma}}}
-    \hvbstr_k\Qlkhth\hvbs_k/{\widehat\sigma^2} \qquad\qquad\qquad\qquad \\
-    - \w{\delta}\fn{d\fn{{\Tbk\invsq\hvbs_k}/{\widehat\sigma}}}
-    \trace\fn{\Tbk\Qlkhth} \bigg] =
-    0\;,
-  \end{split}
-\end{equation}
-where $\Qlkhth$ is the $s\times s$ submatrix of $\Qlhth$ which acts on
-block $k$ and $\Tbk\invsq$ is the inverse of any square root of the
-$s\times s$ matrix $\Tbk$. As in the diagonal case, we define the matrix
-$\Tbk$ such that each summand has expectation zero. For $l = 1, \dots, r$,
-\begin{equation*}
-  \begin{split}
-    \ERWSymbol\bigg[\w{\eta}\fn{d\fn{{\Tbk\invsq\hvbs_k}/{\sigma}}}
-    \hvbstr_k\Qlkhth\hvbs_k/{\sigma^2} \qquad\qquad\qquad\qquad\quad \\
-    - \w{\delta}\fn{d\fn{{\Tbk\invsq\hvbs_k}/{\sigma}}}
-    \trace\fn{\Tbk\Qlkhth} \bigg] = 0\;.
-  \end{split}
-\end{equation*}
-\begin{remarks}
-  The symmetric matrix $\Tbk$ is fully defined for unstructured covariance
-  matrices only, where $r = s(s+1)/2$. For other covariance matrix
-  structures we can replace $\Tbk$ by the variance of the linear
-  approximation of $\vbs$.
-
-  Since in the classical case, the linear approximations for $\hvbs$ and
-  $\hves$ are exact, the estimating equation \eqref{eq:thetaDASNonDiag}
-  reduces to the REML estimating equations. A similar argument is valid for
-  the estimating equation for $\hat\sigma$ \eqref{eq:sigmaDAS}.
-\end{remarks}
-
-%% Initialize Sweave
-\SweaveOpts{prefix.string=figs/fig-ex, eps = FALSE, pdf = TRUE, strip.white=true, echo=FALSE}
-\SweaveOpts{width=6.66, height=4, include=FALSE}
-%\SweaveOpts{eval=FALSE}
-
-<<initialize>>=
-
-#####################################################
-#####################################################
-## set this to true to update fitted objects cache ##
-UPDATE_CACHE <- FALSE
-#####################################################
-#####################################################
-
-options(width=80,
-        str=strOptions(strict.width = "wrap", vec.len=3),
-        xtable.size="\\small")
-if (!file.exists("figs")) dir.create("figs")
-rlmerDoc <- system.file("doc", package="robustlmm")
-require(ggplot2)
-require(reshape2)
-source(file.path(rlmerDoc, "ggplot.theme.R"))
-require(xtable)
-require(robustlmm)
-require(robustbase)
-require(lme4)
-source(file.path(rlmerDoc, "plots.R"))
-st <- system.time
-## make the functions wgt.e and wgt.b accessible again...
-wgt.e <- robustlmm:::wgt.e
-wgt.b <- robustlmm:::wgt.b
-@
-
-\section{Penicillin Example}
-The dataset, shown in Figure~\ref{fig:penicillinRaw}, was originally
-published by \citet{davies72penicillin}. They describe it as data coming
-from an investigation to
-\begin{quote}
-  assess the variability between samples of penicillin by the
-  \emph{B.~subtilis} method.  In this test method a bulk-inoculated
-  nutrient agar medium is poured into a Petri dish of approximately 90
-  mm.\ diameter, known as a plate.  When the medium has set, six small
-  hollow cylinders or pots (about 4 mm.\ in diameter) are cemented onto
-  the surface at equally spaced intervals.  A few drops of the
-  penicillin solutions to be compared are placed in the respective
-  cylinders, and the whole plate is placed in an incubator for a given
-  time.  Penicillin diffuses from the pots into the agar, and this
-  produces a clear circular zone of inhibition of growth of the
-  organisms, which can be readily measured.  The diameter of the zone
-  is related in a known way to the concentration of penicillin in the
-  solution.
-\end{quote}
-The datasets contains the measurements of $6$ samples and $24$ plates.
-
-\label{sec:penicillin}
-<<penicillin-setup>>=
-data(Penicillin)
-## setup datasets
-Penicillin <- within(Penicillin, {
-    plate <- reorder(plate, diameter)
-    attr(plate, "scores") <- NULL
-})
-<<penicillin-raw,fig=TRUE,height=3.2>>=
-print(ggplot(Penicillin, aes(plate, diameter, color = sample)) +
-      geom_point() + geom_line(aes(as.numeric(plate))) +
-      scale_colour_brewer("Sample", palette="Dark2") +
-      scale_y_continuous(breaks=c(18,20,22,24,26)) +
-      xlab("Plate") + ylab("Diameter growth inhibition zone (mm)") +
-      theme(legend.position = "bottom", legend.box = "horizontal"))
-@
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics{figs/fig-ex-penicillin-raw}
-  \caption{Diameters of growth inhibition zones of 6 samples applied to
-    each of 24 agar plates to assess penicillin concentration in the
-    \emph{B. subtilis} method. The lines join the observations of the same
-    sample. The plates have been reordered by their means.}
-  \label{fig:penicillinRaw}
-\end{figure}
-
-The raw data for the Penicillin example is shown in
-Figure~\ref{fig:penicillinRaw}.  In \Rp, the data is provided as part of
-the \Rp package ``lme4''. It is a data.frame with three columns:
-
-<<penicillin-str,echo=TRUE>>=
-str(Penicillin)
-@
-
-The column ``diameter'' is the response and the two factors ``plate'' and
-``sample'' indicate where the observation was measured. As
-\citet{bates2011lme4}, we fit a linear mixed effects model with an
-intercept and two random effects for the two factors.
-
-We fit the classical linear mixed effects model using the function ``lmer''
-of the \Rp package ``lme4''. The random effects are specified in
-brackets. The pipe symbol ``|'' is used to split the factors and
-covariables from the grouping variable. In this case, we only have a random
-intercept ``1'' that varies by group ``plate'' and ``sample'',
-respectively.
-
-<<penicillin-lmer,echo=TRUE>>=
-st(classical <- lmer(diameter ~ 1 + (1|plate) + (1|sample),
-                     Penicillin))
-@
-
-The ``st'' function is just a shortcut to ``system.time'', a function that
-measures the time required to evaluate the expression given as argument.
-
-The robust mixed effects model is fit using the function ``rlmer''. The
-call is quite similar to ``lmer'''s call. By default, it uses the smoothed Huber
-$\psi$-function with tuning parameter $k=1.345$ and $s=10$. Since we are
-mainly interested in the estimates of the variance components, we adjust
-the the tuning parameter for the $\s[\psi]_.$ functions to $k = 2.28$ and
-specify that squared weights are used. This makes sure that the variance
-components are estimated with an efficiency of about $95\%$. One can do this
-with one call to the function ``psi2propII''. Afterwards, we have a look
-at the summary of the fitted object
-
-<<penicillin-rlmer,echo=TRUE>>=
-st(robust <- rlmer(diameter ~ 1 + (1|plate) + (1|sample), Penicillin,
-                   rho.sigma.e = psi2propII(smoothPsi, k = 2.28),
-                   rho.sigma.b = psi2propII(smoothPsi, k = 2.28)))
-summary(robust)
-@
-
-The first half of the summary shows information about the model that was
-fitted and displays the parameter estimates including standard errors for
-the fixed effects. After that, a summary of the robustness weights is
-shown. In this case, we can see that some of the observations have been
-downweighted, but practically none of the random effects. Finally there is
-a table that gives details about which $\psi$-functions were used to fit
-the model.
-\begin{remark}
-  Note that the column ``Std.Dev.'' contains the estimated standard
-  deviances, i.e., just the square roots of the estimated variances. A
-  common mistake is to interpret them as the standard errors of the
-  variance component estimates. The same table is shown for the summary of
-  an lme4 object and to ease the transition from ``lmer'' to ``rlmer'', we use the
-  same convention here.
-\end{remark}
-
-Alternatively, one might be interested in a model that does not downweight
-the random effects of ``sample'' -- for example because there might be
-structural outliers and one is interested in the variability including
-these. To enable this, ``rlmer'' accepts list input for the arguments
-``rho.b'' and ``rho.sigma.b''. The list entries correspond to the
-$\psi$-functions used for the variance components as shown in the summary
-output. The call to fit a model that does uses the classical estimates for
-the ``sample'' variance components is as follows.
-
-<<penicillin2,echo=TRUE>>=
-st(robust2 <- rlmer(diameter ~ 1 + (1|plate) + (1|sample), Penicillin,
-                    rho.sigma.e = psi2propII(smoothPsi, k = 2.28),
-                    rho.b = list(smoothPsi, cPsi),
-                    rho.sigma.b = list(psi2propII(smoothPsi, k = 2.28),
-                                       cPsi)))
-<<penicillin-cmp,results=tex>>=
-print(xtable(compare(classical, robust, robust2, show.rho.functions=FALSE),
-             caption="Comparison table of the fitted models for the Penicillin example.",
-             label="tab:cmpPenicillin"))
-<<penicillin-ta,fig=TRUE,width=2.5,height=2.5>>=
-plots <- plot(robust)
-lower <- floor(min(getME(robust, "w_e"), getME(robust, "w_b_vector"))*100)/100
-plots[[1]] + scale_colour_gradient(limits=c(lower,1)) +
-    theme(legend.position = "none")
-<<penicillin-qq-resid,fig=TRUE,width=2.5,height=2.5>>=
-plots[[2]] + scale_colour_gradient(limits=c(lower,1)) +
-    theme(legend.position = "none")
-<<penicillin-qq-ranef,fig=TRUE,height=3.3>>=
-plots[[3]] +
-    scale_colour_gradient("robustness weights", limits=c(lower,1)) +
-    theme(legend.position = "bottom", legend.box = "horizontal")
-@
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=0.45\textwidth]{figs/fig-ex-penicillin-ta}
-  \includegraphics[width=0.45\textwidth]{figs/fig-ex-penicillin-qq-resid}
-  \includegraphics[width=0.9\textwidth]{figs/fig-ex-penicillin-qq-ranef}
-  \caption{Residual analysis plots for the ``robust'' object of the
-    Penicillin example.}
-  \label{fig:penicillinResidualAnalysis}
-\end{figure}
-
-<<penicillin-robustness-weights,fig=TRUE,height=3.2>>=
-tmp <- cbind(Penicillin, wgt.e = getME(robust, "w_e"))
-print(ggplot(tmp, aes(plate, diameter, color = sample)) +
-      geom_point(aes(size=1/wgt.e)) + geom_line(aes(as.numeric(plate))) +
-      scale_colour_brewer("Sample", palette="Dark2") +
-      scale_size_continuous(expression(w[e]),breaks=c(1,1.5,2,2.5),labels=c(1,0.66,0.5,0.33)) +
-      scale_y_continuous(breaks=c(18,20,22,24,26)) +
-      xlab("Plate") + ylab("Diameter growth inhibition zone (mm)") +
-      theme(legend.position = "bottom", legend.box = "horizontal"))
-@
-
-\begin{figure}[htb]
-  \centering
-  \includegraphics{figs/fig-ex-penicillin-robustness-weights}
-  \caption{Diameters of growth inhibition zones of 6 samples applied to
-    each of 24 agar plates to assess penicillin concentration in the
-    \emph{B. subtilis} method. The lines join the observations of the same
-    sample. The plates have been reordered by their means. The sizes of the
-    data points show the robustness weights.}
-  \label{fig:penicillinRobustnessWeights}
-\end{figure}
-
-The results of the three fits are summarized in
-Table~\ref{tab:cmpPenicillin}. The differences are minimal. Interestingly,
-the estimated variance for ``sample'' is a little smaller for ``robust2''
-than for ``robust''. The common residual analysis plots, Tukey-Anscombe
-and qq-normal, are shown in Figure~\ref{fig:penicillinResidualAnalysis} for
-the ``robust'' object. The points that got a lower robustness weight are
-indicated by a darker color. The rest of the observations seem to follow
-the central model quite nicely. In Figure~\ref{fig:penicillinRobustnessWeights}
-we again show a plot of the data, this time highlighting the observations
-that got a low robustness weight.
-
-\section{Sleepstudy Example}
-\label{sec:sleepstudy}
-<<sleepstudy-setup>>=
-source(file.path(rlmerDoc, "sleepstudy.R"))
-@
-
-This dataset is a subset of data gathered by \citet{belenky03sleepstudy}
-for a study of the effects of sleep deprivation time. The $18$ subjects
-were chosen from a population of long distance drivers that were allowed to
-sleep for only three hours each night. Each subject's reaction time was
-measured several times on each day of the trial. The measurements were made
-over a course of $10$ days. The data are shown in
-Figure~\ref{fig:sleepstudyRaw}.
-
-<<sleepstudy-raw,fig=TRUE,height=8>>=
-print(ggplot(sleepstudy, aes(Days, Reaction)) +
-      stat_smooth(method=function(formula, ..., weights)
-                  lmrob(formula, ..., setting="KS2011"),
-                  se=FALSE) +
-      ## stat_smooth(method="loess", span=1.5, se=FALSE) +
-      geom_point() +
-      scale_x_continuous(breaks=c(0,2,4,6,8)) +
-      facet_wrap(~ Subject, nrow=3) +
-      xlab("Days of sleep deprivation") +
-      ylab("Average reaction time (ms)"))
-@
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics{figs/fig-ex-sleepstudy-raw}
-  \caption{The average reaction time of subjects versus days of sleep
-    deprivation. Each subject is shown in a separate facet. The lines show
-    the robust linear regression fit to the subject's data. The subjects
-    have been ordered by increasing intercept. The robust fits were
-    computed using the method \emph{lmrob} of the \Rp package
-    \emph{robustbase} \citep{robustbase} using \emph{setting=''KS2011''}.}
-  \label{fig:sleepstudyRaw}
-\end{figure}
-
-The data.frame consists of three columns:
-
-<<sleepstudy-str, echo=TRUE>>=
-str(sleepstudy)
-@
-
-As in \citet{bates2011lme4}, we will fit a random intercept and slope
-model. This is an extension of a linear regression model with \T{Reaction}
-as response and \T{Days} as predictor. In this model, the coefficients for
-each subject are split into a population average (fixed) and a subject
-specific (random) part.
-
-The calls to ``lmer'' and ``rlmer'' are quite similar. This time, we omit
-the optional ``1'' for the intercept in both the fixed and the random
-part. The random effect specification \T{(Days|Subject)} is interpreted as
-\T{(1+Days|Subject)}. Specified in this way, the fitted model also
-includes a correlation term. To get uncorrelated random effects, one would
-have to use two terms, namely \T{(1|Subject) + (0+Days|Subject)}. The \T{0}
-tells the method not to include an intercept term. Since the random effects
-now have a non-diagonal covariance matrix $\Ubth$, we have to use another
-tuning constant for ``rho.sigma.b''. It corresponds roughly to the square
-of the one used in the diagonal case.
-
-<<sleepstudy,echo=TRUE, eval=FALSE>>=
-st(classical <- lmer(Reaction ~ Days + (Days|Subject), sleepstudy))
-<<sleepstudy3,echo=TRUE, eval=FALSE>>=
-st(robust <-
-   rlmer(Reaction ~ Days + (Days|Subject), sleepstudy,
-         rho.sigma.e = psi2propII(smoothPsi, k = 2.28),
-         rho.sigma.b = chgDefaults(smoothPsi, k = 5.11, s=10)))
-summary(robust)
-@ 
-
-The model takes some time to be fitted and the above chunk is therefore not
-evaluated by default. In order to reduce straining CRAN's computing
-facilities and rules, we stop with the example here. For the full example,
-pease go back to version 1.6 of the package.
-
-\clearpage
-\section{$\psi$-functions and Tables of Tuning Constants}
-\label{sec:tc}
-The \emph{smoothed Huber $\psi$-function} is defined as
-\begin{equation}
-  \psi(x, k, s) = \left\{
-    \begin{array}{ll}
-      x & \abs{x} \leq c \\
-      \sign(x)\left(k - \frac{1}{(\abs{x}-d)^{s}}\right) &
-      \mbox{otherwise}
-    \end{array}
-  \right.\;,
-\end{equation}
-where $c = k - s^{\frac{-s}{s+1}}$ and $d = c - s^{\frac{1}{s+1}}$. We have
-always used $s = 10$ for our simulations. With this value, the asymptotic
-properties of the regular Huber function and the smoothed Huber function
-are almost identical. We can therefore safely use the same tuning parameter
-$k$ for both $\psi$-functions. A comparison of the two $\psi$-functions is
-shown in Figure~\ref{fig:smoothedHuber}. Useful tables of tuning constants
-for this and the lqq $\psi$-function are given in Tables
-\ref{tab:tuningParameters} to \ref{tab:effLqq}.
-
-<<smoothedHuber,fig=TRUE>>=
-xs <- seq.int(0, 3, length.out=100)
-data <- data.frame(x = xs,
-                   Huber = huberPsi@psi(xs),
-                   `Smoothed` = smoothPsi$psi(xs))
-print(ggplot(melt(data, 1),
-             aes(x, value, color=variable)) + geom_line() +
-      scale_colour_hue(expression(paste(psi, "-function"))) +
-      ylab(expression(psi(x))) +
-      theme(legend.position = "bottom", legend.box = "horizontal"))
-
-@
-
-\vspace{5ex}
-
-\begin{figure}[htbp!]
-  \centering
-  \includegraphics{figs/fig-ex-smoothedHuber}
-  \caption{Comparison of the Huber and the smoothed Huber $\psi$-function
-    for $k = 1.345$ and $s = 10$.}
-  \label{fig:smoothedHuber}
-\end{figure}
-
-%% functions required to compute efficiencies
-<<efficiency-table, eval=FALSE>>=
-require(robustlmm)
-
-## location
-avarBeta <- function(psi) psi$Epsi2()/psi$EDpsi()^2
-effBeta <- function(psi) 1 / avarBeta(psi)
-findEffBeta <- function(psi, eff) {
-    tDefs <- psi$tDefs()
-    if (length(tDefs) == 0) return(NULL)
-    lavar <- function(c) {
-        tDefs[1] <- c
-        lpsi <- do.call(chgDefaults, c(list(psi), tDefs))
-        effBeta(lpsi) - eff
-    }
-    ret <- try(uniroot(lavar, tDefs[1] * c(0.25, 5))$root)
-    ## fail gracefully
-    if (is(ret, "try-error")) NA else ret
-}
-
-## scale
-E <- function(expr, ...) {
-    sexpr <- substitute(expr)
-    args <- list(...)
-    if (is.name(sexpr)) {
-        fcall <- paste(sexpr, "(x)")
-        expr <- parse(text = fcall)
-    }
-    else {
-        if (!(is.call(sexpr) && match("x", all.vars(sexpr), nomatch = 0L)))
-            stop("'expr' must be a function or an expression containing 'x'")
-        expr <- sexpr
-    }
-    ifun <- function(x)
-        eval(expr, envir = c(list(x=x), args), enclos=parent.frame())*dnorm(x)
-    integrate(ifun, -Inf, Inf)$value
-}
-
-## kappa = E[w(x)x^2] / E[w(x)]
-kappa <- function(k) E(w(x, k)*x^2, k=k) / E(w(x, k), k=k)
-## Psi(x,sigma,k) = w(x/sigma, k)*((x/sigma)^2 - kappa(k))
-Psi <- function(x, sigma, k) w(x/sigma,k)*((x/sigma)^2 - kappa(k))
-## Dpsi(x,sigma,k) = d/dsigma Psi(x,sigma,k)
-DPsi <- function(x, sigma, k) {
-    xs <- x/sigma
-    -1/sigma*(Dw(xs,k)*((xs)^3 - kappa(k)*(xs)) + 2*w(xs,k)*xs^2)
-}
-## A = E[Psi(x,1,k)^2]
-A <- function(k) E(Psi(x,1,k)^2,k=k)
-## B = E[d/dsigma Psi
-B <- function(k) E(DPsi(x,1,k), k=k)
-## effSigma = B / A^2 / 2
-effSigma <- Vectorize(function(k) B(k)^2 / A(k) / 2)
-## find eff:
-findEffSigma <- function(eff, lower=0.4, upper=6) {
-    lfun <- function(k) effSigma(k) - eff
-    uniroot(lfun, lower=lower, upper=upper)$root
-}
-
-## compute tuning constants to give the desired efficiency
-require(xtable)
-effs <- c(0.80, 0.85, 0.90, 0.95)
-tbl <- matrix("", nrow=length(effs), ncol=4)
-tbl[,1] <- sprintf("%.2f", effs)
-colnames(tbl) <- c("efficiency",
-                   "$k$ for $\\hat\\mu$",
-                   "$k$ for $\\hat\\sigma_\\text{\\eqref{eq:sigmaDAS}}$",
-                   "$k$ for $\\hat\\sigma_\\text{\\eqref{eq:sigmaDAS}}$, Prop. II")
-## location and wls case
-## w and Dw for wls case
-w <- huberPsi@wgt
-Dw <- huberPsi@Dwgt
-for (i in seq_along(effs)) {
-    leff <- effs[i]
-    tbl[i,2] <- round(findEffBeta(huberPsi, leff), 2)
-    tbl[i,3] <- round(findEffSigma(leff), 2)
-}
-## Prop II case
-huberProp2 <- psi2propII(huberPsi)
-w <- huberProp2@wgt
-Dw <- huberProp2@Dwgt
-for (i in seq_along(effs)) {
-    leff <- effs[i]
-    tbl[i,4] <- round(findEffSigma(leff), 2)
-}
-
-## print results
-print(xtable(tbl, align="lcccc"),
-      file="tuning-constants-table.tex",include.rownames=FALSE,
-      floating=FALSE,sanitize.text.function=function(x){x})
-
-<<efficiency-tables, eval=FALSE>>=
-## dist functions
-dist <- function(b, kappa=kappa) {
-    if (!is.matrix(b)) return(b*b) ## assume s==1
-    s <- ncol(b)
-    if (s == 1) return(drop(b*b))
-    ## else: just square and sum
-    rowSums(b*b) - kappa*s
-}
-dist2 <- function(sb2, s=1, kappa=kappa) {
-    if (s==1) return(sb2)
-    return(sb2 - kappa*s)
-}
-kappa.nondiag <- function(wgt, s) {
-    if (s == 1) {
-        tfun <- function(v) wgt(dist2(v))*v*dchisq(v,s)
-        tfun2 <- function(v) wgt(dist2(v))*dchisq(v,s)
-        integrate(tfun, 0, Inf)$value / integrate(tfun2, 0, Inf)$value
-    } else {
-        tfun <- function(v, kappa) (v-s*kappa)*wgt(v - s*kappa)*dchisq(v, s)
-        tfun2 <- function(kappa) integrate(tfun, 0, Inf, kappa=kappa)$value
-        uniroot(tfun2, c(0, 1))$root
-    }
-}
-## asymptotic efficiency functions
-dEta <- Vectorize(function(wgt, s) {
-    ## kappa <- kappa.nondiag(wgt, s)
-    DEtaQ <- 1/(1 + 2/s) * integrate(function(v) (v/s)^2*wgt(v)^2*dchisq(v,s), 0, Inf)$value
-    DEtaM <- 1/(1 + 2/s) * integrate(function(v) (v/s)^2*wgt(v)*dchisq(v,s), 0, Inf)$value
-    DEtaM^2 / DEtaQ
-}, "s")
-dTau <- Vectorize(function(wgt, s) {
-    kappa <- kappa.nondiag(wgt,s)
-    uTau <- function(v) dist2(v,s,kappa)*wgt(dist2(v,s,kappa))
-    DTauQ <- 1/(2*s) * integrate(function(v) uTau(v)^2*dchisq(v,s), 0, Inf)$value
-    DTauM <- 1/(2*s) * integrate(function(v) uTau(v)*(v-s)*dchisq(v,s), 0, Inf)$value
-    DTauM^2 / DTauQ
-}, "s")
-dMu <- Vectorize(function(wgt, s) {
-    DMuQ <- 1/s * integrate(function(v) v*wgt(sqrt(v))^2*dchisq(v,s), 0, Inf)$value
-    DMuM <- 1/s * integrate(function(v) v*wgt(sqrt(v))*dchisq(v,s), 0, Inf)$value
-    DMuM^2 / DMuQ
-}, "s")
-## function to find corresponding efficiency
-findCorrespEff.nondiag <- function(rho, s, effFun, eff=effBeta(rho), lower=0.1) {
-    cat("Eff for beta:", eff, "\n")
-    lfun <- function(k) {
-        lrho <- chgDefaults(rho, k = k)
-        effFun(lrho@wgt, s) - eff
-    }
-    uniroot(lfun, c(lower, 15))$root
-}
-## need a different function for lqq
-findCorrespEff.lqq <- function(s, effFun, eff, lower=1) {
-    if (s == 1) {
-        lfun <- function(k) {
-            lrho <- chgDefaults(lqqPsi, cc = c(1.5*k, k, 1.5))
-            asymptEff1(lrho@wgt, lrho@Dwgt) - eff
-        }
-    } else {
-        lfun <- function(k) {
-            lrho <- chgDefaults(lqqPsi, cc = c(1.5*k, k, 1.5))
-            effFun(lrho@wgt, s) - eff
-        }
-    }
-    k. <- uniroot(lfun, c(lower, 15))$root
-    c(1.5*k., k., 1.5)
-}
-
-## compute table for huber functions...
-ss <- c(2:7)
-tbl <- matrix("NA", nrow=4, ncol=length(ss))
-tbl[1,] <- as.character(ss)
-for (i in seq_along(ss)) {
-    s <- ss[i]
-    tbl[2,i] <- format(findCorrespEff.nondiag(huberPsi, s, dEta, 0.95), digits=3)
-    tbl[3,i] <- format(findCorrespEff.nondiag(huberPsi, s, dTau, 0.95), digits=3)
-    tbl[4,i] <- format(findCorrespEff.nondiag(huberPsi, s, dMu, 0.95), digits=3)
-}
-rownames(tbl) <- c("$s$", "$b_\\eta$", "$b_\\tau$", "$b_\\mu$")
-print(xtable(tbl,
-             caption="Tuning parameters for the optimal $B$-estimator to yield $95\\%$ efficiency, non-diagonal case. For the Huber $\\psi$-function.",
-             label="tab:effBOptimal"),
-      hline.after=c(0,1,4),
-      include.colnames=FALSE,
-      sanitize.text.function=identity,
-      file="efficiency-table-B-optimal.tex")
-
-## compute loc-scale table for lqq functions...
-effs <- c(0.80, 0.85, 0.90, 0.95)
-tbl <- matrix("", nrow=length(effs), ncol=3)
-tbl[,1] <- sprintf("%.2f", effs)
-f <- function(cc) sprintf("($%s$)", paste(format(cc[-3], digits=3),collapse="$,$"))
-for (i in seq_along(effs)) {
-    leff <- effs[i]
-    tbl[i,2] <- f(robustbase:::lmrob.lqq.findc(c(-0.5, 1.5, leff, NA)))
-    tbl[i,3] <- f(findCorrespEff.lqq(1, eff=leff, lower=0.5))
-}
-colnames(tbl) <- c("efficiency", "$cc$ for $\\hat\\mu$",
-                   "$cc$ for $\\hat\\sigma_\\text{\\eqref{eq:sigmaDAS}}$")
-print(xtable(tbl,
-             caption="Tuning parameters for lqq $\\psi$-function for the location and scale estimates such that they reach the given asymptotic efficiency. The third parameter is always taken to be $1.5$.",
-             label="tab:eqqLqqLocationScale"),
-      include.rownames=FALSE,
-      sanitize.text.function=identity,
-      file="efficiency-table-lqq-locationScale.tex")
-
-## compute non-diag table for lqq functions...
-ss <- c(2:6)
-tbl <- matrix("", nrow=4, ncol=length(ss))
-tbl[1,] <- as.character(ss)
-for (i in seq_along(ss)) {
-    s <- ss[i]
-    tbl[2,i] <- f(findCorrespEff.lqq(s, dEta, 0.95))
-    tbl[3,i] <- f(findCorrespEff.lqq(s, dTau, 0.95))
-    tbl[4,i] <- f(findCorrespEff.lqq(s, dMu, 0.95))
-}
-rownames(tbl) <- c("$s$", "$cc_\\eta$", "$cc_\\tau$", "$cc_\\mu$")
-print(xtable(tbl, digits=2,
-             caption="Tuning parameters for the lqq weight function to yield $95\\%$ efficiency, non-diagonal case. The third parameter is always taken to be $1.5$.",
-             label="tab:effLqq"),
-      hline.after=c(0,1,4),
-      include.colnames=FALSE,
-      sanitize.text.function=identity,
-      file="efficiency-table-lqq.tex")
-@
-
-\clearpage
-\begin{table}[htbp]
-  \centering
-  \input{tuning-constants-table}
-  \caption{Tuning parameters $k$ for scale estimates such that they reach the
-    same asymptotic efficiency as the location estimate. For the Huber
-    $\psi$-function.}
-  \label{tab:tuningParameters}
+\begin{table}
+\centering
+\begin{tabular}{llp{.25\textwidth}p{.4\textwidth}}
+	\hline
+\Rp package & Function & Approach & 
+		Details / Assumptions \\\hline
+	\pkg{nlme} & \code{lme} & classic & 
+		optimized for nested hierarchical structures;
+		allows special random effects covariance structures \\
+	\pkg{lme4} & \code{lmer} & classic & 
+		no assumptions on grouping structure;
+		correlated and uncorrelated random effects within levels \\
+	\pkg{lqmm} & \code{lqmm} & quantile-based & 
+		allows median-type estimates; one grouping level with or 
+		without correlation between random effects \\
+	\pkg{heavy} & \code{heavyLme} & t distributions &
+		one grouping level; correlated random effects \\
+	--- & \code{lmeRob} & reformulation
+		as multivariate problem, then MM-estimation &
+		balanced nested hierarchical structures; 
+		uncorrelated random effects within levels \\
+	\pkg{rlme} & \code{rlme} & rank based &
+		unbalanced nested hierarchical structures (2 or 3 levels);
+		random intercepts only; does not support balanced data \\
+	\pkg{robustlmm} & \code{rlmer} & 
+		huberization of likelihood and DAS-Scale estimation &
+		no assumptions on grouping structure;
+		correlated and uncorrelated random effects within levels
+		\\\hline
+\end{tabular}
+\caption{Overview of classic and robust estimation methods available in \Rpns. See also the CRAN Task View on robust statistical methods \citep{robustTaskView}.}
+\label{tab:functions}
 \end{table}
 
-\input{efficiency-table-B-optimal}
-\input{efficiency-table-lqq-locationScale}
-\input{efficiency-table-lqq}
+For robust estimation of linear mixed-effects models, there exists a variety of specialized implementations in \Rpns, all using different approaches to the robustness problem. Most of them are available on the Comprehensive R Archive Network (CRAN) as \Rp packages. Except the method presented in this paper, all other methods are applicable only for certain grouping structures, see Table~\ref{tab:functions} for an overview. The function \code{heavyLme} in the \pkg{heavy} package \citep{heavy} implements mixed-effects models using t distributions. However, it allows for a single grouping factor only, which limits the method to two-level data. As both, the residual errors and the random effects are modeled with a t distribution, the method can capture outliers on both the subject and the observational level. The degrees of freedom for the two t distributions are fixed to be the same. Hence, it is not possible to have a differing treatment of outliers on the two levels. Multiple random effects are fitted with a correlation parameter, uncorrelated random effects are not supported. The function \code{lmeRob} implements the method by \citet{copt2006high}. It is not available on CRAN but from the authors upon request. They reformulate the mixed-effects problem as multivariate problem and apply multivariate MM-estimation. This approach requires the grouping structure to be nested and the data to be balanced. Observations are down-weighted at the highest group level, so the high breakdown point of $50\%$ applies to the number of groups that can be contaminated, not to the number of observations. The implementation only supports uncorrelated random effects within levels. The function \code{rlme} in the \pkg{rlme} \Rp package implements nested hierarchical mixed-effects models using a rank-based approach \citep{rlme}. The function supports only simple random intercepts, and solutions might not be unique.
+
+This article is a tutorial for \pkg{robustlmm}, an implementation of a robust method to fit mixed-effects models for the statistical computing environment \Rp  \citep{R}. The \Rp package \pkg{robustlmm} is available on CRAN at \url{http://cran.r-project.org/package=robustlmm} under the GPL-v2 license. 
+
+In the next section we provide background on \pkg{robustlmm}'s underlying estimating equations and algorithms. In Section~\ref{implementation}, we describe how \pkg{robustlmm} is implemented. In Section~\ref{usage}, we work an example and demonstrate how to do a full statistical analysis. Pointers to further information are given in Section~\ref{furtherInformation}. Details, tables of tuning parameters and formulas are contained in the Appendix.
+
+\section{Background}
+
+\label{background}
+
+\subsection{Model equations and assumptions}
+
+We work with the general linear mixed-effects model in matrix form and, following \citet{bates2011lme4}, with spherical random effects. The spherical random effects are obtained from the regular random effects by a transformation such that they have a covariance matrix that equals a scaled identity matrix. This transformation enables variance components to be estimated as exactly zero. The model equations are:
+
+\begin{equation}
+\label{eq:mixedModelSpherical}
+\begin{split}
+	\vec y = \bld X\vec\beta + \bld Z\Ubth\vbs + \Ue\ves\;, \\
+	\vbs \sim \bld{\N}\fn{\vec 0, \sigma^2\bld I_q}\;, \quad
+	\ves \sim \bld{\N}\fn{\vec 0, \sigma^2\bld I_n}\;, \quad
+	\vbs \perp \ves\;,
+\end{split}
+\end{equation}
+
+where $\vec y$ is the response vector of length $n$,  $\vec\beta$ is the fixed effects vector of length $p$ with design matrix $\bld X$, and $\vbs$ is the spherical random effects vector of length $q$ with design matrix $\bld Z$. The relation between the regular and the spherical random effects is $\vec b = \Ubth\vbs$. The lower triangular matrix $\Ubth$ is parameterized by the vector $\vec\theta$. The covariance matrix of the random effects is $\Vbth = \Ubth\Ubth\tr$. The matrix $\Ue$ is assumed to be a diagonal matrix of known weights.
+
+As mentioned in the introduction, we do not assume anything about the structure of the data (i.e., the design matrices $\bld X$ and $\bld Z$), though we do make the usual assumption which the model parameters are estimable. We do assume the covariance matrix of the random effects $\Vbth$ to be block-diagonal. This assumption excludes problems that cannot be written in block-diagonal form, like geostatistical problems with spatial dependence encoded in $\Vbth$ (see the \pkg{georob} package \citep{georobPkg} for robust methods to deal with this special case). 
+
+To reduce the complexity of the algorithms, our implementation makes additional assumptions about the covariance matrices of the random effects and the residual errors that are not required by the theory \emph{per se}. Blocks of $\Vbth$ of size $2\times2$ and larger are assumed to be unstructured, i.e., unconstrained covariance matrices (other structures such as \emph{compound symmetry} are not supported). In the remainder of the text, we will call blocks of size $1\times1$ \emph{diagonal} and larger blocks \emph{unstructured}. Finally, the residual error covariance matrix is assumed to be a diagonal matrix with only one unknown scaling parameter.
+
+\subsection{Robustness approach}
+
+Robustness is achieved by robustification of the scoring equations. The scoring equations are the derivatives of the log-likelihood. To fit the model \eqref{eq:mixedModelSpherical}, either the log-likelihood can be maximized, or the roots of the scoring equations can be found.  Robust estimating equations are derived from the scoring equations by replacing the residuals and predicted spherical random effects with bounded functions. These bounded functions ensure that a single term (error or random effect) only has bounded influence on the estimating equations. To get robust and efficient estimating equations of $\sigma$ and $\vec\theta$, we apply the Design Adaptive Scale approach by \citet{ks2011}. The robust estimating equations are provided in Appendix~\ref{sec:eeq}. A detailed derivation and evaluation of the robust method is given in \citet{koller2013diss} and \citet{koller2014roblmm}.
+
+The robustified estimating equations no longer correspond to any likelihood or pseudo-likelihood.  Thus, information criteria like AIC and tests based on the log-likelihood statistic are unavailable for the robust method we present here.
+
+\subsection{Weighting functions, robustness weights and tuning}
+
+\label{rhoFunctions}
+
+Tuning (adjusting robustness properties of the resulting estimates) is done by adjusting parameters that control the form of the bounded functions in the robust estimating equations. In M-estimation terminology, these bounded functions are called \emph{$\psi$-functions}. They are the derivatives of  a \emph{$\rho$-function} (see \citet{MarRMY06} for exact definitions). The Huber function, a function that is quadratic around zero and linear for values outside $\pm k$, is a $\rho$-function (the corresponding $\psi$-function is shown in Figure~\ref{fig:smoothedHuber}).  The parameter $k$ is called the \emph{tuning parameter}.  Larger values yield more efficient, but less robust estimates (for $k = \infty$ one recovers the REML-estimates), whereas smaller values yield more robust but less efficient estimates.  A popular choice is to fix the asymptotic efficiency at $95\%$ of the classic estimates ($k = 1.345$ for the Huber function).
+
+Replacing terms by bounded functions thereof down-weights terms with a large absolute value. In the robustness literature, these weights are called \emph{robustness weights}. Observations or random effects with low robustness weights are classified as outliers by the robust method.  For a given $\psi$-function, the robustness weights are defined as
+
+\begin{equation}
+\label{eq:robWeights}
+w_.(v) = \left\{ \begin{array}{ll}
+	\psi_.\fn{v}/x & \text{if } x\neq 0 \;, \\
+	1 & \text{if } x = 0\;.
+\end{array} \right.
+\end{equation}
+
+where we replace the $.$ in $w_.$ and $\psi_.$ by $e$ or $b$ to specify the terms to which the functions are applied ($e$ for errors/residuals; $b$ for random effects). To gain robustness for all estimates, estimating equations for covariance parameters have to be treated differently from fixed and random effects, although the weighting functions for similar terms are related. We therefore distinguish the weighting functions used for estimating $\sigma$ and $\vec\theta$  with a superscript $^{(\sigma)}$ in equations. (In \pkg{robustlmm}, the functions are objects of class \code{psi\_func}. The arguments are called \code{rho.e}, \code{rho.b}, \code{rho.sigma.e} and \code{rho.sigma.b}.)
+
+The robustness weights defined in \eqref{eq:robWeights} yield robust estimates of the fixed effects and predicted values for the random effects for all $\rho$-functions with a bounded derivative, and also for convex $\rho$-functions like the Huber function. For estimates of scaling factors ($\sigma$ and $\vec\theta$ for diagonal-only blocks of $\Vbth$), the requirements to get robust estimates are more strict. These are not robust when convex $\rho$-functions are used. To get robust estimates for scaling factors, we need to use $\rho$-functions so that $\si{.}\fns{v}v^2$ is bounded for $v\to\pm\infty$. When convex $\rho$-functions are used to estimate the fixed and random effects, a natural choice for a $\rho$-function to estimate the scaling factors is the one that corresponds to the squared robustness weights, i.e.,
+
+\begin{equation}
+\label{eq:sqRobWeights}
+\si{.}\fns{v} = w_.\fns{v}^2 \;.
+\end{equation}
+
+Note the similarity to Huber's Proposal 2. (The function \code{psi2propII} can be used to transform a $\rho$-function to the corresponding $\rho$-function that yields squared robustness weights.)
+
+Squared robustness weights are not required for block-diagonal parts of $\Vbth$. Instead of M-scale type estimating equations, the unstructured blocks require methods similar to multivariate M-estimators for estimating covariance matrices. Multivariate M-estimators, as introduced by \citet{stahel1987estimation}, use a derived set of $\psi$-functions that also yield bounded influence estimates for convex $\rho$-functions. (This derivation is handled internally in \pkg{robustlmm}.)
+
+The use of different $\rho$-functions in the estimating equations for $\sigma$ and $\vec\theta$ ensures the resulting estimates to be robust, but lowers the efficiency of the estimates $\widehat\sigma$ and $\hv\theta$. This might be acceptable for problems in which the scale parameter $\sigma$ is considered a nuisance parameter,  but in mixed-effects modeling one is usually interested in estimating the variance components and does not regard them as nuisance terms. If desired, the efficiency of the estimates of $\sigma$ and $\vec\theta$ can be increased by increasing the tuning parameters of $\si[\psi]{e}$ and $\si[\psi]{b}$. Tables of tuning parameters for popular $\psi$-functions are provided in the Appendix. 
+
+\subsection{Estimation algorithms}
+
+The models are fit with a nested iterative reweighting algorithm. If there are no initial estimates, then the classic estimates are used as initial estimates.  The outer loop is updating $\hv\theta$ until it converges. For each new value of $\hv\theta$, we update $\hv\beta$ and $\hvbs$ and then $\widehat\sigma$. This algorithm converges to a local solution of the estimating equations. For convex $\rho$-functions and squared robustness weights, the solution can be expected to be unique aside from pathological, easily discarded solutions. A detailed description of the algorithm is given in Appendix~\ref{sec:estimationAlgorithm}.
+
+\section{Implementation}
+
+\label{implementation}
+
+The \pkg{robustlmm} package is built upon the \pkg{lme4} package, more specifically the \code{lmer} function. The structure of the objects and the methods are implemented to be as similar as possible to the ones of \pkg{lme4} with robustness specific extensions where needed. The object returned by \code{rlmer} is of class \code{rlmerMod}. Even though this class is close to the corresponding class \code{lmerMod} returned by \code{lmer}, \code{rlmerMod} does not extend \code{lmerMod}.  This is for two reasons. First, methods for classic estimates are in general not applicable to robust estimates without changes. Second, class inheritance would require a lot of maintenance when the corresponding code in \pkg{lme4} is changed.  While computational methods of the \pkg{lme4} package are implemented in \proglang{C++}, the \pkg{robustlmm} package is implemented in pure R. 
+
+The main function of the package is \code{rlmer}, its name hinting at the fact that it is a robust version of the \code{lmer} function. Besides additional arguments to control the robustness of the fit, the usage of \code{rlmer} is identical to \code{lmer}. Most of the functions available for objects returned by \code{lmer} are also available for objects returned by \code{rlmer}, e.g., \code{predict} or \code{getME}. The \code{getME} function is a universal accessor function for quantities derived from the fitted object (see \code{help("getME")}). The function \code{anova} requires the log-likelihood statistic and is therefore unavailable. The simulation functions \code{simulate} and \code{bootMer} have not yet been implemented. The functions to create diagnostic plots, \code{dotplot}, \code{plot} and \code{qqmath} for objects returned by \code{ranef}, as well as \code{dotplot} and \code{plot} for objects returned by \code{coef}, are available and identical to the those from \pkg{lme4}. In addition to the mentioned plot methods, we have added a plot method \code{plot.rlmerMod} for objects returned by \code{rlmer} and \code{lmer}. It creates a Tukey-Anscombe plot, a QQ-plot of the residuals and the random effects as well as scatterplots of the random effects.
+
+\section{Usage}
+
+\label{usage}
+
+\subsection[The Penicillin data]{The \code{Penicillin} data}
+
+We illustrate the use of the \pkg{robustlmm} package on a dataset originally published by \citet{davies72penicillin} and later used by \citet{bates2011lme4}. \citet{davies72penicillin} describe it as data coming from an investigation to\ldots
+
+{\small\begin{quote}\ldots assess the variability between samples of penicillin by the \emph{B.~subtilis} method.  In this test method a bulk-inoculated nutrient agar medium is poured into a Petri dish of approximately 90 mm.\ diameter, known as a plate.  When the medium has set, six small hollow cylinders or pots (about 4 mm.\ in diameter) are cemented onto the surface at equally spaced intervals.  A few drops of the penicillin solutions to be compared are placed in the respective cylinders, and the whole plate is placed in an incubator for a given time. Penicillin diffuses from the pots into the agar, and this produces a clear circular zone of inhibition of growth of the organisms, which can be readily measured.  The diameter of the zone is related in a known way to the concentration of penicillin in the solution.\end{quote}}
+
+\noindent The description implies that it is a balanced two-way anova dataset with two types of random effects: \emph{sample} with six levels and \emph{plate} with 24 levels. The random effects are completely crossed. The dataset is distributed as the \code{Penicillin} dataset in \pkg{lme4}.
+
+To emphasize the effect of the robust method, we modified the dataset slightly (as we did in \citet{koller2014roblmm}). We scaled down the first plate's observation values, and we moved one observation in plate f down to the lowest original observation. The modified dataset is shown in Figure~\ref{fig:penicillinContaminated}.
+
+\begin{figure}[htbp!]
+\centering
+\includegraphics{Figures/fig-ex-penicillin-contaminated}
+\caption{Diameters of growth inhibition zones of 6 samples applied to each of 24 agar plates to assess penicillin concentration. The lines join the observations of the same sample. The plates have been reordered by their diameter values. The observations marked by $\times$ have been modified to introduce some contamination.}
+\label{fig:penicillinContaminated}
+\end{figure}
+
+\subsection{Fitting the model and assessing the model fit}
+
+We start by loading the \Rp package and the modified \code{Penicillin} dataset.
+
+<<init-hidden, echo=FALSE, results=hide>>=
+options(width = 60, str = strOptions(vec.len = 1.4), prompt = 'R> ', continue = '+  ')
+<<init>>=
+require("robustlmm")
+source(system.file("doc/Penicillin.R", package = "robustlmm"))
+<<plot-figure1, echo=FALSE, eval=FALSE>>=
+require(ggplot2)
+theme_set(theme_bw())
+print(ggplot(PenicillinC, aes(plate, diameter, color = sample)) +
+  geom_point(aes(shape = contaminated), size = 2.5) +
+  geom_line(aes(as.numeric(plate))) +
+  scale_colour_brewer("Sample", palette = "Dark2") +
+  scale_shape_manual('', values = c(4, 20)) +
+  scale_y_continuous(breaks = c(0, 5, 10, 15, 20, 25)) +
+  theme(legend.position = "bottom", legend.box = "horizontal") +
+  xlab("Plate") + ylab('Diameter growth\n inhibition zone (mm)'))
+@
+
+The contaminated dataset is now available in the data.frame \code{PenicillinC}. The dataset consists of four columns: the response \code{diameter}; two factors \code{plate} and \code{sample} that describe the origin of the observations and \code{contaminated}, which indicates whether or not an observation has been modified.
+
+<<strPC>>=
+str(PenicillinC)
+@
+
+We fit the model using the function \code{rlmer}. The name of the function suggests that it is a robust variant of a popular function to fit classic mixed-effects models in \Rpns: the function \code{lmer} of the \Rp package \pkg{lme4}. The specification of models is the same for both functions.  In a single formula, we specify the fixed and random terms of the model. Fixed terms are added in the usual \Rp formula notation, and random terms are specified in parentheses. Random effects are defined in conjunction with a grouping factor. The grouping factor is separated from the random effect by a pipe symbol ``\texttt{|}''. We now fit the classic and robust models:
+
+<<fitPC>>=
+fm  <-  lmer(diameter ~ (1|plate) + (1|sample), PenicillinC)
+rfm <- rlmer(diameter ~ (1|plate) + (1|sample), PenicillinC)
+@
+
+As usual, we get information about the fit using the \code{summary} function:
+
+<<summaryPC>>=
+summary(rfm)
+@
+
+The output is close to the output from \code{lmer}. The first part of the summary provides information about the model fit; the estimates of $\Vbth$ and $\sigma$; followed by the estimated fixed effects and derived statistics and (if applicable) the correlation of the fixed effects.  The second part gives information about the robustness weights and a list of the $\rho$-functions employed. 
+
+As we can read off the summary, the default $\rho$-function is the smoothed Huber $\rho$-function, which is a smoothed variant of the regular Huber function (the exact definition is given in the Appendix).  The functions for estimating $\sigma$ and $\vec\theta$ are suffixed by ``Proposal II'', indicating that squared robustness weights, with a high robustness but a low efficiency, are used by default (diagonal blocks only, for unstructured blocks the regular $\rho$-function is used by default).
+
+The summary also tells us that the lowest robustness weights for both the observations and the groups are about $0.2$. We can get a full named list of the robustness weights by using the calls \code{getME(rfm, "w\_e")} and \code{getME(rfm, "w\_b")} for the observations and the groups, respectively. 
+
+With the call \code{plot(rfm)}, we can create simple residual analysis plots including normal QQ-plots of the predicted random effects. The resulting plots are shown in Figure~\ref{fig:plotPC}. The darker color indicates observations with a low robustness weight $w_.$. From the plot as well as from the summary shown above, we can see that the observations that were changed have been detected by the method, i.e., they have received a low robustness weight. There are also other observations that were assigned a rather low robustness weight and we would do good to investigate them.
+
+\begin{figure}[htbp!]
+\centering
+\setkeys{Gin}{width=.375\textwidth}
+<<plotPC1, fig=TRUE, echo=FALSE, width=4, height=4>>=
+require(ggplot2)
+theme_set(theme_bw())
+print(plot(rfm, which = 1)[[1]] + scale_color_continuous(guide = "none"))
+<<plotPC2, fig=TRUE, echo=FALSE, width=4, height=4>>=
+print(plot(rfm, which = 2)[[1]] + scale_color_continuous(guide = "none"))
+@ 
+\setkeys{Gin}{width=0.75\textwidth}
+<<plotPC3, fig=TRUE, echo=FALSE, width=8, height=5>>=
+print(plot(rfm, which = 3)[[1]] + theme(legend.position = "bottom"))
+@
+\caption{Residual analysis plots for robust fit \code{rfm}. The coloring of the points gives information about the corresponding robustness weights.} 
+\label{fig:plotPC}
+\end{figure} 
+
+\subsection{Tuning the fit}
+
+As already mentioned in Section~\ref{rhoFunctions}, the estimates of $\sigma$ and $\vec\theta$ have a low efficiency if the same tuning parameters are used as for estimating the fixed and random effects. To get a higher efficiency, we have to increase the tuning parameter of $\si[\rho]{e}$ and $\si[\rho]{b}$. Tables of tuning parameters are provided in the Appendix. We can change the default tuning parameter of objects of class \code{psi_func} with the function \code{chgDefaults}. The smoothed Huber function is a convex $\rho$-function. Hence, we need to use squared robustness weights to get robust estimates of the residual error scale and the variance components (see Section~\ref{rhoFunctions}). We can convert any $\rho$-function to the corresponding one with squared robustness weights using the function \code{psi2propII}. The latter function also allows the tuning parameters to be changed simultaneously, so that a second call to \code{chgDefaults} can be saved. We use the \code{update} function to fit a model with a higher efficiency for the estimates of $\sigma$ and $\vec\theta$:
+
+<<updatePC1>>=
+rfm2 <- update(rfm, rho.sigma.e = psi2propII(smoothPsi, k = 2.28),
+  rho.sigma.b = psi2propII(smoothPsi, k = 2.28))
+@
+
+Note that the update function both uses the call information from the given object \code{rfm}, and, if applicable, also uses estimates from the object as initial values for the fitting procedure.
+
+To specify different $\rho$-functions for different random effects, the arguments \code{rho.b} and \code{rho.sigma.b} accept as input a list of $\rho$-functions. The order in the list of the random effects must be the same as the order listed in the output of \code{summary}. To fit only the element of $\vec\theta$ that corresponds to the ``sample'' random effect with higher efficiency, we use
+
+<<updatePC2>>=
+rsb <- list(psi2propII(smoothPsi), psi2propII(smoothPsi, k = 2.28))
+rfm3 <- update(rfm2, rho.sigma.b = rsb) 
+@
+
+Note the missing second argument \code{k} when generating the first element of the list \code{rsb}. In that case, the default tuning parameter $k = 1.345$ is used.
+
+To compare the estimates of the various fits we did so far, we can use the function \code{compare}. We set the argument \code{show.rho.functions} to \code{FALSE} to avoid a lengthy display of the $\rho$-functions here. To enhance the comparison, we also fit the model to the original, uncontaminated data with the classic, non-robust, method.
+
+<<setOptions1, echo=FALSE, results=hide>>=
+oldopts <- options(width = 90)
+<<comparePC>>=
+fmUncontam <- update(fm, data = Penicillin)
+compare(fmUncontam, fm, rfm, rfm2, rfm3, show.rho.functions = FALSE)
+<<setOptions2, echo=FALSE, results=hide>>=
+options(oldopts)
+@
+
+The resulting table gives the estimates and standard errors in parentheses. The \code{REML} row gives the restricted maximum likelihood statistic. As mentioned earlier, this statistic is unavailable for robust fits. The output of the \code{compare} function can also be passed to \code{xtable} from the \pkg{xtable} package \citep{xtable} to create \LaTeX{} or HTML-tables.
+
+\subsubsection{How to choose tuning parameters}
+
+When choosing tuning parameters for \code{rlmer}, one has to balance robustness and efficiency. In the examples discussed above, this means that by setting the tuning parameters too high, the estimates might break down and the resulting estimates are misleading. On the other hand, it is not good practice to set the tuning parameters very low as this will produce inefficient, i.e., imprecise, estimates. An approach as outlined above, fitting the model with low as well as with high efficiency, is better. In general, parameters that are not considered nuisance parameters should be estimated with high efficiency if possible.
+
+When comparing fits with low to fits with high efficiency and robust to classic fits, one should first compare the parameter estimates (keeping in mind their precision or confidence intervals). If there are any relevant differences, then a study of the robustness weights should give insight as to which observations cause the difference. It is important not to just remove and, thus, ignore outliers. Whenever possible, the reason why an outlier is far from the bulk of observations should be determined. Outliers that are not merely due to recording errors usually carry information that can help to improve the model.
+
+Applying this method to the example shown above, we can see that the one contaminated plate clearly inflates the classic, non-robust estimates for the standard deviation of the ``plate'' random effect. The robust method can detect this contamination and reduce its effect, leading to an estimate that is only slightly inflated. The comparison of the robust fits with lower and higher efficiency shows that the contamination is not strong enough to cause a breakdown of the fit with higher efficiency but lower robustness. Also, the higher efficiency for the estimate of the standard deviation of the ``sample'' random effect leads to a better estimate that is closer to the classic fits. Finally, the robust estimates of the standard deviation of the random errors are closer to the original classic fit of the uncontaminated data.
+
+\subsection{Controlling the fitting procedure}
+
+To diagnose problems with the fitting procedure, use the argument \code{verbose}. The argument takes values from $1$ to $5$, and gives more verbose output for higher values.  If the method is not converging, increasing the maximum number of allowed iterations (argument \code{max.it}) or the tolerance (\code{rel.tol}) below which convergence is declared can help to achieve convergence.
+
+To specify starting values for the fitting procedure, use the \code{init} argument. The \code{init} argument expects a list with four items: \code{fixef}, the fixed effects, \code{u}, the spherical random effects, \code{sigma}, the error scale $\sigma$, and \code{theta}, the vector $\vec\theta$ parameterizing the random effects covariance matrix $\Vbth$.
+
+To shorten fitting times at the beginning of an analysis, use the argument \code{method = "DASvar"}. This method is faster as it uses simple direct approximations instead of  numerical integrals to compute the scale and covariance parameters using the Design Adaptive Scale approach (see \citet{ks2011} and Appendix~\ref{sec:eeq}). The \code{DASvar} method yields approximate results only.  For covariance matrices of the random effects $\Vbth$ with unstructured blocks of size three and larger, the method \code{DASvar} is the only method currently available.
+
+\section{Further information}
+
+\label{furtherInformation}
+
+Detailed information on the properties of the robust method and validation using simulation studies can be found in compact form in \citet{koller2014roblmm} and more detailed in \citet{koller2013diss}. \citet{bates2011lme4} is a general introduction to mixed modeling using the \Rp package \pkg{lme4} \citep{lme4}. Because \pkg{lme4} and \pkg{robustlmm} are similar, this is also a good starting point for using \pkg{robustlmm}.
+
+We avoided the topic of robust testing for linear mixed-effects models in this tutorial. The usual caveats of testing in mixed models apply for the methods presented here.  The wiki at \url{http://glmm.wikidot.com} is a good resource. Bootstrap presents itself as a simple (but data structure dependent) way to get $p$~values. One has to be careful, though, since the ordinary bootstrap quantiles are not robust \citep{ salibian2008fast, singh1998breakdown}.
+
+Development of \pkg{robustlmm} is hosted on GitHub at \url{http://www.github.com/kollerma/robustlmm}. Any issues with the package can also be reported there. 
+
+\section*{Acknowledgments}
+
+The author would like to thank Kali Tal for providing editorial help with the manuscript. The author would also like to thank two anonymous reviewers for their helpful comments and suggestions on how to improve the paper. Finally, the author would like to thank Niels Hagenbuch for his comments and proof-reading.
 
 \clearpage
-\addcontentsline{toc}{chapter}{Bibliography}
-\bibliographystyle{apalike}
 \bibliography{rlmer}
 
+\clearpage
+\appendix\section{The smoothed Huber function and tables of tuning constants}\label{sec:tc}
+
+The \emph{smoothed Huber $\psi$-function} is defined as
+
+\begin{equation}
+\psi(x, k, s) = \left\{
+	\begin{array}{ll}
+		x & \abs{x} \leq c \\
+		\sign(x)\left(k - \frac{1}{(\abs{x}-d)^{s}}\right) &
+		\mbox{otherwise}
+	\end{array}
+\right.\;,
+\end{equation}
+
+where $c = k - s^{\frac{-s}{s+1}}$ and $d = c - s^{\frac{1}{s+1}}$. We recommend using a value of $s = 10$. The asymptotic properties of the regular Huber function and the smoothed Huber function are almost identical when this value is used. We can therefore safely use the same tuning parameter $k$ for both $\psi$-functions. The two $\psi$-functions are compared in Figure~\ref{fig:smoothedHuber}. Tuning constants for this and the lqq $\psi$-function \citep{ks2011} are shown in Tables~\ref{tab:tuningParameters} to \ref{tab:effLqq}.
+
+<<smoothedHuber,fig=TRUE,width=6.66,height=4,include=FALSE,echo=FALSE>>=
+require(reshape2)
+xs <- seq.int(0, 3, length.out = 100)
+data <- data.frame(x = xs, Huber = huberPsiRcpp$psi(xs),
+  "Smoothed" = smoothPsi$psi(xs))
+print(ggplot(melt(data, 1), aes(x, value, color = variable, 
+  linetype = variable)) + geom_line() +
+  scale_colour_hue(expression(paste(psi, "-function"))) +
+  scale_linetype_discrete(expression(paste(psi, "-function"))) +
+  ylab(expression(psi(x))) +
+  theme(legend.position = "bottom", legend.box = "horizontal"))
+@
+
+
+
+\begin{figure}[htbp!]
+\centering
+\includegraphics{text-smoothedHuber}
+\caption{Comparison of the Huber and the smoothed Huber $\psi$-function
+  for $k = 1.345$ and $s = 10$.}
+\label{fig:smoothedHuber}
+\end{figure}
+
+
+
+\begin{table}[htbp]
+\centering
+\input{tuning-constants-table}
+\caption{Tuning parameters $k$ for scale estimates such that they reach the
+  same asymptotic efficiency as the location estimate. For the Huber
+  $\psi$-function.}
+\label{tab:tuningParameters}
+\end{table}
+
+
+
+\input{efficiency-table-B-optimal}
+
+\input{efficiency-table-lqq-locationScale}
+
+\input{efficiency-table-lqq}
+
+\section{Robust estimating equations}
+
+\label{sec:eeq}
+
+This Appendix summarises the more extensive derivation of the robust estimating equations found in \citet{koller2013diss}.
+
+\subsection{Fixed and random effects}
+
+Let $k\fn{j}$ be a function that maps random effect $j$ to the corresponding block $k$, then the squared Mahalanobis distances of the estimated random effects are 
+
+\begin{equation*}
+\vec d = \left(d\fn{\vbs_{k\fn{j}}/\sigma}\right)_{j=1,\dots,q}\;,
+\quad \mbox{where} \quad
+d\fn{\vbs_k} = \vbstr_k\vbs_k\;.
+\end{equation*}
+
+We may then define the robustness weight for the $j$th random effect as $w_b\fns{d_j}$. We use standard (location and linear regression) robustness weights:
+
+\begin{equation*}
+w_b\fn{d} = \left\{
+	\begin{array}{cl}
+		{\psi_b\fn{\sqrt{d}}}/\sqrt{d} & \mbox{ if } d \neq 0\;, \\
+		\psi_b'\fn{0} & \mbox{ if } d = 0\;.
+	\end{array}
+\right.
+\end{equation*}
+
+It is convenient to represent the robustness weights as (diagonal) weighting matrix,
+
+\begin{equation*}
+\W\fn{\vec d} =
+\diag\fn{w_b\fn{d_{k\fn{j}}}}_{j=1,\dots,q}\;.
+\end{equation*}
+
+The robust estimating equations are then
+
+\begin{equation}
+\label{eq:robustEEq}
+\begin{split}
+	\bld X\tr\Ue\trinv \bld\psi_e\fn{{\tves}/{\sigma}}
+	= {} & 0\;, \\
+	\Ub\tr\bld Z\tr\Ue\trinv \bld\psi_e\fn{{\tves}/{\sigma}} -
+	\bld\Lambda_b \W\fn{\tv d}{\tvbs}/{\sigma}
+	= {} & 0\;,
+\end{split}
+\end{equation}
+
+where $\bld\Lambda_b = \diag\fn{\lambda_{e}/\lambda_{b,j}}_{j=1,\dots,q}$ is a diagonal matrix with elements depending on the block size $s_{k\fn{j}}$, $\lambda_e = \ERWi{0}{\psi'_e\fn{\es}}$ and $\lambda_{b,j} = \wtilde\lambda\fn{s_{k\fn{j}}}$,
+
+\begin{equation*}
+\wtilde\lambda\fn{s} = \ERWi{0}{\frac{\partial}{\partial \bs_1}
+	\left(
+		w_b\fn{\vbstr\vbs}\vbs_1
+\right)}\;, \quad \vbs \sim \bld{\N}\fn{\vec 0, \bld I_s}\;.
+\end{equation*}
+
+
+
+\subsection{Scale}
+
+We apply the Design Adaptive Scale approach following \citet{ks2011}. We get
+
+\begin{equation}
+\label{eq:sigmaDAS}
+\sum_{i=1}^n\tau_{e,i}^2\si{e}\fn{\frac{\hes_i}{\tau_{e,i}\widehat\sigma}}
+\left[
+	\left(\frac{\hes_i}{\tau_{e,i}\widehat\sigma}\right)^2 - \s[\kappa]_e
+\right] = 0\;,
+\end{equation}
+
+where the superscript $\s[\cdot]$ is used to distinguish the weighting functions used for the scale and covariance parameters from the ones used for the fixed effects. Just as in the linear regression case, we define $\tau_{e,i}$ as the value that zeroes the expectation of the $i$-th summand in \eqref{eq:sigmaDAS}. The expectation is
+
+\begin{equation}
+\label{eq:tau_ei}
+\ERW{\si{e}\fn{\frac{\hes_i}{\tau_{e,i}\widehat\sigma}}
+	\left(\frac{\hes_i}{\tau_{e,i}\widehat\sigma}\right)^2 -
+	\s[\kappa]_e \si{e}\fn{\frac{\hes_i}{\tau_{e,i}\widehat\sigma}}} = 0\;,
+\end{equation}
+
+where the distribution of the residuals is approximated using a linear expansion of $\tv\beta$ and $\tvbs$ around their true values \citep[Appendix~C]{koller2013diss}, and $\s[\kappa]_e$ is
+
+\begin{equation*}
+\s[\kappa]_e =
+{\ERWi{0}{\si{e}\fn{\varepsilon}\varepsilon^2}}\Big/
+{\ERWi{0}{\si{e}\fn{\varepsilon}}}\;.
+\end{equation*}
+
+The weighting functions used for the scale estimates are the squared robustness weights used to estimate the fixed and random effects, $\si{e}\fns{x} = (\si[\psi]{e}\fns{x}/x)^2$, $\si{e}\fns{0} = \si[\psi]{e}'\fns{0}$, for convex $\rho$-functions. For redescending $\rho$-functions, it is unnecessary to use the squared robustness weights. Using the same weights as for the fixed and random effects still gives robust estimates (assuming $\psi\fns{x}x$ is bounded). When the squared weights are used, a different set of tuning parameters must be used to estimate the scale and covariance parameters. Tables of tuning parameters can be found in Appendix~\ref{sec:tc}.
+
+\subsection{Covariance parameters}
+
+For the covariance parameters, we have to treat the diagonal and the block-diagonal case of $\Ub$ separately.
+
+
+
+\subsubsection{Diagonal case}
+
+In the case of diagonal $\Ubth$, estimating $\tv\theta$ is essentially a scale estimation problem on $\tvbs$. It can be robustified just like the estimating equation for $\hat\sigma$, see Equation~\ref{eq:sigmaDAS}. For a model with only one random effects term, the robust estimating equations are
+
+\begin{equation}
+\label{eq:thetaDAS}
+\sum_{j=1}^q\tau_{b,j}^2\si{b}\fn{\frac{\hbs_j}{\tau_{b,j}\widehat\sigma}}
+\left[
+	\left(\frac{\hbs_j}{\tau_{b,j}\widehat\sigma}\right)^2 - \s[\kappa]_b
+\right] = 0\;,
+\end{equation}
+
+with $\tau_{b,j}$ such that
+
+\begin{equation*}
+%\label{eq:tau_bi}
+\ERW{\si{b}\fn{\frac{\hbs_j}{\tau_{b,j}\widehat\sigma}}
+	\left[\left(\frac{\hbs_j}{\tau_{b,j}\widehat\sigma}\right)^2 -
+	\s[\kappa]_b\right]} = 0\;,
+\end{equation*}
+
+and normalizing constant
+
+\begin{equation*}
+\s[\kappa]_b = {\ERWi{0}{\si{b}\fn{\bs}\bsQ}}\Big/
+{\ERWi{0}{\si{b}\fn{\bs}}}\;.
+\end{equation*}
+
+Generalization to multiple random effects terms is straightforward. We get one such equation for each of the random effects terms. 
+
+\subsubsection{Block-diagonal case}
+
+For block-diagonal $\Ubth$ we have to take care of the block structure. The normalizing constant $\tau_{b,j}^2$ must be replaced by a matrix $\Tbk$ defined for each block $k$. Analogous to the estimator for the covariance matrix and location problem, we must use two different weight functions: one for the size of the matrix $\w{\tau}$ and another one for the shape $\w{\eta}$. For details, we refer to \citet{stahel1987estimation} and \citet[Chapter~5]{HamFRRS86}. As in the cited references, we introduce a third weight function $\w{\delta}$ to simplify notation. For block types with dimension $s > 1$, let
+
+\begin{equation*}
+\w{\delta}\fn{d} = \left(d\w{\eta}\fn{d} -
+	\left(d-s\kbtau\right)\w{\tau}\fn{d-s\kbtau}\right)\Big/s\;,
+\end{equation*}
+
+where $\kbtau$ is defined such that
+
+\begin{equation*}
+\ERW{\left(u - s\kbtau\right)\w{\tau}\fn{u - s\kbtau}} = 0 \quad
+\mbox{for }u\sim\chi^2_s.
+\end{equation*}
+
+
+
+\begin{remark}
+
+The optimal $B$-robust estimator derived in \citet{stahel1987estimation} is given by $\w{\tau}\fn{d} = \min\fn{1/b_\tau, 1/d}$ and $\w{\eta}\fn{d} = \min{\fn{1/b_\eta, 1/d}}$. Other weight functions may be chosen, as long as $\psi\fn{d} = dw\fn{d}$ is a $\psi$-function. For $\w{\tau}$ and $\w{\eta}$ given above, this would be the Huber $\psi$-function. For low dimensions $s$, one may choose $\w{\tau} = \w{\eta}$. In higher dimensions, the efficiency loss for the estimated size is negligible. Hence, a smaller tuning parameter may be chosen for $\w{\eta}$. For $s=2$ and Huber or smoothed Huber $\psi$-functions (see Appendix~\ref{sec:tc}), the squared tuning parameter of $\s_e$ for $\w{\tau}$may be used to get approximately the same efficiency for $\hv\theta$ as for $\widehat\sigma$.  Tables of tuning parameters for higher dimensions for the Huber and the lqq $\psi$-functions can be found in Appendix~\ref{sec:tc}.
+
+\end{remark}
+
+Before we can state the robust estimating equation for the block-diagonal case, we need one more definition. Let
+
+\begin{equation*}
+\Qlth = \Ubth\inv\frac{\partial\Ubth}{\partial\theta_l}\;.
+\end{equation*}
+
+The robust estimating equation in the block-diagonal case can then be defined as follows. For $l = 1,\dots,r$,
+
+\begin{equation}
+\label{eq:thetaDASNonDiag}
+\begin{split}
+	\sum_{k=1}^K\bigg[
+	\w{\eta}\fn{d\fn{{\Tbk\invsq\hvbs_k}/{\widehat\sigma}}}
+	\hvbstr_k\Qlkhth\hvbs_k/{\widehat\sigma^2} \qquad\qquad\qquad\qquad \\
+	- \w{\delta}\fn{d\fn{{\Tbk\invsq\hvbs_k}/{\widehat\sigma}}}
+	\trace\fn{\Tbk\Qlkhth} \bigg] =
+	0\;,
+\end{split}
+\end{equation}
+
+where $\Qlkhth$ is the $s\times s$ submatrix of $\Qlhth$ which acts on block $k$ and $\Tbk\invsq$ is the inverse of any square root of the $s\times s$ matrix $\Tbk$. As in the diagonal case, we define the matrix $\Tbk$ such that each summand has expectation zero. For $l = 1, \dots, r$,
+
+\begin{equation*}
+\begin{split}
+	\ERWSymbol\bigg[\w{\eta}\fn{d\fn{{\Tbk\invsq\hvbs_k}/{\sigma}}}
+	\hvbstr_k\Qlkhth\hvbs_k/{\sigma^2} \qquad\qquad\qquad\qquad\quad \\
+	- \w{\delta}\fn{d\fn{{\Tbk\invsq\hvbs_k}/{\sigma}}}
+	\trace\fn{\Tbk\Qlkhth} \bigg] = 0\;.
+\end{split}
+\end{equation*}
+
+\begin{remarks}
+
+The symmetric matrix $\Tbk$ is fully defined for unstructured covariance matrices only, where $r = s(s+1)/2$. For other covariance matrix structures we can replace $\Tbk$ by the variance of the linear approximation of $\vbs$.
+
+Since in the classic case, the linear approximations for $\hvbs$ and $\hves$ are exact, the estimating equation \eqref{eq:thetaDASNonDiag} reduces to the REML estimating equations. A similar argument is valid for the estimating equation \eqref{eq:sigmaDAS} for $\hat\sigma$.
+
+\end{remarks}
+
+\section{Estimation algorithm}\label{sec:estimationAlgorithm}
+
+The algorithm for finding the simultaneous roots of the estimating equations \eqref{eq:robustEEq}, \eqref{eq:sigmaDAS} and \eqref{eq:thetaDAS} (and/or \eqref{eq:thetaDASNonDiag}) can be split into four general steps. They are:
+
+\begin{enumerate}
+\item Compute initial estimates.
+\item For given $\tv\theta$, $\tilde\sigma$, find $\tv\beta$ and $\tvbs$ that solve \eqref{eq:robustEEq}.
+\item Keeping the intermediate solutions $\tv\beta$ and $\tvbs$ fixed, find $\tilde\sigma$ such that \eqref{eq:sigmaDAS} is fulfilled.
+\item Check the estimating equations for $\tv\theta$, \eqref{eq:thetaDAS} and/or \eqref{eq:thetaDASNonDiag}, for convergence. If they are not fulfilled, update $\tv\theta$ in some way and go back to step~2.
+\end{enumerate}
+
+The algorithms for the four steps can be chosen independently from each other. We discuss the four steps below.
+
+When this algorithm stops, it has found a simultaneous solution of all the estimating equations, except in the block-diagonal case where some, but not all, components corresponding to a block might lie on the border of the parameter space. For those parameters, the estimating equations won't be satisfied. To avoid incorrect solutions, it is crucial that the estimates for $\tv\beta$ and $\tvbs$ are updated for each new candidate of $\tv\theta$ and that the initial estimate for $\vec\theta$ is large enough. Otherwise, the algorithm might wrongly set all components of $\vec\theta$ corresponding to one block to zero or close to zero. 
+
+This is illustrated for a simple one-way anova in Figure~\ref{fig:multipleSolutions}. The expected sum of squares vanishes for $\tv\theta = \vec 0$ in the classic case. In the robust case, the expectation does not vanish, but there is a solution close to zero. This is an artifact of the linear approximation used to compute the expectation. As long as convex $\rho$-functions are used, the classic estimates are generally a good choice of initial estimates. Zero components of the initial $\tv\theta$ should be set to one at the start of the algorithm.
+
+<<convergence-setup, echo=FALSE, eval=FALSE>>=
+require(robustbase)
+require(reshape2)
+Psi <- smoothPsi
+c.sigma <- 2.38
+wExp <- 2
+<<convergence,fig=TRUE,echo=FALSE,width=6.66, height=4, eval=FALSE>>=
+rfm <- rlmer(Yield ~ (1 | Batch), Dyestuff, rho.e = Psi, rho.b = Psi,
+  rho.sigma.e = if (wExp == 2) psi2propII(Psi, k = c.sigma) else Psi,
+  rho.sigma.b = if (wExp == 2) psi2propII(Psi, k = c.sigma) else Psi)
+true <- robustlmm:::theta(rfm)
+kappa <- robustlmm:::calcKappaTau(rfm@rho.sigma.b[[1]])
+fun <- function(theta, rfm) {
+  robustlmm:::theta(rfm) <- theta
+  T <- diag(robustlmm:::len(rfm, "b")) - 
+    robustlmm:::rho.b(rfm)[[1]]@EDpsi() * (rfm@pp$L + t(rfm@pp$L)) +
+    robustlmm:::rho.e(rfm)@Epsi2() * crossprod(rfm@pp$Kt) +
+    robustlmm:::rho.b(rfm)[[1]]@Epsi2() * tcrossprod(rfm@pp$L)
+  c(theta, mean(getME(rfm, "u")^2)/getME(rfm, "sigma")^2, mean(diag(T))*kappa
+    ,mean(diag(robustlmm:::rho.b(rfm)[[1]]@EDpsi() * (rfm@pp$L + t	(rfm@pp$L))))
+    ,mean(diag(robustlmm:::rho.e(rfm)@Epsi2() * crossprod(rfm@pp$Kt)))
+    ,mean(diag(robustlmm:::rho.b(rfm)[[1]]@Epsi2() * tcrossprod(rfm@pp$L)))
+    ,mean(diag(rfm@pp$D_b))
+  )
+}
+thetas <- exp(seq(0, log(4), length.out = 100)) - 1
+ssq <- sapply(thetas, fun, rfm = rfm)
+print(head(t(ssq)))
+test.1 <- data.frame(t(ssq[1:3,]))
+colnames(test.1) <- c("theta", "realized", "expected")
+test.1$difference <- test.1$realized - test.1$expected
+## find wrong root
+spl <- splinefun(test.1$theta, test.1$difference)
+false <- uniroot(spl, c(0, with(test.1, theta[which.max(difference)])))$root
+## plot
+test.1 <- melt(test.1, "theta")
+print(ggplot(test.1, aes(theta, value, color = variable)) +
+  geom_line() + geom_vline(xintercept = c(true, false), linetype = 2) +      
+  scale_x_continuous(breaks = c(0:3, false, true), 
+    labels = c(0:3, expression(theta^"\u2020"), expression(hat(theta)))) +
+  xlab(expression(theta)) + geom_hline(yintercept = 0) +
+  theme(legend.position = "bottom", legend.box = "horizontal"))
+@
+
+
+\begin{figure}[htb]
+\centering
+\includegraphics{Figures/fig-convergence}
+\caption{Sum of Squares of the spherical random effects for a balanced one-way anova. The smoothed Huber function was used for both $\rho_e$ and $\rho_b$. The estimating equations \eqref{eq:thetaDAS} are solved at the points where the two curves cross. The solutions are highlighted by black dashed lines, $\hat\theta$ is the correct solution, $\theta^\dagger$ the wrong one.}
+\label{fig:multipleSolutions}
+\end{figure}
+
+\subsection{Step 1: Initial estimates}
+
+\label{initialEstimates}
+
+The methods described here work for convex $\rho$-functions as well as for redescender $\rho$-functions. If redescender $\rho$-functions are used, the algorithm as defined here converges to a local solution. It is up to the initial estimator to provide starting values that ensure the algorithm converges to the right local solution, whatever the right solution is. In case of MM-estimates for the fixed effects model, the initial S-estimate makes sure that the final estimate has the desired high breakdown point. The same would certainly also be desirable in case of mixed-effects models. However, to the best of our knowledge, there exists currently no such estimator. The S-estimators by \citet{copt2006high} and \citet{chervoneva2011constrained} do not seem suitable, since they are based on a different contamination model and are not as general as the method proposed here.
+
+If convex $\rho$-functions are used, this difficulty does not exist. Apart from the artificial solution $\tv\theta$ close to zero (see Figure~\ref{fig:multipleSolutions}) which is easily distinguishable from the true solution, we conjecture that the solutions are unique as they are for the Proposal II case in the location-scale problem \citep{koller2013diss}. We therefore consider it safe to use the classic solutions as initial estimates when convex $\rho$-functions are used.
+
+Redescender $\rho$-functions have the advantage that they can assign a weight of zero to some observations or random effects levels. This makes it possible that such observations have no influence on the estimates. When convex $\rho$-functions are used, an observation practically always has an influence on the estimates, since a weight of zero is only reached in the limit, when the residual or the random effect level approaches plus or minus infinity.  If one is interested in eliminating the influence of observations, then one might consider the following. First, compute the fit using a convex $\rho$-function. Then use the results as starting value for fitting using a redescender $\rho$-function in a second step. In the absence of good initial estimators for redescender $\rho$-functions, this approach might be used to get at least some of the desirable properties of redescender $\rho$-functions.
+
+\subsection{Step 2: Fixed and random effects}
+
+\label{algorithmEffects}
+
+For given $\vec\theta$ and $\sigma$, the estimation of the fixed and random effects can be done using iteratively reweighted least squares.
+
+Let $\W[e]$ be defined analogously to $\W$, i.e.,
+
+\begin{equation*}
+\W[e] = \diag\fn{w_e\fn{{\es_i}/{\sigma}}}_{i=1,\dots,n}\;,
+\end{equation*}
+
+where
+
+\begin{equation*}
+w_e\fn{\es} = \left\{
+	\begin{array}{cl}
+		{\psi_e\fn{\es}}/{\es} & \mbox{ if } \es \neq 0\;, \\
+		\psi_e'\fn{0} & \mbox{ if } \es = 0\;.
+	\end{array}
+\right.
+\end{equation*}
+
+Then insert these weights into \eqref{eq:robustEEq} and expand $\tves$ to get the following linear system of equations,
+
+\begin{equation*}
+\begin{split}
+	\left[
+		\begin{array}{cc}
+			\bld X\tr\Ue\trinv\W[e]\Ue\inv\bld X &
+			\bld X\tr\Ue\trinv\W[e]\Ue\inv\bld Z\Ub \\
+			\Ub\tr\bld Z\tr\Ue\trinv\W[e]\Ue\inv\bld X &
+			\Ub\tr\bld Z\tr\Ue\trinv\W[e]\Ue\inv\bld Z\Ub +
+			\bld\Lambda_b\W
+		\end{array}
+	\right]
+	\left[
+		\begin{array}{c}
+			\tv\beta \\ \tvbs
+		\end{array}
+	\right] \\
+	= 
+	\left[
+		\begin{array}{c}
+			\bld X\tr\Ue\trinv\W[e]\vec y \\
+			\Ub\tr\bld Z\tr\Ue\trinv\W[e]\vec y
+		\end{array}
+	\right]\;.
+\end{split}
+\end{equation*}
+
+By alternating between computing $\tv\beta$ and $\tvbs$ for a given set of weights and updating the weights for a given set of estimates, we get a simple and efficient algorithm for computing the fixed and random effects.
+
+We start the algorithm with either a predefined set of weights or set all the weights to one. When the relative change of the estimates is small enough, the algorithm can stop.
+
+\subsection{Step 3: Variance parameter}
+
+Equation~\ref{eq:sigmaDAS} can be written as
+
+\begin{equation*}
+\tilde\sigma^2 = \frac
+{\sum_{i=1}^n\si{e}\fn{\frac{\tes_i}{\tau_{e,i}\tilde\sigma}} \tes_i{}^2}
+{\s[\kappa]_e\sum_{i=1}^n\tau_{e,i}^2 
+	\si{e}\fn{\frac{\tes_i}{\tau_{e,i}\tilde\sigma}}}\;.
+\end{equation*}
+
+This suggests a simple two-step algorithm, namely alternating between computing $\tilde\sigma$ using the above formula and updating the weights given $\tilde\sigma$. This algorithm is quick and reliable, especially if the overall algorithm has almost converged and $\tilde\sigma$ only changes little between iterations of $\tv\theta$. 
+
+A similar procedure can also be derived for the computation of $\tau_{e,i}$. Solving \eqref{eq:tau_ei} for $\tau_{e,i}$ yields
+
+\begin{equation*}
+\tau_{e,i}^2 = {\ERW{\si{e}\fn{\frac{\hes_i}{\tau_{e,i}\widehat\sigma}}
+	\left(\frac{\hes_i}{\widehat\sigma}\right)^2}} \bigg /
+{\ERW{\s[\kappa]_e \si{e}\fn{\frac{\hes_i}{\tau_{e,i}\widehat\sigma}}}}\;,
+\end{equation*}
+
+which again suggests to use the same two-step procedure as lined out above. The values $\tau_{e,i}$ have to be recomputed for every new value of $\tv\theta$, preferably using the values of the last candidate $\tv\theta$ as starting values. 
+
+\subsection{Step 4: Covariance parameters}
+
+In the following, we will assume that we have only one block type. The algorithms mentioned below can be easily generalized to multiple block types. One iteration then consists of computing the updates for every block type separately before applying all of them together.
+
+In case of diagonal $\Ubth$, $\tv\theta$ may be computed using the analogue of the algorithm for Step~3. This has proven to be much more efficient and robust compared to using a generic root solving procedure. 
+
+The same is true in the non-diagonal case. Nevertheless, if we assume a special covariance structure, the only options are generic root solving procedures such as Newton-Raphson. The Newton-Raphson algorithm, however, can be quite unstable and often does not converge for problems with many parameters.
+
+In the case of unstructured covariance matrices, there exists a better algorithm of EM-type. Let the function $\chol\fn{\bld A}$ return the lower triangular Cholesky factor of $\bld A$, and $\chol\inv$ return the inverse of the factor. Then, for unstructured covariance matrices and in terms of the first block $\U{b,1}$ of $\Ub$, the update is 
+
+\begin{equation}
+\label{eq:deltaUbth}
+\U{b,1}\fn{\tv{\theta}\iter} = 
+\U{b,1}\fn{\tv{\theta}\lastiter}\frac{1}{\sigma}
+\chol\fn{\sum_{k=1}^K\hw[b,k]{\eta}\tvbs_k\tvbstr_k}
+\chol\inv\fn{\sum_{k=1}^K\hw[b,k]{\delta}\Tbk} \;,
+\end{equation}
+
+where the superscript in square brackets denotes the iteration. The right-hand side is computed using $\tv\theta\lastiter$, the value from the last iteration, and $\hw[b,k]{.}$ is the corresponding $k$-th robustness weight. 
+
+\begin{remark}
+To see that \eqref{eq:deltaUbth} is indeed a sensible update, we have to first rewrite the $r$ scalar valued estimating equations into one matrix valued estimating equation. We may write \eqref{eq:thetaDAS} as
+\begin{equation*}
+	\sum_{k=1}^K \left[ 
+		\trace\fn{
+			\left(\hw[b,k]{\eta}\tvbs_k\tvbstr_k/{\widehat\sigma^2} -
+			\hw[b,k]{\delta}\Tbk\right)\Qlkhth} 
+		\right] = 0 \quad \text{for } l=1,\dots, r\;.
+\end{equation*}
+When assuming an unstructured covariance matrix for the random effects, $\Qlk$ has only one non-zero value and does not depend on $k$. (For other block types, $\Qlk$ vanishes, thus decoupling the problem for different block types.) Since $r = s(s+1)/2$, we may thus write the estimating equation as
+\begin{equation*}
+	\sum_{k=1}^K \left[ 
+		\hw[b,k]{\eta}\tvbs_k\tvbstr_k - 
+		\widehat\sigma^2\hw[b,k]{\delta}\Tbk
+	\right] = \vec 0\;.
+\end{equation*}
+The dependence of the robustness weights on $\tv\theta$ will be neglected from now on, thereby reducing the problem to solving a system of linear equations. In terms of the actual random effects, the estimating equation in iteration $[\text{it}]$ reads
+\begin{equation*}
+	\sum_{k=1}^K \left[
+		\hw[b,k]{\eta}\U{b,1}\inv\fn{\tv\theta\lastiter}\tv[k]{b}
+		\tv[k]{b}\tr\U{b,1}\trinv\fn{\tv\theta\lastiter} - 
+		\widehat\sigma^2\hw[b,k]{\delta}\Tbk
+	\right] = \vec 0\;.
+\end{equation*}
+As long as the algorithm has not converged, the estimating equation is not fulfilled for $\tv\theta\lastiter$, but there exists a $\tv\theta\iter$, such that it is. For
+\begin{equation*}
+	\U{b,1}\fn{\tv\theta\iter} = \U{b,1}\fn{\tv\theta\lastiter}\Delta\U{b}\iter\;,
+\end{equation*}
+where $\Delta\U{b}\iter$ is a lower triangular matrix, we have after multiplying the equation by $\Delta\U{b}\iter$ from the left and by $\Delta\U{b}\itertr$ from the right,
+\begin{equation*}
+	\sum_{k=1}^K \left[
+		\hw[b,k]{\eta}\tvbs_k\tvbstr_k - 
+		\widehat\sigma^2\hw[b,k]{\delta}
+		\Delta\U{b}\iter\Tbk\Delta\U{b}\itertr
+	\right] = \vec 0\;.
+\end{equation*}
+By splitting the left-hand side into two sums, moving the second sum to the right-hand side, and replacing both sides by the corresponding lower-triangular Cholesky factor, we get an equation that can be solved for $\Delta\U{b}\iter$ and thus an expression for $\U{b,1}\fn{\tv\theta\iter}$, which is exactly update \eqref{eq:deltaUbth} mentioned above.
+\end{remark}
+
+The resulting algorithm, considering steps 2 to 4 together, is then of EM-type. It converges fairly quickly, except when the solution is zero, i.e., some variance components are dropped. An illustration of the problem and potential improvements to the algorithm can be found in \citet[Section~2.12]{demidenko2004mixed}.
 
 \end{document}

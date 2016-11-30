@@ -1,0 +1,217 @@
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{amsbsy}%% for \boldsymbol and \pmb{.}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage[utf8]{inputenc}
+\usepackage{Sweave}
+
+%%----------------------------------------------------------------------------
+%% replace texab:
+%\usepackage{texab}%- 'tex Abkürzungen' /u/sfs/tex/tex/latex/texab.sty
+        %%- z.B.  \R, \Z, \Q, \Nat für reelle, ganze, rationale, natürl. Zahlen;
+        %%-       \N   (Normalvert.)  \W == Wahrscheinlichkeit .....
+        %%-  \med, \var, \Cov, \....
+        %%-  \abs{x} == |x|   und   \norm{y} ==  || y ||   (aber anständig)
+\newcommand*{\Rpns}{\proglang{R}}
+\newcommand*{\Rp}{\proglang{R}$\;$}% R program
+% \renewcommand{\Rpns}{R}
+% \renewcommand{\Rp}{R}
+\DeclareMathOperator{\N}{\mathcal{N}}% Normalverteilung
+\newcommand{\inv}{^{-1}}
+\DeclareMathOperator{\cov}{cov}
+\DeclareMathOperator{\Cov}{Cov}
+\DeclareMathOperator*{\argmin}{arg\, min}
+\DeclareMathOperator{\Var}{Var}
+\DeclareMathOperator{\var}{var}
+\newcommand{\VARSymbol}{\Var}
+\newcommand{\makeright}[2]{\ifx#1\left\right#2\else#1#2\fi}
+\newcommand{\@ckl}{(}     % (Co)variance Klammer links
+\newcommand{\@ckr}{)}
+%\newcommand{\VAR}[2][\left] {\VARSymbol    #1\@ckl #2 \makeright{#1}{\@ckr}}
+\newcommand{\@ekl}{[}     % Erwartungswert Klammer links
+\newcommand{\@ekr}{]}     % Erwartungswert Klammer rechts
+\newcommand{\ERW}[2][\left] {\ERWSymbol    #1\@ekl #2 \makeright{#1}{\@ekr}}
+%\newcommand{\E}{\ERWSymbol}
+\newcommand{\Xsub}[2]{{#1}_{\mathrm{\scriptscriptstyle #2}}}
+\newcommand{\ERWi}[3][\left] {\Xsub{\ERWSymbol}{#2}    #1\@ekl #3
+    \makeright{#1}{\@ekr}}
+\newcommand{\abs}[1]    {\left| #1 \right|}
+\DeclareMathOperator{\trace}{tr}
+\DeclareMathOperator{\sign}{sign}
+\newcommand{\T}[1]      {\texttt{#1}}
+\newcommand{\iid}{\mbox{ i.i.d. }}
+\newcommand{\norm}[1]   {\left\| #1 \right\|}
+\newcommand{\NormSymbol}{\N}
+\newcommand{\@vkl}{(}     % Verteilungs Klammer links
+\newcommand{\@vkr}{)}
+\newcommand{\Norm}[2][\left]{\NormSymbol   #1\@vkl #2 \makeright{#1}{\@vkr}}
+%%----------------------------------------------------------------------------
+\newcommand{\fraclinep}[2]{#1\,\left/\left(#2\right)\right.}
+
+
+%% from http://derchmul.wordpress.com/2009/11/25/width-of-strings-in-latex/
+\newlength{\widthtmp}
+\newcommand{\getWidth}[1]{
+  \settowidth{\widthtmp}{#1}
+  \the\widthtmp
+}
+
+%% replace all tildes by hats
+\newcommand{\wh}{\widehat}
+\renewcommand{\tilde}{\widehat}
+\let\wtilde\widetilde
+\renewcommand{\widetilde}{\widehat}
+
+\newcommand{\bld}[1]{\boldsymbol{#1}} % shortcut for bold symbol
+\renewcommand{\vec}[1]{\bld{#1}}
+\renewcommand{\Vec}[1]{\vec{#1}}
+\newcommand{\vc}[1]{\vec{#1}}
+\newcommand{\mx}[1]{\bld{#1}}
+\newcommand{\Sig}{\relax\ifmmode\rlap{\kern0.4em\raise0.08em\hbox{$|$}}
+\bld\Sigma\else$\Sig$\fi}
+%% \newcommand{\Sigh}{\widehat{\Sig}}
+\newcommand{\tr}{^{\top}}
+\newcommand{\invsq}{^{-1/2}}
+\newcommand{\trinvsq}{^{-\top/2}}
+\newcommand{\trinv}{^{-\top}}
+\newcommand{\trsq}{^{\top/2}}
+\newcommand{\trisq}{^{-\frac{\top}{2}}}
+\renewcommand{\det}[1]{\abs{#1}}
+\newcommand{\vp}[1][e]{\Vec{\psi}_{#1}}
+\newcommand{\vchi}[1][e]{\Vec{\chi}_{#1}}
+\newcommand{\tv}[2][]{{\widetilde{\Vec{#2}}_{#1}}}
+\newcommand{\hv}[2][]{{\widehat{\Vec{#2}}_{#1}}}
+\newcommand{\tvp}[1][e]{\tv[#1]{\psi}}
+\newcommand{\hvp}[1][e]{\hv[#1]{\psi}}
+\newcommand{\tvc}[1][e]{\tv[#1]{\chi}}
+\newcommand{\s}[1][\rho]{#1^{(\sigma)}}
+\newcommand{\si}[2][w]{#1^{(\sigma)}_{#2}\kern-1pt}
+\newcommand{\exponent}{{\mbox{\emph{expt}}}}
+\newcommand{\W}[1][b]{\text{\textbf{W}}_{\hspace{-0.5ex}#1\hspace{0.25ex}}}
+\newcommand{\w}[2][b]{w_{#1}^{(#2)}}
+\newcommand{\hw}[2][b]{\widehat{w}_{#1}^{(#2)}}
+\newcommand{\kbtau}{\kappa_b^{(\tau)}}
+\newcommand{\J}[1][]{\bld J_{\hspace{-0.5ex}#1\hspace{0.25ex}}}
+\newcommand{\Jg}{\mathcal J\fns{g}}
+\newcommand{\Jk}{\widehat{\mathcal J}\fns{k}}
+\newcommand{\bs}{b^{*}}
+\newcommand{\bstr}{b^{*\top}}
+\newcommand{\eps}{\varepsilon}
+\newcommand{\es}{\varepsilon^{*}}
+\newcommand{\bsQ}{b^{*2}}
+\newcommand{\tbs}{\widetilde{b}^{*}}
+\newcommand{\hbs}{\widehat{b}^{*}}
+\newcommand{\tes}{\widetilde{\varepsilon}^{*}}
+\newcommand{\hes}{\widehat{\varepsilon}^{*}}
+\newcommand{\vbs}{\vec b^{*}}
+\newcommand{\ves}{\vec\varepsilon^{*}}
+\newcommand{\vBs}{\vec B^{*}}
+\newcommand{\tvbs}{\widetilde{\vec{b}}^{\raisebox{-0.75ex}{\scriptsize *}}}
+\newcommand{\tves}{\widetilde{\vec{\varepsilon}}^{\raisebox{-0.75ex}{\scriptsize *}}}
+\newcommand{\hvbs}{\widehat{\vec{b}}^{\raisebox{-0.75ex}{\scriptsize *}}}
+\newcommand{\hves}{\widehat{\vec{\varepsilon}}^{\raisebox{-0.75ex}{\scriptsize *}}}
+\newcommand{\vbstr}{\vec b^{*\top}}
+\newcommand{\vestr}{\vec\varepsilon^{*\top}}
+\newcommand{\tvbstr}{\widetilde{\Vec{b}}^{*\top}}
+\newcommand{\tvestr}{\widetilde{\Vec{\varepsilon}}^{*\top}}
+\newcommand{\hvbstr}{\widehat{\Vec{b}}^{*\top}}
+\newcommand{\hvestr}{\widehat{\Vec{\varepsilon}}^{*\top}}
+%\renewcommand{\it}{\mathrm{it}}
+\newcommand{\If}{\mbox{\textbf{IF}}}
+\newcommand{\diag}{\mbox{\textbf{Diag}}}
+\newcommand{\ERWSymbol}{\mathbb{E}}
+
+
+
+%% from
+%% http://tex.stackexchange.com/questions/2607/spacing-around-left-and-right
+
+\let\originalleft\left
+\let\originalright\right
+\renewcommand{\left}{\mathopen{}\mathclose\bgroup\originalleft}
+\renewcommand{\right}{\aftergroup\egroup\originalright}
+
+
+%% To highlight definitions as margin notes
+\usepackage{marginnote}
+\newcommand{\mgp}[1]{\marginnote{#1}\ignorespaces}
+
+%% Werner's tex shortcuts
+\newcommand{\Sdef}[1]{\mgp{$#1$}}
+%% these are defined in texab
+%%\newcommand{\vc}[1]{\Vec{#1}}
+%%\newcommand{\mx}[1]{\bld{#1}}
+%%\newcommand{\fn}[1]{\left(#1\right)}
+\newcommand{\U}[2][-0.15ex]{\bld{U}_{\hspace{#1}#2\hspace{0.25ex}}}
+\newcommand{\V}[2][-0.15ex]{\bld{V}_{\hspace{#1}#2\hspace{0.25ex}}}
+\newcommand{\Vbth}{\V{b}\fn{\vec\theta}}
+\newcommand{\Vbtth}{\V{b}\fns{\tv\theta}}
+\newcommand{\Vbhth}{\V{b}\fns{\hv\theta}}
+\newcommand{\Ubth}{\U{b}\fn{\vec\theta}}
+\newcommand{\Ubtth}{\U{b}\fns{\tv\theta}}
+\newcommand{\Ubhth}{\U{b}\fns{\hv\theta}}
+\newcommand{\Vyth}{\V[-0.5ex]{y}\fn{\vec\theta}}
+\newcommand{\Vytth}{\V[-0.5ex]{y}\fns{\tv\theta}}
+\newcommand{\Vyhth}{\V[-0.5ex]{y}\fns{\hv\theta}}
+\newcommand{\Vy}{\V[-0.5ex]{y}}
+\newcommand{\Ve}{\V[-0.6ex]{e}}
+\newcommand{\Ue}{\U{e}}
+\newcommand{\Ub}{\U{b}}
+% \newcommand{\Vbth}{\bld{V}_{b}\fn{\vec\theta}}
+% \newcommand{\Ubth}{\bld{U}_{b}\fn{\vec\theta}}
+% \newcommand{\Ve}{\bld{V}_{e}}
+% \newcommand{\Ue}{\bld{U}_{e}}
+\newcommand{\dVbth}{\frac{\partial\Ubth\tr}{\partial\theta_l}}
+\newcommand{\Tbk}{\bld{T}_{\hspace{-0.5ex}b,k\hspace{0.25ex}}}
+\newcommand{\hTbk}{\widehat{\bld{T}}_{\hspace{-0.5ex}b,k\hspace{0.25ex}}}
+\newcommand{\TbkTitle}{\mbox{\bf\emph{T}}_{\hspace{-0.5ex}b,k\hspace{0.25ex}}}
+\newcommand{\Q}[1]{\bld{Q}_{\hspace{-0.15ex}{#1}}}
+\newcommand{\Ql}{\Q{\ell}}
+\newcommand{\Qlk}{\Q{\ell,k}}
+\newcommand{\Qlth}{\Q{\ell}\fns{\vec\theta}}
+\newcommand{\Qlkth}{\Q{\ell,k}\fns{\vec\theta}}
+\newcommand{\Qltth}{\Q{\ell}\fns{\tv\theta}}
+\newcommand{\Qlhth}{\Q{\ell}\fns{\hv\theta}}
+\newcommand{\Qlktth}{\Q{\ell,k}\fns{\tv\theta}}
+\newcommand{\Qlkhth}{\Q{\ell,k}\fns{\hv\theta}}
+
+
+%% redefine \fn
+\newcommand{\fn}[1]{\kern-1pt\left(#1\right)\kern+0.5pt}
+\newcommand{\fns}[1]{\kern-0.5pt(#1)}
+
+%% chol and other functions
+\DeclareMathOperator{\chol}{\textbf{L}}
+\DeclareMathOperator{\mean}{mean}
+\DeclareMathOperator{\eff}{eff}
+\DeclareMathOperator{\obj}{obj}
+
+%% iterations
+\newcommand{\iter}{^{[\text{it}]}}
+\newcommand{\lastiter}{^{[\text{it}-1]}}
+\newcommand{\itertr}{^{[\text{it}]\raisebox{0.25ex}{\scriptsize$\top$}}}
+
+%\newcommand{\url}[1]{\texttt{#1}}
+
+%% Define remark environment
+\newtheoremstyle{note}% name
+  {3pt}%      Space above
+  {3pt}%      Space below
+  {\small}%         Body font
+  {}%         Indent amount (empty = no indent, \parindent = para indent)
+  {\itshape}% Thm head font
+  {.}%        Punctuation after thm head
+  {.5em}%     Space after thm head: " " = normal interword space;
+        %       \newline = linebreak
+  {}%         Thm head spec (can be left empty, meaning `normal')
+
+\theoremstyle{note}
+\newtheorem*{remark}{Remark}
+\newtheorem*{remarks}{Remarks}
+
+%% Sweave stuff
+\usepackage{color}
+\setkeys{Gin}{width=\textwidth}
+

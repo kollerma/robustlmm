@@ -1,4 +1,4 @@
-\documentclass[article]{jss}
+\documentclass[nojss]{jss}
 \usepackage{rlmer}
 
 %\VignetteIndexEntry{robustlmm: An R Package for Robust Estimation of Linear Mixed-Effects Models}
@@ -40,7 +40,9 @@
 
   In this tutorial, we show how to fit robust linear mixed-effects models
   using \pkg{robustlmm}, how to assess the model fit, how to detect
-  outliers, and how to compare different fits.}  
+  outliers, and how to compare different fits. If you use the software, 
+  please cite this article as published in the Journal of Statistic
+  Software \citep{vignette}.}  
 
 \Keywords{robust statistics, mixed-effects model, hierarchical model,
   ANOVA, \proglang{R}, crossed, random effect}
@@ -75,7 +77,7 @@
 
 We introduce an \Rp package, \pkg{robustlmm}, to robustly fit linear mixed-effects models. The package's functions and methods are designed to closely equal those offered by \pkg{lme4}, the \Rp package that implements classic linear mixed-effects model estimation in \Rpns. The robust estimation method in \pkg{robustlmm} is based on the random effects contamination model and the central contamination model. Contamination can be detected at all levels of the data. The estimation method does not make any assumption on the data's grouping structure except that the model parameters are estimable. \pkg{robustlmm} supports hierarchical and non-hierarchical (e.g., crossed) grouping structures. The robustness of the estimates and their asymptotic efficiency is fully controlled through the function interface. Individual parts (e.g., fixed effects and variance components) can be tuned independently.
 
-In this tutorial, we show how to fit robust linear mixed-effects models using \pkg{robustlmm}, how to assess the model fit, how to detect outliers, and how to compare different fits.}
+In this tutorial, we show how to fit robust linear mixed-effects models using \pkg{robustlmm}, how to assess the model fit, how to detect outliers, and how to compare different fits. If you use the software, please cite this article as published in the Journal of Statistic Software \citep{vignette}.}
 
 %\usepackage{Sweave}
 

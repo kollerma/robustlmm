@@ -1,5 +1,5 @@
 
-R Under development (unstable) (2016-01-02 r69837) -- "Unsuffered Consequences"
+R Under development (unstable) (2016-10-26 r71594) -- "Unsuffered Consequences"
 Copyright (C) 2016 The R Foundation for Statistical Computing
 Platform: x86_64-apple-darwin13.4.0 (64-bit)
 
@@ -47,7 +47,11 @@ Note: method with signature 'dsparseMatrix#dgeMatrix' chosen for function 'cross
 [37] "w_sigma_b_vector" "is_REML"         
 > for (nm in nmME) {
 +     cat("\nName:", nm, "\n")
-+     str(getME(rfm, name=nm))
++     if (substr(nm, 1, 3) == "rho") {
++        print(getME(rfm, name=nm))
++     } else {
++        str(getME(rfm, name=nm))
++     }
 + }
 
 Name: X 
@@ -223,44 +227,26 @@ Name: lower
  num [1:4] 0 -Inf 0 0
 
 Name: rho_e 
-Reference class 'Rcpp_SmoothPsi' [package "robustlmm"] with 0 fields
- list()
- and 28 methods, of which 14 are  possibly relevant:
-   chgDefaults, Dpsi, Dwgt, EDpsi, Epsi2, Erho, finalize, initialize, name,
-   psi, rho, show#envRefClass, tDefs, wgt
+smoothed Huber psi function (k = 1.345, s = 10) 
 
 Name: rho_b 
-List of 2
- $ Subject:Reference class 'Rcpp_SmoothPsi' [package "robustlmm"] with 0 fields
- list()
-  ..and 28 methods, of which 14 are  possibly relevant:
-  ..  chgDefaults, Dpsi, Dwgt, EDpsi, Epsi2, Erho, finalize, initialize, name,
-  ..  psi, rho, show#envRefClass, tDefs, wgt
- $ Group  :Reference class 'Rcpp_SmoothPsi' [package "robustlmm"] with 0 fields
- list()
-  ..and 28 methods, of which 14 are  possibly relevant:
-  ..  chgDefaults, Dpsi, Dwgt, EDpsi, Epsi2, Erho, finalize, initialize, name,
-  ..  psi, rho, show#envRefClass, tDefs, wgt
+$Subject
+smoothed Huber psi function (k = 1.345, s = 10) 
+
+$Group
+smoothed Huber psi function (k = 1.345, s = 10) 
+
 
 Name: rho_sigma_e 
-Reference class 'Rcpp_PsiFunction to Prop II PsiFunction wrapper' [package "robustlmm"] with 0 fields
- list()
- and 28 methods, of which 14 are  possibly relevant:
-   chgDefaults, Dpsi, Dwgt, EDpsi, Epsi2, Erho, finalize, initialize, name,
-   psi, rho, show#envRefClass, tDefs, wgt
+smoothed Huber, Proposal II psi function (k = 2.28, s = 10) 
 
 Name: rho_sigma_b 
-List of 2
- $ Subject:Reference class 'Rcpp_PsiFunction to Prop II PsiFunction wrapper' [package "robustlmm"] with 0 fields
- list()
-  ..and 28 methods, of which 14 are  possibly relevant:
-  ..  chgDefaults, Dpsi, Dwgt, EDpsi, Epsi2, Erho, finalize, initialize, name,
-  ..  psi, rho, show#envRefClass, tDefs, wgt
- $ Group  :Reference class 'Rcpp_PsiFunction to Prop II PsiFunction wrapper' [package "robustlmm"] with 0 fields
- list()
-  ..and 28 methods, of which 14 are  possibly relevant:
-  ..  chgDefaults, Dpsi, Dwgt, EDpsi, Epsi2, Erho, finalize, initialize, name,
-  ..  psi, rho, show#envRefClass, tDefs, wgt
+$Subject
+smoothed Huber, Proposal II psi function (k = 2.28, s = 10) 
+
+$Group
+smoothed Huber, Proposal II psi function (k = 2.28, s = 10) 
+
 
 Name: M 
 List of 5
@@ -337,9 +323,10 @@ Name: w_sigma_b_vector
 
 Name: is_REML 
  logi 1
-> str(g.all <- getME(rfm, "ALL"),
-+     max.level = 2)
-List of 38
+> g.all <- getME(rfm, "ALL")
+> g.all[grepl("^rho", names(g.all))] <- NULL
+> str(g.all, max.level = 2)
+List of 34
  $ X               : num [1:180, 1:2] 1 1 1 1 1 1 1 1 1 1 ...
   ..- attr(*, "dimnames")=List of 2
   ..- attr(*, "assign")= int [1:2] 0 1
@@ -384,30 +371,6 @@ List of 38
   .. ..- attr(*, "names")= chr [1:12] "N" "n" "p" "nmp" ...
  $ offset          : num [1:180] 0 0 0 0 0 0 0 0 0 0 ...
  $ lower           : num [1:4] 0 -Inf 0 0
- $ rho_e           :Reference class 'Rcpp_SmoothPsi' [package "robustlmm"] with 0 fields
- list()
-  ..and 28 methods, of which 14 are  possibly relevant:
-  ..  chgDefaults, Dpsi, Dwgt, EDpsi, Epsi2, Erho, finalize, initialize, name,
-  ..  psi, rho, show#envRefClass, tDefs, wgt
- $ rho_b           :List of 2
-  ..$ Subject:Reference class 'Rcpp_SmoothPsi' [package "robustlmm"] with 0 fields
- list()
-  .. ..and 28 methods, of which 14 are  possibly relevant
-  ..$ Group  :Reference class 'Rcpp_SmoothPsi' [package "robustlmm"] with 0 fields
- list()
-  .. ..and 28 methods, of which 14 are  possibly relevant
- $ rho_sigma_e     :Reference class 'Rcpp_PsiFunction to Prop II PsiFunction wrapper' [package "robustlmm"] with 0 fields
- list()
-  ..and 28 methods, of which 14 are  possibly relevant:
-  ..  chgDefaults, Dpsi, Dwgt, EDpsi, Epsi2, Erho, finalize, initialize, name,
-  ..  psi, rho, show#envRefClass, tDefs, wgt
- $ rho_sigma_b     :List of 2
-  ..$ Subject:Reference class 'Rcpp_PsiFunction to Prop II PsiFunction wrapper' [package "robustlmm"] with 0 fields
- list()
-  .. ..and 28 methods, of which 14 are  possibly relevant
-  ..$ Group  :Reference class 'Rcpp_PsiFunction to Prop II PsiFunction wrapper' [package "robustlmm"] with 0 fields
- list()
-  .. ..and 28 methods, of which 14 are  possibly relevant
  $ M               :List of 5
   ..$ M_bb.:Formal class 'dgeMatrix' [package "Matrix"] with 4 slots
   ..$ M_XZ :Formal class 'dgeMatrix' [package "Matrix"] with 4 slots
@@ -428,4 +391,4 @@ List of 38
 > 
 > proc.time()
    user  system elapsed 
-  3.061   0.138   3.320 
+  3.902   0.261   4.222 

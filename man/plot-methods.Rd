@@ -4,7 +4,7 @@
 \alias{plot,Rcpp_SmoothPsi-method}
 \alias{plot,Rcpp_HuberPsi-method}
 \alias{plot,Rcpp_PsiFunction-method}
-\alias{plot,Rcpp_PsiFunction to Prop II PsiFunction wrapper-method}
+\alias{plot,Rcpp_PsiFunctionToPropIIPsiFunctionWrapper-method}
 \title{Plot an Object of the "Psi Function" Class}
 \description{
   The \code{\link{plot}} method objects of class
@@ -28,7 +28,7 @@
      main = "full", % shortMain = FALSE,
      col = c("black", "red3", "blue3", "dark green", "light green"),
      leg.loc = "right", ...)
-\S4method{plot}{`Rcpp_PsiFunction to Prop II PsiFunction wrapper`}(x, y,
+\S4method{plot}{Rcpp_PsiFunctionToPropIIPsiFunctionWrapper}(x, y,
      which = c("rho", "psi", "Dpsi", "wgt", "Dwgt"),
      main = "full", % shortMain = FALSE,
      col = c("black", "red3", "blue3", "dark green", "light green"),

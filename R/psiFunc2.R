@@ -3,7 +3,7 @@ loadModule("psi_function_module", TRUE)
 if (FALSE) {
   
   classes <- c("Rcpp_PsiFunction", "Rcpp_HuberPsi", "Rcpp_SmoothPsi",
-               "Rcpp_PsiFunction to Prop II PsiFunction wrapper")
+               "Rcpp_PsiFunctionToPropIIPsiFunctionWrapper")
   
   setMeth <- function(f, def, ...) {
     for (class in classes) {
@@ -20,7 +20,7 @@ if (FALSE) {
 ## to avoid test is(..., "refClass")
 ## but this fails:
 ## setLoadAction(setIs("Rcpp_SmoothPsi", "Rcpp_PsiFunction"))
-## setLoadAction(setIs("Rcpp_PsiFunction to Prop II PsiFunction wrapper", "Rcpp_PsiFunction"))
+## setLoadAction(setIs("Rcpp_PsiFunctionToPropIIPsiFunctionWrapper", "Rcpp_PsiFunction"))
 
 ##' Change the default arguments for a psi_func_cached object
 ##'
@@ -33,7 +33,7 @@ if (FALSE) {
 ##' curve(sPsi$psi(x), 0, 3, color="blue", add=TRUE)
 ##' @exportMethod chgDefaults Rcpp_SmoothPsi
 ##' @exportMethod chgDefaults Rcpp_PsiFunction
-##' @exportMethod chgDefaults `Rcpp_PsiFunction to Prop II PsiFunction wrapper`
+##' @exportMethod chgDefaults Rcpp_PsiFunctionToPropIIPsiFunctionWrapper
 
 .chgDefaults <- function(object, ...) {
   if (identical(object, cPsi))
@@ -47,8 +47,16 @@ if (FALSE) {
 setLoadAction(function(ns) setMethod("chgDefaults", signature("Rcpp_PsiFunction"), .chgDefaults))
 setLoadAction(function(ns) setMethod("chgDefaults", signature("Rcpp_HuberPsi"), .chgDefaults))
 setLoadAction(function(ns) setMethod("chgDefaults", signature("Rcpp_SmoothPsi"), .chgDefaults))
-setLoadAction(function(ns) setMethod("chgDefaults", signature("Rcpp_PsiFunction to Prop II PsiFunction wrapper"), .chgDefaults))
 
+if (FALSE) {
+  ## disable this for the time being, once enabled, also enable test in PsiFunction.R
+  .chgDefaultsPropII <- function(object, ...) {
+    base <- object$base()
+    return(psi2propII(base, ...))
+  }
+  setLoadAction(function(ns) setMethod("chgDefaults", signature("Rcpp_PsiFunctionToPropIIPsiFunctionWrapper"), .chgDefaultsPropII))
+}
+  
 .sprintPsiFunc <- function(x, short=FALSE) {
     v <- x$tDefs()
     n <- names(v)
@@ -136,7 +144,7 @@ setLoadAction(function(ns) assign("smoothPsi", new(SmoothPsi), envir = ns))
 setGeneric("psi2propII", function(object, ...) standardGeneric("psi2propII"))
 ##' @exportMethod psi2propII Rcpp_PsiFunction
 ##' @exportMethod psi2propII Rcpp_SmoothPsi
-##' @exportMethod psi2prioII `Rcpp_PsiFunction to Prop II PsiFunction wrapper`
+##' @exportMethod psi2propII Rcpp_PsiFunctionToPropIIPsiFunctionWrapper
 
 .psi2propII <- function(object, ...) {
   if (identical(object, cPsi))
@@ -145,24 +153,24 @@ setGeneric("psi2propII", function(object, ...) standardGeneric("psi2propII"))
   clone$chgDefaults(object$tDefs())
   if (length(list(...)) > 0)
     clone$chgDefaults(c(...))
-  return(new(`PsiFunction to Prop II PsiFunction wrapper`, clone))
+  return(new(PsiFunctionToPropIIPsiFunctionWrapper, clone))
 }
 ## setMeth("psi2propII", .psi2propII)
 setLoadAction(function(ns) setMethod("psi2propII", signature("Rcpp_PsiFunction"), .psi2propII))
 setLoadAction(function(ns) setMethod("psi2propII", signature("Rcpp_HuberPsi"), .psi2propII))
 setLoadAction(function(ns) setMethod("psi2propII", signature("Rcpp_SmoothPsi"), .psi2propII))
-setLoadAction(function(ns) setMethod("psi2propII", signature("Rcpp_PsiFunction to Prop II PsiFunction wrapper"), .psi2propII))
+setLoadAction(function(ns) setMethod("psi2propII", signature("Rcpp_PsiFunctionToPropIIPsiFunctionWrapper"), .psi2propII))
 
 ## set show method
 ##' @exportMethod show Rcpp_PsiFunction
 ##' @exportMethod show Rcpp_SmoothPsi
-##' @exportMethod show `Rcpp_PsiFunction to Prop II PsiFunction wrapper`
+##' @exportMethod show Rcpp_PsiFunctionToPropIIPsiFunctionWrapper
 .show <- function(object) cat(object$show(), "\n")
 ## setMeth("show", .show)
 setLoadAction(function(ns) setMethod("show", signature("Rcpp_PsiFunction"), .show))
 setLoadAction(function(ns) setMethod("show", signature("Rcpp_HuberPsi"), .show))
 setLoadAction(function(ns) setMethod("show", signature("Rcpp_SmoothPsi"), .show))
-setLoadAction(function(ns) setMethod("show", signature("Rcpp_PsiFunction to Prop II PsiFunction wrapper"), .show))
+setLoadAction(function(ns) setMethod("show", signature("Rcpp_PsiFunctionToPropIIPsiFunctionWrapper"), .show))
 
 ## copied here from robustbase, version 0.92-5
 matplotPsi <- function(x, m.psi, psi, par, main = "full",
@@ -218,9 +226,9 @@ plotPsi <- function(x, y, which = c("rho", "psi", "Dpsi", "wgt", "Dwgt"),
 ##' @exportMethod plot
 ##' @exportMethod plot Rcpp_PsiFunction
 ##' @exportMethod plot Rcpp_SmoothPsi
-##' @exportMethod plot `Rcpp_PsiFunction to Prop II PsiFunction wrapper`
+##' @exportMethod plot Rcpp_PsiFunctionToPropIIPsiFunctionWrapper
 ## setMeth("plot", plotPsi)
 setLoadAction(function(ns) setMethod("plot", signature("Rcpp_PsiFunction"), plotPsi))
 setLoadAction(function(ns) setMethod("plot", signature("Rcpp_HuberPsi"), plotPsi))
 setLoadAction(function(ns) setMethod("plot", signature("Rcpp_SmoothPsi"), plotPsi))
-setLoadAction(function(ns) setMethod("plot", signature("Rcpp_PsiFunction to Prop II PsiFunction wrapper"), plotPsi))
+setLoadAction(function(ns) setMethod("plot", signature("Rcpp_PsiFunctionToPropIIPsiFunctionWrapper"), plotPsi))

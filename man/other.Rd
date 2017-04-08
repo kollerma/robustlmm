@@ -3,13 +3,13 @@
 \alias{show,Rcpp_SmoothPsi-method}
 \alias{show,Rcpp_HuberPsi-method}
 \alias{show,Rcpp_PsiFunction-method}
-\alias{show,Rcpp_PsiFunction to Prop II PsiFunction wrapper-method}
+\alias{show,Rcpp_PsiFunctionToPropIIPsiFunctionWrapper-method}
 \title{Other methods}
 \usage{
 \S4method{show}{Rcpp_SmoothPsi}(object)
 \S4method{show}{Rcpp_HuberPsi}(object)
 \S4method{show}{Rcpp_PsiFunction}(object)
-\S4method{show}{`Rcpp_PsiFunction to Prop II PsiFunction wrapper`}(object)
+\S4method{show}{Rcpp_PsiFunctionToPropIIPsiFunctionWrapper}(object)
 }
 \description{
   Other miscellaneous utilities for instances of the PsiFunction class.

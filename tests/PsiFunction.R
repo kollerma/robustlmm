@@ -249,4 +249,16 @@ stopifnot(all.equal(sP2$wgt(x), sPOld2@wgt(x)),
           all.equal(sP2$Epsi2(), sPOld2@Epsi2()),
           all.equal(sP2$EDpsi(), sPOld2@EDpsi()))
 
+if (FALSE) {
+  
+  test1 <- psi2propII(smoothPsi, k = 2.2)
+  test2 <- psi2propII(chgDefaults(smoothPsi, k = 2.2))
+  ## this fails at the moments as psi2propII()$base() will
+  ## not give an object of the correct class, and then the
+  ## wrong copy constructor will be invoked.
+  test3 <- chgDefaults(psi2propII(smoothPsi), k = 2.2)
 
+  stopifnot(all.equal(test1$psi(x), test2$psi(x)),
+            all.equal(test2$psi(x), test3$psi(x)))
+  
+}

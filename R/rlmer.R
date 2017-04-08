@@ -399,20 +399,20 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
         T.bs[idx] <- forwardsolve(L, lobj@pp$b.s[idx])
         ## compute weights
         db <- .dk(lobj, sigma, FALSE, T.bs)[lobj@k]
-        wbsEta <- wbsDelta <- numeric(0)
+        wbsEta <- wbsDelta <- numeric(q)
         for (type in seq_along(lobj@blocks)) {
             s <- lobj@dim[type]
             lidx <- as.vector(lobj@idx[[type]])
             if (s > 1) {
                 ## for eta, we would actually need a little smaller
                 ## tuning constants than for delta to get the same efficiency
-                wbsEta <- c(wbsEta, lobj@rho.sigma.b[[type]]$wgt(db[lidx]))
-                wbsDelta <- c(wbsDelta, (lobj@rho.sigma.b[[type]]$psi(db[lidx]) -
-                                         lobj@rho.sigma.b[[type]]$psi(db[lidx] - s*kappas[type]))/s)
+                wbsEta[lidx] <- lobj@rho.sigma.b[[type]]$wgt(db[lidx])
+                wbsDelta[lidx] <- (lobj@rho.sigma.b[[type]]$psi(db[lidx]) -
+                                     lobj@rho.sigma.b[[type]]$psi(db[lidx] - s*kappas[type]))/s
             } else {
                 lw <- lobj@rho.sigma.b[[type]]$wgt(db[lidx])
-                wbsEta <- c(wbsEta, lw)
-                wbsDelta <- c(wbsDelta, lw*kappas[type]) ## adding kappa to wbsDelta in 1d case
+                wbsEta[lidx] <- lw
+                wbsDelta[lidx] <- lw*kappas[type] ## adding kappa to wbsDelta in 1d case
             }
         }
         WbDelta <- Diagonal(x=wbsDelta)

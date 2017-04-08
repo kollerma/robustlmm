@@ -268,7 +268,7 @@ calcTau.nondiag <- function(object, ghZ, ghw, skbs, kappas, max.iter,
             tmp <- calcTau(diag(object@pp$L)[bidx], unlist(skbs[ind]),
                            object@rho.b[[type]], object@rho.sigma.b[[type]],
                            object@pp, kappas[type])
-            Tbks <- c(Tbks, as.list(tmp))
+            Tbks <- c(Tbks, as.list(tmp*tmp))
         } else if (s == 2) { ## 2d case
             wgt <- object@rho.b[[type]]$wgt
             wgt.sigma <- object@rho.sigma.b[[type]]$wgt
@@ -438,8 +438,8 @@ updateSigma <- function(object, max.iter = 100, rel.tol = 1e-6, fit.effects = TR
 updateThetaTau <- function(object, max.iter = 100, rel.tol = 1e-6, verbose = 0) {
     kappas <- object@pp$kappa_b
     tau <- switch(object@method,
-                  DAStau = diag(calcTau.nondiag(object,skbs=.s(object, theta=TRUE),
-                                                kappas=kappas, max.iter=max.iter)),
+                  DAStau = sqrt(diag(calcTau.nondiag(object,skbs=.s(object, theta=TRUE),
+                                                     kappas=kappas, max.iter=max.iter))),
                   DASvar = sqrt(diag(object@pp$Tb())),
                   stop("method not supported by updateThetaTau:", object@method))
 

@@ -632,6 +632,11 @@ update.rlmerMod <- function(object, formula., ..., evaluate = TRUE) {
             }
             ## copy pp and resp (to really get a new object)
             extras$init@pp <- object@pp$copy()
+            ## Make sure we get the rho functions correct
+            extras$init@pp$rho_e <- object@pp$rho_e
+            extras$init@pp$rho_sigma_e <- object@pp$rho_sigma_e
+            extras$init@pp$rho_b <- object@pp$rho_b
+            extras$init@pp$rho_sigma_b <- object@pp$rho_sigma_b
             ## reset calledInit... fields to FALSE:
             fields <- grep("calledInit", names(getRefClass(class(extras$init@pp))$fields()), value=TRUE)
             Map(function(field) extras$init@pp$field(field, FALSE), fields)

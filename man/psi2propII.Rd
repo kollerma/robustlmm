@@ -3,13 +3,13 @@
 \alias{psi2propII,Rcpp_SmoothPsi-method}
 \alias{psi2propII,Rcpp_HuberPsi-method}
 \alias{psi2propII,Rcpp_PsiFunction-method}
-\alias{psi2propII,Rcpp_PsiFunction to Prop II PsiFunction wrapper-method}
+\alias{psi2propII,Rcpp_PsiFunctionToPropIIPsiFunctionWrapper-method}
 \title{Convert to Propsal II weight function}
 \usage{
 \S4method{psi2propII}{Rcpp_SmoothPsi}(object, ...)
 \S4method{psi2propII}{Rcpp_HuberPsi}(object, ...)
 \S4method{psi2propII}{Rcpp_PsiFunction}(object, ...)
-\S4method{psi2propII}{`Rcpp_PsiFunction to Prop II PsiFunction wrapper`}(object, ...)
+\S4method{psi2propII}{Rcpp_PsiFunctionToPropIIPsiFunctionWrapper}(object, ...)
 }
 \arguments{
   \item{object}{PsiFunction instance to convert}

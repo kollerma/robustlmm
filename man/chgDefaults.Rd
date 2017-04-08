@@ -3,13 +3,13 @@
 \alias{chgDefaults,Rcpp_SmoothPsi-method}
 \alias{chgDefaults,Rcpp_HuberPsi-method}
 \alias{chgDefaults,Rcpp_PsiFunction-method}
-\alias{chgDefaults,Rcpp_PsiFunction to Prop II PsiFunction wrapper-method}
+\alias{chgDefaults,Rcpp_PsiFunctionToPropIIPsiFunctionWrapper-method}
 \title{Change default arguments}
 \usage{
 \S4method{chgDefaults}{Rcpp_SmoothPsi}(object, ...)
 \S4method{chgDefaults}{Rcpp_HuberPsi}(object, ...)
 \S4method{chgDefaults}{Rcpp_PsiFunction}(object, ...)
-\S4method{chgDefaults}{`Rcpp_PsiFunction to Prop II PsiFunction wrapper`}(object, ...)
+\S4method{chgDefaults}{Rcpp_PsiFunctionToPropIIPsiFunctionWrapper}(object, ...)
 }
 \arguments{
   \item{object}{PsiFunction instance to convert}

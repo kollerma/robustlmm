@@ -1,7 +1,7 @@
 
-R Under development (unstable) (2016-10-26 r71594) -- "Unsuffered Consequences"
-Copyright (C) 2016 The R Foundation for Statistical Computing
-Platform: x86_64-apple-darwin13.4.0 (64-bit)
+R Under development (unstable) (2017-11-18 r73751) -- "Unsuffered Consequences"
+Copyright (C) 2017 The R Foundation for Statistical Computing
+Platform: x86_64-apple-darwin15.6.0 (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
 You are welcome to redistribute it under certain conditions.
@@ -105,10 +105,7 @@ Loading required package: Matrix
 +     rho.e = smoothPsi, rho.b = smoothPsi)
 
 ######## DASvar ########
-Note: method with signature 'dsparseMatrix#dgeMatrix' chosen for function 'crossprod',
- target signature 'dsCMatrix#dgeMatrix'.
- "CsparseMatrix#ddenseMatrix" would also be valid
-Time elapsed: 1.326 0.027 1.39 0 0 
+Time elapsed: 2.566 0.069 2.697 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -146,7 +143,7 @@ Rho functions used for fitting:
 -19.822   1.081  33.966 -30.283  67.013 -51.900 
 
 ######## DAStau ########
-Time elapsed: 1.071 0.01 1.114 0 0 
+Time elapsed: 2.447 0.063 2.562 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -212,10 +209,7 @@ sigma               55.5
 +     rho.e = smoothPsi, rho.b = smoothPsi)
 
 ######## DASvar ########
-Note: method with signature 'CsparseMatrix#Matrix#missing#replValue' chosen for function '[<-',
- target signature 'dgCMatrix#ngCMatrix#missing#numeric'.
- "Matrix#nsparseMatrix#missing#replValue" would also be valid
-Time elapsed: 1.383 0.011 1.428 0 0 
+Time elapsed: 1.387 0.035 1.451 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -253,7 +247,7 @@ A B C D E F
 0 0 0 0 0 0 
 
 ######## DAStau ########
-Time elapsed: 1.365 0.009 1.411 0 0 
+Time elapsed: 1.817 0.044 1.9 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -319,7 +313,7 @@ sigma               4.02
 +     rho.e = smoothPsi, rho.b = smoothPsi)
 
 ######## DASvar ########
-Time elapsed: 0.847 0.016 0.889 0 0 
+Time elapsed: 0.738 0.025 0.777 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -371,7 +365,7 @@ Rho functions used for fitting:
 -2.667e-02 -7.956e-01 
 
 ######## DAStau ########
-Time elapsed: 0.93 0.009 0.951 0 0 
+Time elapsed: 0.922 0.024 0.964 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -482,8 +476,8 @@ sigma                0.561
 + }
 > 
 > cat('Time elapsed: ', proc.time(),'\n') # for ``statistical reasons''
-Time elapsed:  9.998 0.184 10.415 0.003 0.003 
+Time elapsed:  13.388 0.469 14.129 0.004 0.007 
 > 
 > proc.time()
    user  system elapsed 
- 10.001   0.187  10.415 
+ 13.392   0.476  14.129 

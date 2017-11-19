@@ -18,4 +18,24 @@ std::string to_string(T value)
   return os.str() ;
 }
 
+void warn(std::string msg);
+
+template <typename T1>
+inline void warn(const char* fmt, const T1& arg1) {
+  // Rcpp::Rcout << "Formatting message" << std::endl;
+  // This will cause a stackoverflow if -fno-elide-constructors is set
+  std::string msg = tfm::format(fmt, arg1);
+  // Rcpp::Rcout << "Issuing warning" << std::endl;
+  warn(msg);
+}
+
+template <typename T1, typename T2>
+inline void warn(const char* fmt, const T1& arg1, const T2& arg2) {
+  // Rcpp::Rcout << "Formatting message" << std::endl;
+  // This will cause a stackoverflow if -fno-elide-constructors is set
+  std::string msg = tfm::format(fmt, arg1, arg2);
+  // Rcpp::Rcout << "Issuing warning" << std::endl;
+  warn(msg);
+}
+
 #endif

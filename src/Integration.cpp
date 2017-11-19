@@ -101,7 +101,7 @@ void DqagIntegration::dqags(IntegrFnEx fnex, double* a, double* b) {
 
 void DqagIntegration::checkIer() {
   if(ier_ > 0 && ier_!=5)  
-    Rcpp::warning("integration flag " +  to_string(ier_)); 
+    warn("integration flag %i", ier_);
 }
 
 /*

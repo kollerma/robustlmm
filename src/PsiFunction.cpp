@@ -29,41 +29,41 @@ const std::string PsiFunction::showDefaults() const {
   return "";  
 }
 
-const double PsiFunction::rhoFun(const double x) {
+double PsiFunction::rhoFun(const double x) {
   return x * x / 2.;
 }
 
-const double PsiFunction::psiFun(const double x) {
+double PsiFunction::psiFun(const double x) {
   return x;
 }
 
-const double PsiFunction::wgtFun(const double x) {
+double PsiFunction::wgtFun(const double x) {
   return 1.;
 }
 
-const double PsiFunction::DpsiFun(const double x) {
+double PsiFunction::DpsiFun(const double x) {
   return 1.;
 }
 
-const double PsiFunction::DwgtFun(const double x) {
+double PsiFunction::DwgtFun(const double x) {
   return 0.;
 }
 
-const double PsiFunction::Erho() {
+double PsiFunction::Erho() {
   return 0.5;
 }
 
-const double PsiFunction::Epsi2() {
+double PsiFunction::Epsi2() {
   return 1.;
 }
 
-const double PsiFunction::EDpsi() {
+double PsiFunction::EDpsi() {
   return 1.;
 }
 
 PsiFunction::~PsiFunction() {}
 
-const double PsiFunction::psi2Fun(const double x) {
+double PsiFunction::psi2Fun(const double x) {
   double value = this->psiFun(x);
   return value * value;
 }
@@ -85,19 +85,19 @@ void PsiFunctionNumIntExp::chgDefaults(NumericVector tuningParameters) {
   PsiFunction::chgDefaults(tuningParameters);
 }
 
-const double PsiFunctionNumIntExp::Erho() {
+double PsiFunctionNumIntExp::Erho() {
   if (NumericVector::is_na(Erho_))
     Erho_ = computeErho();
   return Erho_;
 }
 
-const double PsiFunctionNumIntExp::Epsi2() {
+double PsiFunctionNumIntExp::Epsi2() {
   if (NumericVector::is_na(Epsi2_))
     Epsi2_ = computeEpsi2();
   return Epsi2_;
 }
 
-const double PsiFunctionNumIntExp::EDpsi() {
+double PsiFunctionNumIntExp::EDpsi() {
   if (NumericVector::is_na(EDpsi_))
     EDpsi_ = computeEDpsi();
   return EDpsi_;
@@ -113,16 +113,16 @@ void PsiFunctionNumIntExp::reset() {
   EDpsi_ = NA_REAL;
 }
 
-const double PsiFunctionNumIntExp::computeErho() {
+double PsiFunctionNumIntExp::computeErho() {
   DEBUG("Called computeErho()")
   return integrate(&PsiFunction::rhoFun);
 }
 
-const double PsiFunctionNumIntExp::computeEpsi2() {
+double PsiFunctionNumIntExp::computeEpsi2() {
   return integrate(&PsiFunction::psi2Fun);
 }
 
-const double PsiFunctionNumIntExp::computeEDpsi() {
+double PsiFunctionNumIntExp::computeEDpsi() {
   return integrate(&PsiFunction::DpsiFun);
 }
 
@@ -161,27 +161,27 @@ NumericVector PsiFunctionPropII::tDefs() const {
   return base_->tDefs();
 }
 
-const double PsiFunctionPropII::rhoFun(const double x) {
+double PsiFunctionPropII::rhoFun(const double x) {
   if (!R_FINITE(x))
     return x;
   return integrate(&PsiFunction::psiFun, x);
 }
 
-const double PsiFunctionPropII::psiFun(const double x) {
+double PsiFunctionPropII::psiFun(const double x) {
   return base_->wgtFun(x) * base_->psiFun(x);
 }
 
-const double PsiFunctionPropII::wgtFun(const double x) {
+double PsiFunctionPropII::wgtFun(const double x) {
   double value = base_->wgtFun(x);
   return value * value;
 }
 
-const double PsiFunctionPropII::DpsiFun(const double x) {
+double PsiFunctionPropII::DpsiFun(const double x) {
   return base_->wgtFun(x) * base_->DpsiFun(x) + 
     base_->DwgtFun(x) * base_->psiFun(x);
 }
 
-const double PsiFunctionPropII::DwgtFun(const double x) {
+double PsiFunctionPropII::DwgtFun(const double x) {
   return 2. * base_->wgtFun(x) * base_->DwgtFun(x);
 }
 
@@ -231,12 +231,10 @@ NumericVector HuberPsi::tDefs() const {
 }
 
 const std::string HuberPsi::showDefaults() const {
-  char buffer[20];
-  std::sprintf(buffer, " (k = %.5g)", k_);  
-  return std::string(buffer);
+  return tfm::format(" (k = %.5g)", k_);
 }
 
-const double HuberPsi::rhoFun(const double x) {
+double HuberPsi::rhoFun(const double x) {
   double u = std::abs(x);
   if (u > k_) {
     return k_*(u - k_ / 2.);
@@ -245,7 +243,7 @@ const double HuberPsi::rhoFun(const double x) {
   }
 }
 
-const double HuberPsi::psiFun(const double x) {
+double HuberPsi::psiFun(const double x) {
   if (x < -k_) {
     return -k_;
   } else if (x > k_) {
@@ -255,7 +253,7 @@ const double HuberPsi::psiFun(const double x) {
   }
 }
 
-const double HuberPsi::wgtFun(const double x) {
+double HuberPsi::wgtFun(const double x) {
   if (x < -k_ || x > k_) {
     return k_ / std::abs(x);
   } else {
@@ -263,7 +261,7 @@ const double HuberPsi::wgtFun(const double x) {
   }
 }
 
-const double HuberPsi::DpsiFun(const double x) {
+double HuberPsi::DpsiFun(const double x) {
   if (x < -k_ || x > k_) {
     return 0.;
   } else {
@@ -271,7 +269,7 @@ const double HuberPsi::DpsiFun(const double x) {
   }
 }
 
-const double HuberPsi::DwgtFun(const double x) {
+double HuberPsi::DwgtFun(const double x) {
   if (x < -k_) {
     return k_ / (x * x);
   } else if (x > k_) {
@@ -281,12 +279,12 @@ const double HuberPsi::DwgtFun(const double x) {
   }
 }
 
-const double HuberPsi::Erho() {
+double HuberPsi::Erho() {
   double iP = stats::pnorm_0(k_, 0, 0);
   return .5 - iP + k_ * (stats::dnorm_0(k_, 0) - k_ * iP);
 }
 
-const double HuberPsi::Epsi2() {
+double HuberPsi::Epsi2() {
   if (k_ < 10.) {
     return 1. - 2.*(k_ * stats::dnorm_0(k_, 0) + (1. - k_*k_) * stats::pnorm_0(k_, 0, 0));
   } else {
@@ -294,7 +292,7 @@ const double HuberPsi::Epsi2() {
   }
 }
 
-const double HuberPsi::EDpsi() {
+double HuberPsi::EDpsi() {
   return 2. * stats::pnorm_0(k_, 1, 0) - 1.;
 }
 
@@ -340,7 +338,7 @@ NumericVector SmoothPsi::tDefs() const {
   return tDefs;
 }
 
-const double SmoothPsi::rhoFun(const double x) {
+double SmoothPsi::rhoFun(const double x) {
   double ax = std::abs(x);
   if (ax <= c_) {
     return x * x / 2.;
@@ -350,7 +348,7 @@ const double SmoothPsi::rhoFun(const double x) {
   }
 }
 
-const double SmoothPsi::psiFun(const double x) {
+double SmoothPsi::psiFun(const double x) {
   double ax = std::abs(x);
   if (ax <= c_) {
     return x;
@@ -359,7 +357,7 @@ const double SmoothPsi::psiFun(const double x) {
   }
 }
 
-const double SmoothPsi::DpsiFun(const double x) {
+double SmoothPsi::DpsiFun(const double x) {
   double ax = std::abs(x);
   if (ax <= c_) {
     return 1.;
@@ -368,7 +366,7 @@ const double SmoothPsi::DpsiFun(const double x) {
   }
 }
 
-const double SmoothPsi::wgtFun(const double x) {
+double SmoothPsi::wgtFun(const double x) {
   double ax = std::abs(x);
   if (ax <= c_) {
     return 1.;
@@ -377,7 +375,7 @@ const double SmoothPsi::wgtFun(const double x) {
   }
 }
 
-const double SmoothPsi::DwgtFun(const double x) {
+double SmoothPsi::DwgtFun(const double x) {
   double ax = std::abs(x);
   if (ax <= c_) {
     return 0.;
@@ -390,9 +388,7 @@ const double SmoothPsi::DwgtFun(const double x) {
 SmoothPsi::~SmoothPsi() {}
 
 const std::string SmoothPsi::showDefaults() const {
-  char buffer[30];
-  std::sprintf(buffer, " (k = %.5g, s = %.5g)", k_, s_);  
-  return std::string(buffer);
+  return tfm::format(" (k = %.5g, s = %.5g)", k_, s_);
 }
 
 // end class SmoothPsi
@@ -453,15 +449,15 @@ NumericVector Dwgt(PsiFunction* p, NumericVector x) {
   return compute(p, &PsiFunction::DwgtFun, x);
 }
 
-const double Erho(PsiFunction* p) {
+double Erho(PsiFunction* p) {
   return p->Erho();
 }
 
-const double Epsi2(PsiFunction* p) {
+double Epsi2(PsiFunction* p) {
   return p->Epsi2();
 }
 
-const double EDpsi(PsiFunction* p) {
+double EDpsi(PsiFunction* p) {
   return p->EDpsi();
 }
 

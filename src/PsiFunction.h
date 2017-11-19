@@ -16,21 +16,21 @@ public:
   virtual Rcpp::NumericVector tDefs() const;
   virtual const std::string showDefaults() const;
   
-  virtual const double rhoFun(const double x);
-  virtual const double psiFun(const double x);
-  virtual const double wgtFun(const double x);
-  virtual const double DpsiFun(const double x);
-  virtual const double DwgtFun(const double x);
-  const double psi2Fun(const double x);
+  virtual double rhoFun(const double x);
+  virtual double psiFun(const double x);
+  virtual double wgtFun(const double x);
+  virtual double DpsiFun(const double x);
+  virtual double DwgtFun(const double x);
+  double psi2Fun(const double x);
   
-  virtual const double Erho();
-  virtual const double Epsi2();
-  virtual const double EDpsi();
+  virtual double Erho();
+  virtual double Epsi2();
+  virtual double EDpsi();
   
   virtual ~PsiFunction();
 };
 
-typedef const double (PsiFunction::*Fptr)(const double);
+typedef double (PsiFunction::*Fptr)(const double);
 typedef Rcpp::XPtr<PsiFunction> PsiFuncXPtr;
 
 class PsiFunctionNumIntExp : public PsiFunction {
@@ -40,9 +40,9 @@ public:
   const std::string name() const;
   void chgDefaults(Rcpp::NumericVector tDefs);
   
-  virtual const double Erho();
-  virtual const double Epsi2();
-  virtual const double EDpsi();
+  virtual double Erho();
+  virtual double Epsi2();
+  virtual double EDpsi();
   
   ~PsiFunctionNumIntExp();
   
@@ -54,9 +54,9 @@ private:
   
   void reset();
   
-  const double computeErho();
-  const double computeEpsi2();
-  const double computeEDpsi();
+  double computeErho();
+  double computeEpsi2();
+  double computeEDpsi();
   double integrate(Fptr fptr);
 };
 
@@ -70,14 +70,14 @@ public:
   NumericVector tDefs() const;
   const std::string showDefaults() const;
   
-  const double rhoFun(const double x);
-  const double psiFun(const double x);
-  const double wgtFun(const double x);
-  const double DpsiFun(const double x);
-  const double DwgtFun(const double x);
-  const double Erho();
-  const double Epsi2();
-  const double EDpsi();
+  double rhoFun(const double x);
+  double psiFun(const double x);
+  double wgtFun(const double x);
+  double DpsiFun(const double x);
+  double DwgtFun(const double x);
+  double Erho();
+  double Epsi2();
+  double EDpsi();
   
   ~HuberPsi();
   
@@ -94,11 +94,11 @@ public:
   NumericVector tDefs() const;
   const std::string showDefaults() const;
   
-  const double rhoFun(const double x);
-  const double psiFun(const double x);
-  const double DpsiFun(const double x);
-  const double wgtFun(const double x);
-  const double DwgtFun(const double x);
+  double rhoFun(const double x);
+  double psiFun(const double x);
+  double DpsiFun(const double x);
+  double wgtFun(const double x);
+  double DwgtFun(const double x);
   
   ~SmoothPsi();
   
@@ -121,11 +121,11 @@ public:
   NumericVector tDefs() const;
   const std::string showDefaults() const;
   
-  const double rhoFun(const double x);
-  const double psiFun(const double x);
-  const double wgtFun(const double x);
-  const double DpsiFun(const double x);
-  const double DwgtFun(const double x);
+  double rhoFun(const double x);
+  double psiFun(const double x);
+  double wgtFun(const double x);
+  double DpsiFun(const double x);
+  double DwgtFun(const double x);
   
   const PsiFunction* base() const;
   
@@ -147,9 +147,9 @@ NumericVector psi(PsiFunction* p, NumericVector x);
 NumericVector wgt(PsiFunction* p, NumericVector x);
 NumericVector Dpsi(PsiFunction* p, NumericVector x);
 NumericVector Dwgt(PsiFunction* p, NumericVector x);
-const double Erho(PsiFunction* p);
-const double Epsi2(PsiFunction* p);
-const double EDpsi(PsiFunction* p);
+double Erho(PsiFunction* p);
+double Epsi2(PsiFunction* p);
+double EDpsi(PsiFunction* p);
 NumericVector tDefs(PsiFunction* p);
 
 extern "C" SEXP _rcpp_module_boot_psi_function_module();

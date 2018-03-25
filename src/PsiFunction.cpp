@@ -1,8 +1,12 @@
 #include "PsiFunction.h"
+#include <Rinternals.h>
 using namespace Rcpp;
 
+static const double DEFAULT_K = 1.345;
+static const double DEFAULT_S = 10.;
+
 #define DEBUG(STRING)                                          \
-// /Rcpp::Rcout << STRING << std::endl;
+// Rcpp::Rcout << STRING << std::endl;
 
 template <typename T> int sgn(T val) {
   return (T(0) < val) - (val < T(0));
@@ -19,7 +23,18 @@ const std::string PsiFunction::show() const {
   return this->name() + " psi function" + this->showDefaults();
 }
 
-void PsiFunction::chgDefaults(NumericVector tuningParameters) {}
+
+void PsiFunction::chgDefaults(NumericVector tuningParameters) {
+  if (this->needToChgDefaults(tuningParameters)) {
+    this->doChgDefaults(tuningParameters);
+  }
+}
+
+bool PsiFunction::needToChgDefaults(NumericVector tuningParameters) {
+  return false;
+}
+
+void PsiFunction::doChgDefaults(NumericVector tuningParameters) {}
 
 NumericVector PsiFunction::tDefs() const {
   return NumericVector(0);
@@ -80,9 +95,9 @@ const std::string PsiFunctionNumIntExp::name() const {
   return "PsiFunction with expectations computed using numerical integration";
 }
 
-void PsiFunctionNumIntExp::chgDefaults(NumericVector tuningParameters) {
+void PsiFunctionNumIntExp::doChgDefaults(NumericVector tuningParameters) {
   reset();
-  PsiFunction::chgDefaults(tuningParameters);
+  PsiFunction::doChgDefaults(tuningParameters);
 }
 
 double PsiFunctionNumIntExp::Erho() {
@@ -152,9 +167,13 @@ const std::string PsiFunctionPropII::name() const {
   return base_->name() + ", Proposal II";
 }
 
-void PsiFunctionPropII::chgDefaults(NumericVector x) {
-  base_->chgDefaults(x);
-  PsiFunctionNumIntExp::chgDefaults(x);
+bool PsiFunctionPropII::needToChgDefaults(NumericVector x) {
+  return base_->needToChgDefaults(x); 
+}
+
+void PsiFunctionPropII::doChgDefaults(NumericVector x) {
+  base_->doChgDefaults(x);
+  PsiFunctionNumIntExp::doChgDefaults(x);
 }
 
 NumericVector PsiFunctionPropII::tDefs() const {
@@ -204,22 +223,30 @@ double PsiFunctionPropII::integrate(Fptr fptr, double b) {
 
 // class HuberPsi
 HuberPsi::HuberPsi() : PsiFunction() {
-  chgDefaults(NumericVector(0));
+  doChgDefaults(NumericVector(0));
 }
 
 HuberPsi::HuberPsi(NumericVector k) : PsiFunction() {
-  chgDefaults(k); 
+  doChgDefaults(k); 
 }
 
 const std::string HuberPsi::name() const {
   return "Huber";
 }
 
-void HuberPsi::chgDefaults(NumericVector k) {
+bool HuberPsi::needToChgDefaults(NumericVector k) {
+  if (k.size() >= 1) {
+    return k_ != k[0]; 
+  } else {
+    return k_ != DEFAULT_K;
+  }
+}
+
+void HuberPsi::doChgDefaults(NumericVector k) {
   if (k.size() >= 1) {
     k_ = k[0];
   } else {
-    k_ = 1.345;
+    k_ = DEFAULT_K;
   }
 }
 
@@ -302,28 +329,46 @@ HuberPsi::~HuberPsi() {}
 
 // class SmoothPsi
 SmoothPsi::SmoothPsi() : PsiFunctionNumIntExp() {
-  chgDefaults(NumericVector(0));
+  doChgDefaults(NumericVector(0));
 }
 
 SmoothPsi::SmoothPsi(NumericVector tuningParameters) : PsiFunctionNumIntExp() {
-  chgDefaults(tuningParameters);
+  doChgDefaults(tuningParameters);
 }
 
 const std::string SmoothPsi::name() const {
   return "smoothed Huber";
 }
 
-void SmoothPsi::chgDefaults(NumericVector tuningParameters) {
-  PsiFunctionNumIntExp::chgDefaults(tuningParameters);
+bool SmoothPsi::needToChgDefaults(NumericVector tuningParameters) {
+  bool result = false;
+  if (tuningParameters.size() >= 1) {
+    result = k_ != tuningParameters[0];
+  } else {
+    result = k_ != DEFAULT_K;
+  }
+  if (result) {
+    return result;
+  }
+  if (tuningParameters.size() >= 2) {
+    result = s_ != tuningParameters[1];
+  } else {
+    result = s_ != DEFAULT_S;
+  }
+  return result;
+}
+
+void SmoothPsi::doChgDefaults(NumericVector tuningParameters) {
+  PsiFunctionNumIntExp::doChgDefaults(tuningParameters);
   if (tuningParameters.size() >= 1) {
     k_ = tuningParameters[0];
   } else {
-    k_ = 1.345;
+    k_ = DEFAULT_K;
   }
   if (tuningParameters.size() >= 2) {
     s_ = tuningParameters[1];
   } else {
-    s_ = 10.;
+    s_ = DEFAULT_S;
   }
   a_ = std::pow(s_, 1. / (s_ + 1.));
   c_ = k_ - std::pow(a_, -s_);
@@ -495,6 +540,13 @@ void psiFunctionIntegrandNorm(double *x, const int n, void *const ex) {
   return;
 }
 
+extern "C" {
+  
+  SEXP isnull(SEXP pointer) {
+    return Rf_ScalarLogical(!R_ExternalPtrAddr(pointer));
+  }
+
+}
 
 RCPP_EXPOSED_CLASS(PsiFunction)
 RCPP_MODULE(psi_function_module) {
@@ -533,4 +585,6 @@ RCPP_MODULE(psi_function_module) {
     .constructor<PsiFunction*>()
     .method("base", &PsiFunctionPropII::base)
   ;
+  
+  function("isnull", &isnull);
 }

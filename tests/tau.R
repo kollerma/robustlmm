@@ -26,8 +26,8 @@ testKappaTau <- function(rho, wExp) {
     rho2 <- if (wExp == 2) psi2propII(rho) else rho
     kappa <- calcKappaTau(rho2, 1)
     fun <- switch(wExp,
-                  function(x) rho$psi(x)*x - kappa*rho$wgt(x),
-                  function(x) rho$psi(x)^2 - kappa*rho$wgt(x)^2)
+                  function(x) rho@psi(x)*x - kappa*rho@wgt(x),
+                  function(x) rho@psi(x)^2 - kappa*rho@wgt(x)^2)
     E(fun)
 }
 
@@ -48,7 +48,7 @@ E2 <- function(fun, ...) {
 rfm <- rlmer(Yield ~ (1|Batch), Dyestuff)
 
 testTau <- function(rho, rho.sigma, wExp, a, s) {
-    psi <- rho$psi
+    psi <- rho@psi
     rho.e <- rho.sigma
     rho.sigma2 <- if (wExp == 2) psi2propII(rho.sigma) else rho.sigma
     kappa <- calcKappaTau(rho.sigma2, 1)
@@ -56,18 +56,18 @@ testTau <- function(rho, rho.sigma, wExp, a, s) {
 
     fun <- switch(wExp + 1,
                   { ## wExp.e == 0:
-                      wgt <- function(x) ifelse(x == 0, rho.e$Dpsi(0)/2, rho$rho(x)/(x*x))
+                      wgt <- function(x) ifelse(x == 0, rho.e$Dpsi(0)/2, rho@rho(x)/(x*x))
                       function(w, v, tau) {
                           t <- (v-a[i]*psi(v)+w*s[i])/tau
                           rho.e$rho(t) - kappa*wgt(t)
                       } }, ## wExp.e == 1:
                   function(w, v, tau) {
                       t <- (v-a[i]*psi(v)+w*s[i])/tau
-                      rho.e$psi(t)*t - kappa*rho.e$wgt(t)
+                      rho.e@psi(t)*t - kappa*rho.e@wgt(t)
                   }, ## wExp.e == 2:
                   function(w, v, tau) {
                       t <- (v-a[i]*psi(v)+w*s[i])/tau
-                      rho.e$psi(t)^2 - kappa*rho.e$wgt(t)^2
+                      rho.e@psi(t)^2 - kappa*rho.e@wgt(t)^2
                   })
 
     tau <- calcTau(a, s, rho, rho.sigma2, rfm@pp, kappa)

@@ -12,7 +12,7 @@ public:
   
   virtual const std::string name() const;
   virtual const std::string show() const;
-  virtual void chgDefaults(Rcpp::NumericVector tDefs);
+  void chgDefaults(Rcpp::NumericVector tDefs);
   virtual Rcpp::NumericVector tDefs() const;
   virtual const std::string showDefaults() const;
   
@@ -28,6 +28,13 @@ public:
   virtual double EDpsi();
   
   virtual ~PsiFunction();
+  
+protected:
+  virtual bool needToChgDefaults(Rcpp::NumericVector tDefs);
+  virtual void doChgDefaults(Rcpp::NumericVector tDefs);
+  
+  friend class PsiFunctionNumIntExp;
+  friend class PsiFunctionPropII;
 };
 
 typedef double (PsiFunction::*Fptr)(const double);
@@ -38,7 +45,6 @@ public:
   PsiFunctionNumIntExp();
   
   const std::string name() const;
-  void chgDefaults(Rcpp::NumericVector tDefs);
   
   virtual double Erho();
   virtual double Epsi2();
@@ -58,6 +64,9 @@ private:
   double computeEpsi2();
   double computeEDpsi();
   double integrate(Fptr fptr);
+  
+protected: 
+  virtual void doChgDefaults(Rcpp::NumericVector tDefs);
 };
 
 class HuberPsi : public PsiFunction {
@@ -66,7 +75,6 @@ public:
   HuberPsi(NumericVector k);
   
   const std::string name() const;
-  void chgDefaults(NumericVector k);
   NumericVector tDefs() const;
   const std::string showDefaults() const;
   
@@ -83,6 +91,10 @@ public:
   
 private:
   double k_;
+  
+protected: 
+  bool needToChgDefaults(Rcpp::NumericVector tDefs);
+  void doChgDefaults(Rcpp::NumericVector tDefs);
 };
 
 class SmoothPsi : public PsiFunctionNumIntExp {
@@ -90,7 +102,6 @@ public:
   SmoothPsi();
   SmoothPsi(NumericVector tuningParameters);
   const std::string name() const;
-  void chgDefaults(NumericVector tuningParameters);
   NumericVector tDefs() const;
   const std::string showDefaults() const;
   
@@ -108,6 +119,10 @@ private:
   double a_;
   double c_;
   double d_;
+  
+protected: 
+  bool needToChgDefaults(Rcpp::NumericVector tDefs);
+  void doChgDefaults(Rcpp::NumericVector tDefs);
 };
 
 class PsiFunctionPropII: public PsiFunctionNumIntExp {
@@ -117,7 +132,6 @@ public:
   ~PsiFunctionPropII();
   
   const std::string name() const;
-  void chgDefaults(NumericVector x);
   NumericVector tDefs() const;
   const std::string showDefaults() const;
   
@@ -134,6 +148,10 @@ private:
   Integration &integration_;
   
   double integrate(Fptr fptr, double b);
+  
+protected:
+  bool needToChgDefaults(Rcpp::NumericVector tDefs);
+  void doChgDefaults(Rcpp::NumericVector tDefs);
 };
 
 void psiFunctionIntegrand(double *x, const int n, void *const ex);
@@ -152,6 +170,7 @@ double Epsi2(PsiFunction* p);
 double EDpsi(PsiFunction* p);
 NumericVector tDefs(PsiFunction* p);
 
+extern "C" SEXP isnull(SEXP pointer);
 extern "C" SEXP _rcpp_module_boot_psi_function_module();
 
 #endif

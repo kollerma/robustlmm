@@ -56,9 +56,9 @@ cPsi2 <- psiFuncCached(rho = function(x, .) x^2 / 2,
                        name = "classic (x^2/2)",
                        . = Inf ## dummy, need at least one parameter
 )
-stopifnot(all.equal(cPsi$Erho(), cPsi2@Erho()),
-          all.equal(cPsi$Epsi2(), cPsi2@Epsi2()),
-          all.equal(cPsi$EDpsi(), cPsi2@EDpsi()))
+stopifnot(all.equal(cPsi@Erho(), cPsi2@Erho()),
+          all.equal(cPsi@Epsi2(), cPsi2@Epsi2()),
+          all.equal(cPsi@EDpsi(), cPsi2@EDpsi()))
 
 smoothPsiOld <- 
   psiFuncCached(rho = function(x, k, s) {
@@ -141,34 +141,34 @@ chgDefaults.old <- function(object, ...) {
 }
 
 x <- seq(-10, 10, length.out = 1001)
-stopifnot(all.equal(smoothPsi$wgt(x), smoothPsiOld@wgt(x)),
-  all.equal(smoothPsi$Dwgt(x), smoothPsiOld@Dwgt(x)),
-  all.equal(smoothPsi$psi(x), smoothPsiOld@psi(x)),
-  all.equal(smoothPsi$Dpsi(x), smoothPsiOld@Dpsi(x)),
-  all.equal(smoothPsi$rho(x), smoothPsiOld@rho(x)),
-  all.equal(smoothPsi$Erho(), smoothPsiOld@Erho()),
-  all.equal(smoothPsi$Epsi2(), smoothPsiOld@Epsi2()),
-  all.equal(smoothPsi$EDpsi(), smoothPsiOld@EDpsi()))
+stopifnot(all.equal(smoothPsi@wgt(x), smoothPsiOld@wgt(x)),
+  all.equal(smoothPsi@Dwgt(x), smoothPsiOld@Dwgt(x)),
+  all.equal(smoothPsi@psi(x), smoothPsiOld@psi(x)),
+  all.equal(smoothPsi@Dpsi(x), smoothPsiOld@Dpsi(x)),
+  all.equal(smoothPsi@rho(x), smoothPsiOld@rho(x)),
+  all.equal(smoothPsi@Erho(), smoothPsiOld@Erho()),
+  all.equal(smoothPsi@Epsi2(), smoothPsiOld@Epsi2()),
+  all.equal(smoothPsi@EDpsi(), smoothPsiOld@EDpsi()))
 
 sP <- chgDefaults(smoothPsi, k = 2.0, s = 9.0)
 sPOld <- chgDefaults.old(smoothPsiOld, k = 2.0, s = 9.0)
-stopifnot(all.equal(sP$wgt(x), sPOld@wgt(x)),
-          all.equal(sP$Dwgt(x), sPOld@Dwgt(x)),
-          all.equal(sP$psi(x), sPOld@psi(x)),
-          all.equal(sP$Dpsi(x), sPOld@Dpsi(x)),
-          all.equal(sP$rho(x), sPOld@rho(x)),
-          all.equal(sP$Erho(), sPOld@Erho()),
-          all.equal(sP$Epsi2(), sPOld@Epsi2()),
-          all.equal(sP$EDpsi(), sPOld@EDpsi()))
+stopifnot(all.equal(sP@wgt(x), sPOld@wgt(x)),
+          all.equal(sP@Dwgt(x), sPOld@Dwgt(x)),
+          all.equal(sP@psi(x), sPOld@psi(x)),
+          all.equal(sP@Dpsi(x), sPOld@Dpsi(x)),
+          all.equal(sP@rho(x), sPOld@rho(x)),
+          all.equal(sP@Erho(), sPOld@Erho()),
+          all.equal(sP@Epsi2(), sPOld@Epsi2()),
+          all.equal(sP@EDpsi(), sPOld@EDpsi()))
 
-stopifnot(all.equal(huberPsiRcpp$wgt(x), robustbase::huberPsi@wgt(x)),
-          all.equal(huberPsiRcpp$Dwgt(x), robustbase::huberPsi@Dwgt(x)),
-          all.equal(huberPsiRcpp$psi(x), robustbase::huberPsi@psi(x)),
-          all.equal(huberPsiRcpp$Dpsi(x), robustbase::huberPsi@Dpsi(x) + 0),
-          all.equal(huberPsiRcpp$rho(x), robustbase::huberPsi@rho(x)),
-          all.equal(huberPsiRcpp$Erho(), robustbase::huberPsi@Erho()),
-          all.equal(huberPsiRcpp$Epsi2(), robustbase::huberPsi@Epsi2()),
-          all.equal(huberPsiRcpp$EDpsi(), robustbase::huberPsi@EDpsi()))
+stopifnot(all.equal(huberPsiRcpp@wgt(x), robustbase::huberPsi@wgt(x)),
+          all.equal(huberPsiRcpp@Dwgt(x), robustbase::huberPsi@Dwgt(x)),
+          all.equal(huberPsiRcpp@psi(x), robustbase::huberPsi@psi(x)),
+          all.equal(huberPsiRcpp@Dpsi(x), robustbase::huberPsi@Dpsi(x) + 0),
+          all.equal(huberPsiRcpp@rho(x), robustbase::huberPsi@rho(x)),
+          all.equal(huberPsiRcpp@Erho(), robustbase::huberPsi@Erho()),
+          all.equal(huberPsiRcpp@Epsi2(), robustbase::huberPsi@Epsi2()),
+          all.equal(huberPsiRcpp@EDpsi(), robustbase::huberPsi@EDpsi()))
 
 .psi2propII <- function(object, ...) {
   ## do not do anything for cPsi
@@ -227,38 +227,90 @@ stopifnot(all.equal(huberPsiRcpp$wgt(x), robustbase::huberPsi@wgt(x)),
 
 sP2 <- psi2propII(smoothPsi)
 sPOld2 <- .psi2propII(smoothPsiOld)
-stopifnot(all.equal(sP2$wgt(x), sPOld2@wgt(x)),
-          all.equal(sP2$Dwgt(x), sPOld2@Dwgt(x)),
-          all.equal(sP2$psi(x), sPOld2@psi(x)),
-          all.equal(sP2$Dpsi(x), sPOld2@Dpsi(x)),
-          all.equal(sP2$rho(x), sPOld2@rho(x)),
-          all.equal(sP2$Erho(), sPOld2@Erho()),
-          all.equal(sP2$Epsi2(), sPOld2@Epsi2()),
-          all.equal(sP2$EDpsi(), sPOld2@EDpsi()))
+stopifnot(all.equal(sP2@wgt(x), sPOld2@wgt(x)),
+          all.equal(sP2@Dwgt(x), sPOld2@Dwgt(x)),
+          all.equal(sP2@psi(x), sPOld2@psi(x)),
+          all.equal(sP2@Dpsi(x), sPOld2@Dpsi(x)),
+          all.equal(sP2@rho(x), sPOld2@rho(x)),
+          all.equal(sP2@Erho(), sPOld2@Erho()),
+          all.equal(sP2@Epsi2(), sPOld2@Epsi2()),
+          all.equal(sP2@EDpsi(), sPOld2@EDpsi()))
 
 sP <- chgDefaults(smoothPsi, k = 2.0, s = 9.0)
 sPOld <- chgDefaults.old(smoothPsiOld, k = 2.0, s = 9.0)
 sP2 <- psi2propII(sP)
 sPOld2 <- .psi2propII(sPOld)
-stopifnot(all.equal(sP2$wgt(x), sPOld2@wgt(x)),
-          all.equal(sP2$Dwgt(x), sPOld2@Dwgt(x)),
-          all.equal(sP2$psi(x), sPOld2@psi(x)),
-          all.equal(sP2$Dpsi(x), sPOld2@Dpsi(x)),
-          all.equal(sP2$rho(x), sPOld2@rho(x)),
-          all.equal(sP2$Erho(), sPOld2@Erho()),
-          all.equal(sP2$Epsi2(), sPOld2@Epsi2()),
-          all.equal(sP2$EDpsi(), sPOld2@EDpsi()))
-
-if (FALSE) {
+stopifnot(all.equal(sP2@wgt(x), sPOld2@wgt(x)),
+          all.equal(sP2@Dwgt(x), sPOld2@Dwgt(x)),
+          all.equal(sP2@psi(x), sPOld2@psi(x)),
+          all.equal(sP2@Dpsi(x), sPOld2@Dpsi(x)),
+          all.equal(sP2@rho(x), sPOld2@rho(x)),
+          all.equal(sP2@Erho(), sPOld2@Erho()),
+          all.equal(sP2@Epsi2(), sPOld2@Epsi2()),
+          all.equal(sP2@EDpsi(), sPOld2@EDpsi()))
   
-  test1 <- psi2propII(smoothPsi, k = 2.2)
-  test2 <- psi2propII(chgDefaults(smoothPsi, k = 2.2))
-  ## this fails at the moments as psi2propII()$base() will
-  ## not give an object of the correct class, and then the
-  ## wrong copy constructor will be invoked.
-  test3 <- chgDefaults(psi2propII(smoothPsi), k = 2.2)
+test1 <- psi2propII(smoothPsi, k = 2.2)
+test2 <- psi2propII(chgDefaults(smoothPsi, k = 2.2))
+test3 <- chgDefaults(psi2propII(smoothPsi), k = 2.2)
 
-  stopifnot(all.equal(test1$psi(x), test2$psi(x)),
-            all.equal(test2$psi(x), test3$psi(x)))
-  
-}
+stopifnot(all.equal(test1@psi(x), test2@psi(x)),
+          all.equal(test2@psi(x), test3@psi(x)))
+
+## test changing of constants is not kept for next call
+stopifnot(all.equal(sP@wgt(x, k = 1.0), sPOld@wgt(x, k = 1.0)),
+          all.equal(sP2@wgt(x, k = 1.0), sPOld2@wgt(x, k = 1.0)),
+          all.equal(huberPsiRcpp@psi(x, k = 1.0), robustbase::huberPsi@psi(x, k = 1.0)))
+
+stopifnot(all.equal(sP@wgt(x), sPOld@wgt(x)),
+          all.equal(sP2@wgt(x), sPOld2@wgt(x)),
+          all.equal(huberPsiRcpp@psi(x), robustbase::huberPsi@psi(x)))
+
+# test chgDefaults with different order of arguments
+stopifnot(all.equal(sP@psi(x, s = 8., k = 1.2), sP@psi(x, k = 1.2, s = 8.)),
+          all.equal(sP2@psi(x, s = 8., k = 1.2), sP2@psi(x, k = 1.2, s = 8.)))
+sPc <- chgDefaults(sP, s = 8., k = 1.2)
+sP2c <- chgDefaults(sP2, s = 8., k = 1.2)
+stopifnot(all.equal(sPc@psi(x), sP@psi(x, k = 1.2, s = 8.)),
+          all.equal(sP2c@psi(x), sP2@psi(x, k = 1.2, s = 8.)))
+
+# test handling of missing arguments
+stopifnot(all.equal(sPc@psi(x, s = 9.), sPc@psi(x, k = 1.2, s = 9.)),
+          all.equal(sP2c@psi(x, s = 9.), sP2c@psi(x, k = 1.2, s = 9.)))
+sPc <- chgDefaults(sP, k = 1.2)
+sP2c <- chgDefaults(sP2, k = 1.2)
+stopifnot(all.equal(sPc@psi(x), sP@psi(x, k = 1.2, s = 9.)),
+          all.equal(sP2c@psi(x), sP2@psi(x, k = 1.2, s = 9.)))
+
+## test chgDefaults croaks on additional arguments, too many arguments
+stopifnot(inherits(try(chgDefaults(sP, k = 1.2, h = 1.3, s = 10.), silent = TRUE), 
+                "try-error"),
+          inherits(try(chgDefaults(sP, 1.2, 1.3, 10.), silent = TRUE), 
+                   "try-error"),
+          inherits(try(chgDefaults(sP, 1.2, s = 10.), silent = TRUE), 
+                   "try-error"),
+          inherits(try(chgDefaults(sP2, k = 1.2, h = 1.3, s = 10.), silent = TRUE), 
+                   "try-error"))
+
+## test unnamed arguments work as expected
+sPc <- chgDefaults(sP, 1.2, 8.)
+sPcc <- chgDefaults(sPc, 1.3)
+stopifnot(all.equal(sPc@psi(x), sP@psi(x, k = 1.2, s = 8.)),
+          all.equal(sPcc@psi(x), sP@psi(x, k = 1.3, s = 8.)))
+
+## getInstanceWithOriginalDefaults gets the right defaults
+stopifnot(all.equal(smoothPsi@getInstanceWithOriginalDefaults()$tDefs(), smoothPsi@tDefs),
+          all.equal(sP2@getInstanceWithOriginalDefaults()$tDefs(), sP2@tDefs),
+          all.equal(sPc@getInstanceWithOriginalDefaults()$tDefs(), sPc@tDefs),
+          all.equal(sP2c@getInstanceWithOriginalDefaults()$tDefs(), sP2c@tDefs))
+
+## test psi2propII only works once
+stopifnot(inherits(try(psi2propII(sP2c), silent = TRUE),  "try-error"))
+
+## test saving and loading
+expected <- chgDefaults(smoothPsi, k = 1.0, s = 12)
+actual <- chgDefaults(smoothPsi, k = 1.0, s = 12)
+tfile <- tempfile()
+save(actual, file = tfile)
+load(tfile)
+stopifnot(all.equal(expected@EDpsi(), actual@EDpsi()))
+unlink(tfile)

@@ -180,7 +180,7 @@ setMethod("show", "rlmerMod", function(object) print.rlmerMod(object))
 
 ## getME is in helpers.R
 
-globalVariables("forceSymmetric", add=TRUE) 
+globalVariables("forceSymmetric", add=TRUE)
 
 ##' @importFrom stats vcov
 ##' @S3method vcov rlmerMod
@@ -227,49 +227,50 @@ print.VarCorr.rlmerMod <- getS3method("print", "VarCorr.merMod")
 ##' @param ... optional arguments for \code{formatter(*)} in addition
 ##' to the first (numeric vector) and \code{digits}.
 ##' @return a character matrix of formatted VarCorr entries from \code{varc}.
-formatVC <- function(varc, digits = max(3, getOption("digits") - 2),
-		     comp = "Std.Dev.", formatter = format, ...)
+formatVC <- function(varcor, digits = max(3, getOption("digits") - 2),
+                     comp = "Std.Dev.", formatter = format,
+                     useScale = attr(varcor, "useSc"),
+                     ...)
 {
-    c.nms <- c("Groups", "Name", "Variance", "Std.Dev.")
-    avail.c <- c.nms[-(1:2)]
-    if(any(is.na(mcc <- pmatch(comp, avail.c))))
-	stop("Illegal 'comp': ", comp[is.na(mcc)])
-    nc <- length(colnms <- c(c.nms[1:2], (use.c <- avail.c[mcc])))
-    if(length(use.c) == 0)
-	stop("Must *either* show variances or standard deviations")
-    useScale <- attr(varc, "useSc")
-    reStdDev <- c(lapply(varc, attr, "stddev"),
-		  if(useScale) list(Residual = unname(attr(varc, "sc"))))
-    reLens <- vapply(reStdDev, length, 1L)
-    nr <- sum(reLens)
-    reMat <- array('', c(nr, nc), list(rep.int('', nr), colnms))
-    reMat[1+cumsum(reLens)-reLens, "Groups"] <- names(reLens)
-    reMat[,"Name"] <- c(unlist(lapply(varc, colnames)), if(useScale) "")
-    if(any("Variance" == use.c))
+  c.nms <- c("Groups", "Name", "Variance", "Std.Dev.")
+  avail.c <- c.nms[-(1:2)]
+  if(anyNA(mcc <- pmatch(comp, avail.c)))
+    stop("Illegal 'comp': ", comp[is.na(mcc)])
+  nc <- length(colnms <- c(c.nms[1:2], (use.c <- avail.c[mcc])))
+  if(length(use.c) == 0)
+    stop("Must *either* show variances or standard deviations")
+  reStdDev <- c(lapply(varcor, attr, "stddev"),
+                if(useScale) list(Residual = unname(attr(varcor, "sc"))))
+  reLens <- lengths(reStdDev)
+  nr <- sum(reLens)
+  reMat <- array('', c(nr, nc), list(rep.int('', nr), colnms))
+  reMat[1+cumsum(reLens)-reLens, "Groups"] <- names(reLens)
+  reMat[,"Name"] <- c(unlist(lapply(varcor, colnames)), if(useScale) "")
+  if(any("Variance" == use.c))
     reMat[,"Variance"] <- formatter(unlist(reStdDev)^2, digits = digits, ...)
-    if(any("Std.Dev." == use.c))
+  if(any("Std.Dev." == use.c))
     reMat[,"Std.Dev."] <- formatter(unlist(reStdDev),   digits = digits, ...)
-    if (any(reLens > 1)) {
-	maxlen <- max(reLens)
-	recorr <- lapply(varc, attr, "correlation")
-	corr <-
-	    do.call("rBind",
-		    lapply(recorr,
-			   function(x) {
-			       x <- as(x, "matrix")
-			       dig <- max(2, digits - 2) # use 'digits' !
-                               ## not using formatter() for correlations
-			       cc <- format(round(x, dig), nsmall = dig)
-			       cc[!lower.tri(cc)] <- ""
-			       nr <- nrow(cc)
-			       if (nr >= maxlen) return(cc)
-			       cbind(cc, matrix("", nr, maxlen-nr))
-			   }))[, -maxlen, drop = FALSE]
-	if (nrow(corr) < nrow(reMat))
-	    corr <- rbind(corr, matrix("", nrow(reMat) - nrow(corr), ncol(corr)))
-	colnames(corr) <- c("Corr", rep.int("", max(0L, ncol(corr)-1L)))
-	cbind(reMat, corr)
-    } else reMat
+  if (any(reLens > 1)) {
+    maxlen <- max(reLens)
+    recorr <- lapply(varcor, attr, "correlation")
+    corr <-
+      do.call(rbind,
+              lapply(recorr,
+                     function(x) {
+                       x <- as.matrix(x)
+                       dig <- max(2, digits - 2) # use 'digits' !
+                       ## not using formatter() for correlations
+                       cc <- format(round(x, dig), nsmall = dig)
+                       cc[!lower.tri(cc)] <- ""
+                       nr <- nrow(cc)
+                       if (nr >= maxlen) return(cc)
+                       cbind(cc, matrix("", nr, maxlen-nr))
+                     }))[, -maxlen, drop = FALSE]
+    if (nrow(corr) < nrow(reMat))
+      corr <- rbind(corr, matrix("", nrow(reMat) - nrow(corr), ncol(corr)))
+    colnames(corr) <- c("Corr", rep.int("", max(0L, ncol(corr)-1L)))
+    cbind(reMat, corr)
+  } else reMat
 }
 
 ## summary is in helpers.R
@@ -340,7 +341,7 @@ predict.rlmerMod <- function(object, newdata=NULL,
             pred <- napredict(fit.na.action,pred)
         }
         return(pred)
-   
+
       } else { ## newdata and/or REform specified
         X_orig <- getME(object, "X")
         if (is.null(newdata)) {
@@ -438,10 +439,5 @@ predict.rlmerMod <- function(object, newdata=NULL,
         }
         return(pred)
     }
-}    
+}
 
-##' @importFrom stats predict
-##' @S3method predict rlmerMod
-predict.rlmerMod <- getS3method("predict", "merMod")
-## the following is needed to get the correct getME() function:
-environment(predict.rlmerMod) <- environment()

@@ -1,15 +1,9 @@
 \name{chgDefaults}
 \alias{chgDefaults}
-\alias{chgDefaults,Rcpp_SmoothPsi-method}
-\alias{chgDefaults,Rcpp_HuberPsi-method}
-\alias{chgDefaults,Rcpp_PsiFunction-method}
-\alias{chgDefaults,Rcpp_PsiFunctionToPropIIPsiFunctionWrapper-method}
+\alias{chgDefaults,psi_func_rcpp-method}
 \title{Change default arguments}
 \usage{
-\S4method{chgDefaults}{Rcpp_SmoothPsi}(object, ...)
-\S4method{chgDefaults}{Rcpp_HuberPsi}(object, ...)
-\S4method{chgDefaults}{Rcpp_PsiFunction}(object, ...)
-\S4method{chgDefaults}{Rcpp_PsiFunctionToPropIIPsiFunctionWrapper}(object, ...)
+\S4method{chgDefaults}{psi_func_rcpp}(object, ...)
 }
 \arguments{
   \item{object}{PsiFunction instance to convert}
@@ -24,8 +18,8 @@
 }
 \examples{
 sPsi <- chgDefaults(smoothPsi, k=2)
-curve(smoothPsi$psi(x), 0, 3)
-curve(sPsi$psi(x), 0, 3, color="blue", add=TRUE)
+curve(smoothPsi@psi(x), 0, 3)
+curve(sPsi@psi(x), 0, 3, color="blue", add=TRUE)
 }
 \keyword{utilities}
 

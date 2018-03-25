@@ -388,8 +388,8 @@ where $c = k - s^{\frac{-s}{s+1}}$ and $d = c - s^{\frac{1}{s+1}}$. We recommend
 <<smoothedHuber,fig=TRUE,width=6.66,height=4,include=FALSE,echo=FALSE>>=
 require(reshape2)
 xs <- seq.int(0, 3, length.out = 100)
-data <- data.frame(x = xs, Huber = huberPsiRcpp$psi(xs),
-  "Smoothed" = smoothPsi$psi(xs))
+data <- data.frame(x = xs, Huber = huberPsiRcpp@psi(xs),
+  "Smoothed" = smoothPsi@psi(xs))
 print(ggplot(melt(data, 1), aes(x, value, color = variable, 
   linetype = variable)) + geom_line() +
   scale_colour_hue(expression(paste(psi, "-function"))) +

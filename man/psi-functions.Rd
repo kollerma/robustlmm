@@ -42,9 +42,9 @@
 plot(cPsi)
 plot(huberPsiRcpp)
 plot(smoothPsi)
-curve(cPsi$psi(x), -3, 3)
-curve(smoothPsi$psi(x), -3, 3, add=TRUE, col="red")
-curve(huberPsiRcpp$psi(x), -3, 3, add=TRUE, col="blue")
+curve(cPsi@psi(x), -3, 3)
+curve(smoothPsi@psi(x), -3, 3, add=TRUE, col="red")
+curve(huberPsiRcpp@psi(x), -3, 3, add=TRUE, col="blue")
 }
 \seealso{
   \code{\link{chgDefaults}} and \code{\link{psi2propII}}

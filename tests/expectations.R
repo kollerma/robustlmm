@@ -11,7 +11,7 @@ cPsi <- robustlmm:::cPsi
 
 ## simple tests for q = 1:
 test1 <- function(rho) {
-    stopifnot(all.equal(.calcE.D.re(1, rho), rho$EDpsi()))
+    stopifnot(all.equal(.calcE.D.re(1, rho), rho@EDpsi()))
 }
 
 test1(cPsi)
@@ -27,7 +27,7 @@ test2 <- function(q, rho, npts = 1000000) {
     ## test .calcE.D.re
     integrand <- function(u2, v2, s2) {
         dk <- .d2(u2 + v2,q)
-        (rho$Dpsi(dk)/dk - rho$psi(dk)/dk^2)/dk*u2 + rho$psi(.d2(s2,q))/.d2(s2,q)
+        (rho@Dpsi(dk)/dk - rho@psi(dk)/dk^2)/dk*u2 + rho@psi(.d2(s2,q))/.d2(s2,q)
     }
     u2 <- rnorm(npts)^2
     v2 <- rchisq(npts, q-1)

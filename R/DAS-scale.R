@@ -5,7 +5,7 @@
 ##' @importFrom stats uniroot update.formula
 ##' @importFrom utils packageVersion stack
 ##' @importFrom methods as is slot validObject
-##' @importFrom grDevices devAskNewPage 
+##' @importFrom grDevices devAskNewPage
 ## calculate the expected value to be used in D.re
 .calcE.D.re <- function(s, rho) {
     if (s == 1) return(rho@EDpsi())
@@ -46,7 +46,7 @@
 ## (if the \eqn{\rho}{rho}-function is not redescending). As an
 ## alternative, one can use \eqn{\rho_\sigma = \psi_e'^2/2}{rho_sigma = psi_e'^2}.
 ## This corresponds to Huber's Proposal II.
-## 
+##
 ## @title Function \eqn{G_\sigma(a, s)}{G_sigma(a, s)}
 ## @param tau denominator inside function \eqn{\rho_\sigma}{rho_sigma}
 ## @param a first argument of G, leverage of observation
@@ -70,7 +70,7 @@ G <- function(tau = rep(1, length(a)), a, s, rho, rho.sigma, pp) {
 ## Calculate s = sqrt(v_{-i}), standard deviation of the
 ## average term in the linear approximation of the residuals,
 ## (in the case of diagonal Sigma_b / Lambda_\theta)
-## This scale is used in G 
+## This scale is used in G
 ##
 ## @title Calculate s
 ## @param object rlmerMod object
@@ -91,7 +91,7 @@ G <- function(tau = rep(1, length(a)), a, s, rho, rho.sigma, pp) {
     M2[is.na(M2)] <- 0
     ## calculate s:
     ret <- pp$rho_e@Epsi2() * rowSums(M1^2)
-    if (any(!pp$zeroB)) ret <- ret + drop(M2^2 %*% diag(pp$Epsi_bpsi_bt))
+    if (any(!.zeroB(pp=pp))) ret <- ret + drop(M2^2 %*% diag(pp$Epsi_bpsi_bt))
     sqrt(ret)
 }
 
@@ -105,7 +105,7 @@ G <- function(tau = rep(1, length(a)), a, s, rho, rho.sigma, pp) {
 ## @return list of matrices S_k
 .S <- function(object) {
     ret <- list()
-    idx <- !object@pp$zeroB
+    idx <- !.zeroB(object)
     tmpEL <- object@pp$L %*% object@pp$Epsi_bpsi_bt
     for (k in 1:max(object@k)) {
         ind <- object@k == k
@@ -225,17 +225,21 @@ calcTau <- function(a, s, rho.e, rho.sigma.e, pp,
             if (tau[i] > 1) {
                 tau[i] <- 1
                 warning("tau[", i, "] > 1, setting it to 1")
-            }            
+            }
         }
     }
-    
+
     tau
 }
 
 calcTau.nondiag <- function(object, ghZ, ghw, skbs, kappas, max.iter,
                             rel.tol = 1e-4, verbose = 0) {
+    if (!inherits(object@pp, "rlmerPredD")) {
+        return(object@pp$Tb())
+    }
+
     ## define 4d integration function
-    int4d <- function(fun) drop(apply(ghZ, 1, fun) %*% ghw)
+    ## int4d <- function(fun) drop(apply(ghZ, 1, fun) %*% ghw)
     ## initial values
     T <- object@pp$T()
     ## move into list
@@ -244,7 +248,7 @@ calcTau.nondiag <- function(object, ghZ, ghw, skbs, kappas, max.iter,
     for (type in seq_along(object@blocks)) {
         bidx <- object@idx[[type]]
         for (k in 1:ncol(bidx)) ## 1:K
-            TkbsI <- c(TkbsI, list(T[bidx[,k],bidx[,k]]))
+            TkbsI <- c(TkbsI, list(as.matrix(T[bidx[,k],bidx[,k]])))
     }
 
     ## Compute Taus
@@ -256,7 +260,7 @@ calcTau.nondiag <- function(object, ghZ, ghw, skbs, kappas, max.iter,
         bidx <- object@idx[[type]]
         s <- nrow(bidx)
         ind <- which(object@ind == type) ## (in terms of blocks on diagonal)
-        idx <- !object@pp$zeroB
+        idx <- !.zeroB(object)
         if (!any(idx[bidx])) { ## block has been dropped
             Tbks <- c(Tbks, rep(list(matrix(0, s, s)), length(ind)))
             next
@@ -275,7 +279,7 @@ calcTau.nondiag <- function(object, ghZ, ghw, skbs, kappas, max.iter,
             psi.sigma <- object@rho.sigma.b[[type]]@psi
             skappa <- s*object@pp$kappa_b[type]
             wgtDelta <- function(u) (psi.sigma(u) - psi.sigma(u-skappa))/s
-            lastSk <- lastkk <- matrix()
+            lastSk <- lastLkk <- matrix()
             lastRet <- NA
             ## cycle blocks
             for (k in 1:ncol(bidx)) { ## 1:K
@@ -303,6 +307,24 @@ calcTau.nondiag <- function(object, ghZ, ghw, skbs, kappas, max.iter,
                             conv <- TRUE
                             lTbk <- as.matrix(TkbsI[[ind[k]]])
                         } else {
+                            ## browser()
+                            if (FALSE) {
+
+                            ## old:
+                            funA <- function(u) {
+                              btilde <- u[1:2] - wgt(.d(u[1:2],2)) * Lkk %*% u[1:2] - crossprod(Sk, u[3:4])
+                              wgtDelta(drop(crossprod(backsolve(lLTbk, btilde))))
+                              ## not needed: *prod(dnorm(c(u1,u2,u3,u4)))
+                            }
+                            a <- int4d(funA)
+                            funB <- function(u) {
+                              btilde <- u[1:2] - wgt(.d(u[1:2],2)) * Lkk %*% u[1:2] -
+                                crossprod(Sk, u[3:4])
+                              wgt.sigma(drop(crossprod(backsolve(lLTbk, btilde))))*tcrossprod(btilde)
+                            }
+                            B <- matrix(int4d(funB), s)
+
+                            }
                             btilde <- ghZ[,1:2] - wgt(.d(ghZ[,1:2],2)) * ghZ[, 1:2] %*% Lkk -
                                 ghZ[, 3:4] %*% Sk
                             tmp1 <- colSums(backsolve(lLTbk, t(btilde))^2)
@@ -345,13 +367,16 @@ calcTau.nondiag <- function(object, ghZ, ghw, skbs, kappas, max.iter,
         } else {
             warning("DAStau for blocks of dimension > 2 not defined, falling back to DASvar")
             stop("yes, do as promised")
-        }    
+        }
     }
 
     ## combine into Matrix
-    bdiag(Tbks)    
+    out <- bdiag(Tbks)
+    ## print(object@pp$Tb()[1:4, 1:4])
+    ## print(out[1:4, 1:4])
+    return(out)
 }
-    
+
 ## Update sigma: calculate averaged DAS scale
 ##
 ## @title Calculate averaged DAS scale
@@ -362,10 +387,10 @@ calcTau.nondiag <- function(object, ghZ, ghw, skbs, kappas, max.iter,
 ## @return rlmerMod-object
 updateSigma <- function(object, max.iter = 100, rel.tol = 1e-6, fit.effects = TRUE) {
     rho.sigma.e <- object@rho.sigma.e
-        
-    kappa <- object@pp$kappa_e
+
+    kappa <- .kappa_e(object)
     tau <- object@pp$tau_e()
-    
+
     ## use iterative reweighting
     fun <- if (object@method %in% c("DAStau", "DASvar")) {
         wgt <- rho.sigma.e@wgt
@@ -377,7 +402,7 @@ updateSigma <- function(object, max.iter = 100, rel.tol = 1e-6, fit.effects = TR
     }
     fun2 <- if (fit.effects) function(scale, r) {
         setSigma(object, scale)
-        fitEffects(c(object@pp$beta, object@pp$b.s), object)
+        fitEffects(c(.fixef(object), .u(object)), object)
         fun(scale, object@resp$wtres)
     } else fun
     scale0 <- .sigma(object)
@@ -430,7 +455,7 @@ updateSigma <- function(object, max.iter = 100, rel.tol = 1e-6, fit.effects = TR
 ## @param verbose level of verbosity
 ## @return rlmerMod-object
 updateThetaTau <- function(object, max.iter = 100, rel.tol = 1e-6, verbose = 0) {
-    kappas <- object@pp$kappa_b
+    kappas <- .kappa_b(object)
     tau <- switch(object@method,
                   DAStau = sqrt(diag(calcTau.nondiag(object,skbs=.s(object, theta=TRUE),
                                                      kappas=kappas, max.iter=max.iter))),
@@ -438,8 +463,9 @@ updateThetaTau <- function(object, max.iter = 100, rel.tol = 1e-6, verbose = 0) 
                   stop("method not supported by updateThetaTau:", object@method))
 
     deltatheta <- rep(0, length(theta(object)))
-    sigmae <- object@pp$sigma
+    sigmae <- .sigma(object)
     ds <- .dk(object, sigmae)[object@k]
+    ## FIXME remove diag above and do stuff as matrix.
     ds <- ds / tau
     tau2 <- tau*tau
     idxTheta <- 0
@@ -449,7 +475,7 @@ updateThetaTau <- function(object, max.iter = 100, rel.tol = 1e-6, verbose = 0) 
         lq <- object@q[block]
         lind <- object@ind[object@k] == block
         idxTheta <- max(idxTheta) + 1:(ldim*(ldim+1)/2)
-        us <- object@pp$b.s[lind] / sigmae
+        us <- b.s(object)[lind] / sigmae
         lds <- ds[lind]
         if (all(abs(us) < 1e-7)) {
             deltatheta[idxTheta] <- 0
@@ -469,7 +495,7 @@ updateThetaTau <- function(object, max.iter = 100, rel.tol = 1e-6, verbose = 0) 
                     converged <- abs(delta - delta0) < rel.tol * max(rel.tol, delta0)
                     delta0 <- delta
                 }
-                
+
                 if (it >= max.iter)
                     warning("theta iterations did not converge. Returning unconverged estimates")
             }
@@ -480,13 +506,13 @@ updateThetaTau <- function(object, max.iter = 100, rel.tol = 1e-6, verbose = 0) 
 
     ## check for boundary conditions
     if (any(idx <- deltatheta < object@lower)) deltatheta[idx] <- 0
-    
+
     setTheta(object, theta(object) * deltatheta, fit.effects = TRUE,
              update.sigma = FALSE)
     ## update sigma without refitting effects
     updateSigma(object, fit.effects = FALSE)
     ## set Tbk cache
-    object@pp$setT(Diagonal(x=tau2))
-    
+    if (inherits(object@pp, "rlmerPredD")) object@pp$setT(Diagonal(x=tau2))
+
     invisible(object)
 }

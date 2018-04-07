@@ -85,8 +85,8 @@ chkPsiDeriv(p.psiFun(x., smoothPsi))
 stopifnot(chkPsiDeriv(p.psiFun(x., smoothPsi)))
 head(x. <- seq(-5, 10, length=1501))
 
-## intPsi <- Vectorize(function(x) integrate(function(y) smoothPsi$psi(y), 0, x)$value)
+## intPsi <- Vectorize(function(x) integrate(function(y) smoothPsi@psi(y), 0, x)$value)
 ## curve(intPsi, 0, 10)
-## curve(smoothPsi$rho(x), 0, 10, add=TRUE)
+## curve(smoothPsi@rho(x), 0, 10, add=TRUE)
 
 cat('Time elapsed: ', proc.time(),'\n') # for ``statistical reasons''

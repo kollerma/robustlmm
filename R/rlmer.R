@@ -1,16 +1,3 @@
-#######################################################
-## Main methods                                      ##
-#######################################################
-
-####
-## laplace approximated log likelihood
-## use the following "algorithm":
-##
-## 1. find beta, b for given values of theta
-## 2. find theta for given values of beta, b
-## 3. iterate
-####
-
 ##' Robust estimation of linear mixed effects models, for hierarchical
 ##' nested and non-nested, e.g., crossed, datasets.
 ##'
@@ -35,7 +22,7 @@
 ##' \code{method} argument can be used to speed up computations at the
 ##' expense of accuracy of the results.
 ##' }
-##' 
+##'
 ##' \item{Computation methods:}{
 ##' Currently, there are two different methods available for fitting
 ##' models. They only differ in how the consistency factors for the
@@ -54,7 +41,7 @@
 ##'         method available.
 ##' }
 ##' }
-##' 
+##'
 ##' \item{Weight functions:}{
 ##' The tuning parameters of the weight functions \dQuote{rho} can be
 ##' used to adjust robustness and efficiency of the resulting
@@ -181,7 +168,7 @@
 ##'                                   method="DASvar"))
 ##'   ## compare the two
 ##'   compare(rfm.DAStau, rfm.DASvar)
-##' 
+##'
 ##'   ## Fit variance components with higher efficiency
 ##'   ## psi2propII yields squared weights to get robust estimates
 ##'   rlmer(diameter ~ 1 + (1|plate) + (1|sample), Penicillin,
@@ -198,7 +185,7 @@
 ##' @importFrom lme4 lmer
 ##' @importFrom stats getCall
 ##' @export
-rlmer <- function(formula, data, ..., method = "DAStau",
+rlmerRcpp <- function(formula, data, ..., method = "DASvar",
                   rho.e = smoothPsi, rho.b = smoothPsi,
                   rho.sigma.e, rho.sigma.b, rel.tol = 1e-8,
                   max.iter = 40*(r+1)^2, verbose = 0,
@@ -262,7 +249,7 @@ rlmer <- function(formula, data, ..., method = "DAStau",
         ## check length of c.sigma.b
         for (bt in seq_along(lobj@blocks)) {
             ## set higher tuning constants by default
-            
+
             rho.sigma.b[[bt]] <- switch(wExp.b[bt],
                                         rho.b[[bt]],
                                         psi2propII(rho.b[[bt]]),
@@ -281,17 +268,12 @@ rlmer <- function(formula, data, ..., method = "DAStau",
         method <- "DASvar"
     }
     lobj@method <- method
-    if (substr(method, 1, 3) == "DAS") {
-        lobj@pp <- as(lobj@pp, "rlmerPredD_DAS")
-        lobj@pp$method <- method
-    }
-    lobj@pp$initRho(lobj)
-    lobj@pp$initMatrices(lobj)
-    lobj@pp$updateMatrices()
 
+    ## FIXME this should be moved to .convLme4Rlmer
+    lobj@pp <- convToRlmerPredD(init, lobj)
 
     if (!doFit) return(updateWeights(lobj))
-    
+
     ## do not start with theta == 0
     if (any(theta(lobj)[lobj@lower == 0] == 0)) {
         if (verbose > 0)
@@ -306,8 +288,8 @@ rlmer <- function(formula, data, ..., method = "DAStau",
 
     if (verbose > 0) {
         cat("\nrlmer starting values:\n")
-        cat("sigma, theta: ", lobj@pp$sigma, ", ", theta(lobj), "\n")
-        cat("coef: ", lobj@pp$beta, "\n")
+        cat("sigma, theta: ", .sigma(lobj), ", ", theta(lobj), "\n")
+        cat("coef: ", .fixef(lobj), "\n")
         if (verbose > 1)
             cat("b.s: ", b.s(lobj), "\n")
     }
@@ -316,25 +298,166 @@ rlmer <- function(formula, data, ..., method = "DAStau",
     r <- len(lobj, "theta")
 
     ## do fit: non diagonal case differently
-    if (!isDiagonal(lobj@pp$U_b)) {
+    if (!isDiagonal(.U_b(lobj))) {
         if (method == "DASvar") {
             lobj <- rlmer.fit.DAS.nondiag(lobj, verbose, max.iter, rel.tol)
         } else if (method == "DAStau") {
             lobj <- rlmer.fit.DAS.nondiag(lobj, verbose, max.iter, rel.tol, method="DAStau")
-        } else 
+        } else
             stop("Non-diagonal case only supported by DAStau and DASvar")
     } else {
         lobj <- rlmer.fit.DAS(lobj, verbose, max.iter, rel.tol)
     }
 
     if (verbose > 0) {
-        cat("sigma, theta: ", lobj@pp$sigma, ", ", theta(lobj), "\n")
-        cat("coef: ", lobj@pp$beta, "\n")
+        cat("sigma, theta: ", .sigma(lobj), ", ", theta(lobj), "\n")
+        cat("coef: ", .fixef(lobj), "\n")
         if (verbose > 1)
             cat("b.s: ", b.s(lobj), "\n")
     }
 
     return(updateWeights(lobj))
+}
+
+##' @export
+##' @rdname rlmer
+rlmer <- function(formula, data, ..., method = "DAStau",
+                  rho.e = smoothPsi, rho.b = smoothPsi,
+                  rho.sigma.e, rho.sigma.b, rel.tol = 1e-8,
+                  max.iter = 40*(r+1)^2, verbose = 0,
+                  doFit = TRUE, init)
+{
+  lcall <- match.call()
+  if (missing(init) || is.null(init) || is.list(init)) {
+    lcall2 <- lcall
+    lcall2[setdiff(names(formals(rlmer)), names(formals(lmer)))] <- NULL
+    lcall2$doFit <- NULL
+    lcall2$REML <- TRUE
+    lcall2[[1]] <- as.name("lmer")
+    pf <- parent.frame()
+    linit <- eval(lcall2, pf)
+    if (!missing(init) && is.list(init)) {
+      ## check sanity of input
+      stopifnot(length(init$fixef) == length(fixef(linit)),
+                length(init$u) == length(getME(linit, "u")),
+                length(init$sigma) == length(sigma(linit)),
+                length(init$theta) == length(getME(linit, "theta")))
+      ## convert object to rlmerMod
+      linit <- as(linit, "rlmerMod")
+      ## set all of the initial parameters, but do not fit yet
+      setFixef(linit, unname(init$fixef))
+      setSigma(linit, init$sigma)
+      setTheta(linit, init$theta, fit.effects=FALSE, update.sigma=FALSE)
+      setU(linit, init$u)
+    }
+    init <- linit
+  } else if (is.function(init)) {
+    init <- do.call(init,list(formula=formula, data=data, REML=TRUE, ...))
+  } else if (is(init, "merMod") || is(init, "rlmerMod")) {
+    ## check whether formula and data match with
+    ## the ones in the provided in init
+    if (is.null(icall <- getCall(init)))
+      stop("Object 'init' should contain a 'call' component")
+    if (!identical(as.character(lcall$formula), as.character(icall$formula)) |
+        !identical(lcall$data, icall$data))
+      warning("Arguments 'data' and 'formula' do not match with 'init': ",
+              "using model specification from 'init'")
+  } else stop("Unsuitable init object, aborting.",
+              "Expecting no, list (see ?rlmer), rlmerMod or merMod object")
+  lobj <- as(init, "rlmerMod")
+  lobj@call <- lcall
+
+  ## give a warning if weights or offset are used
+  if (any(lobj@resp$weights != 1))
+    stop("Argument weights is unsave to use at the moment.")
+  if (any(lobj@resp$offset != 0))
+    warning("Argument offset is untested.")
+
+  ## set arguments only relevant to rlmerMod
+  ## convert rho argument to list if necessary
+  convRho <- function(l)
+    if (!is.list(l)) rep.int(list(l), length(lobj@dim)) else l
+  lobj@rho.b <- rho.b <- convRho(rho.b)
+  if (missing("rho.sigma.b")) {
+    rho.sigma.b <- list()
+    ## set default wExp.b
+    wExp.b <- ifelse(lobj@dim == 1, 2, 1) ## if s==1 then 2 else 1
+    ## check length of c.sigma.b
+    for (bt in seq_along(lobj@blocks)) {
+      ## set higher tuning constants by default
+
+      rho.sigma.b[[bt]] <- switch(wExp.b[bt],
+                                  rho.b[[bt]],
+                                  psi2propII(rho.b[[bt]]),
+                                  stop("only wExp = 1 and 2 are supported"))
+    }
+  }
+  lobj@rho.sigma.b <- convRho(rho.sigma.b)
+  if (!isTRUE(chk <- validObject(lobj))) stop(chk)
+  lobj@rho.e <- rho.e
+  if (missing("rho.sigma.e"))
+    rho.sigma.e <- psi2propII(rho.e) ## prop II is the default
+  lobj@rho.sigma.e <- rho.sigma.e
+  if (method == "DAStau" & any(sapply(lobj@idx, nrow) > 2)) {
+    warning("Method 'DAStau' does not support blocks of size larger than 2. ",
+            "Falling back to method 'DASvar'.")
+    method <- "DASvar"
+  }
+  lobj@method <- method
+  if (substr(method, 1, 3) == "DAS") {
+    lobj@pp <- as(lobj@pp, "rlmerPredD_DAS")
+    lobj@pp$method <- method
+  }
+  lobj@pp$initRho(lobj)
+  lobj@pp$initMatrices(lobj)
+  lobj@pp$updateMatrices()
+
+
+  if (!doFit) return(updateWeights(lobj))
+
+  ## do not start with theta == 0
+  if (any(theta(lobj)[lobj@lower == 0] == 0)) {
+    if (verbose > 0)
+      cat("Setting variance components from 0 to 1\n")
+    theta0 <- theta(lobj)
+    theta0[lobj@lower == 0 & theta0 == 0] <- 1
+    setTheta(lobj, theta0, fit.effects = TRUE, update.sigma = method != "Opt")
+  } else {
+    ## set theta at least once
+    setTheta(lobj, theta(lobj), fit.effects = FALSE)
+  }
+
+  if (verbose > 0) {
+    cat("\nrlmer starting values:\n")
+    cat("sigma, theta: ", .sigma(lobj), ", ", theta(lobj), "\n")
+    cat("coef: ", .fixef(lobj), "\n")
+    if (verbose > 1)
+      cat("b.s: ", b.s(lobj), "\n")
+  }
+
+  ## required for max.iter:
+  r <- len(lobj, "theta")
+
+  ## do fit: non diagonal case differently
+  if (!isDiagonal(lobj@pp$U_b)) {
+    if (method == "DASvar") {
+      lobj <- rlmer.fit.DAS.nondiag(lobj, verbose, max.iter, rel.tol)
+    } else if (method == "DAStau") {
+      lobj <- rlmer.fit.DAS.nondiag(lobj, verbose, max.iter, rel.tol, method="DAStau")
+    } else
+      stop("Non-diagonal case only supported by DAStau and DASvar")
+  } else {
+    lobj <- rlmer.fit.DAS(lobj, verbose, max.iter, rel.tol)
+  }
+
+  if (verbose > 0) {
+    cat("sigma, theta: ", .sigma(lobj), ", ", theta(lobj), "\n")
+    cat("coef: ", .fixef(lobj), "\n")
+    if (verbose > 1)
+      cat("b.s: ", b.s(lobj), "\n")
+  }
+
+  return(updateWeights(lobj))
 }
 
 ## DAS method
@@ -344,11 +467,13 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
         stop("can only do REML when using averaged DAS-estimate for sigma")
 
     ## Prepare for DAStau
-    if (method == "DAStau") {
+    if (method == "DAStau" && inherits(lobj@pp, "rlmerPredD")) {
         ## 4d int
         ## vectorize it!
         ghZ <- as.matrix(expand.grid(lobj@pp$ghz, lobj@pp$ghz, lobj@pp$ghz, lobj@pp$ghz))
         ghw <- apply(as.matrix(expand.grid(lobj@pp$ghw, lobj@pp$ghw, lobj@pp$ghw, lobj@pp$ghw)), 1, prod)
+    } else {
+        ghZ <- ghw <- c()
     }
 
     ## fit model using EM algorithm
@@ -357,18 +482,18 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
     iter <- 0
     rel.tol <- sqrt(rel.tol)
     ## compute kappa
-    kappas <- lobj@pp$kappa_b
+    kappas <- .kappa_b(lobj)
     ## zero pattern for T matrix
-    nzT <- crossprod(bdiag(lobj@blocks[lobj@ind])) == 0
+    nzT <- as.matrix(crossprod(bdiag(lobj@blocks[lobj@ind])) == 0)
     q <- lobj@pp$q
     ## false convergence indicator
     fc <- rep(FALSE, length(lobj@blocks))
     if (verbose > 0) {
         theta0 <- theta(lobj)
         if (verbose > 2) {
-            coef0 <- lobj@pp$beta
+            coef0 <- .fixef(lobj)
             b.s0 <- b.s(lobj)
-            sigma0 <- lobj@pp$sigma
+            sigma0 <- .sigma(lobj)
         }
     }
     ## iterate
@@ -389,14 +514,14 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
         ## symmetrize T to avoid non symmetric warning, then apply chol
         T <- symmpart(T)
         ## save to cache
-        lobj@pp$setT(T)
+        if (inherits(lobj@pp, "rlmerPredD")) lobj@pp$setT(T)
         ## apply chol to non-zero part only
-        idx <- !lobj@pp$zeroB
+        idx <- !.zeroB(lobj)
         ## stop if all are zero
         if (!any(idx)) break
         L <- t(chol(T[idx,idx]))
         T.bs <- numeric(q) ## set the others to zero
-        T.bs[idx] <- forwardsolve(L, lobj@pp$b.s[idx])
+        T.bs[idx] <- forwardsolve(L, b.s(lobj)[idx])
         ## compute weights
         db <- .dk(lobj, sigma, FALSE, T.bs)[lobj@k]
         wbsEta <- wbsDelta <- numeric(q)
@@ -417,7 +542,7 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
         }
         WbDelta <- Diagonal(x=wbsDelta)
         T <- WbDelta %*% T
-        bs <- sqrt(wbsEta) * lobj@pp$b.s
+        bs <- sqrt(wbsEta) * b.s(lobj)
 
         ## cycle block types
         for(type in seq_along(lobj@blocks)) {
@@ -430,7 +555,7 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
             if (all(abs(bs[bidx]) < 1e-7)) {
                 if (verbose > 1)
                     cat("Block", type, "dropped (all = 0), stopping iterations.\n")
-                 Ubtilde <- lobj@blocks[[type]]
+                Ubtilde <- lobj@blocks[[type]]
                 pat <- Ubtilde != 0
                 Lind <- Ubtilde[pat]
                 thetatilde[Lind] <- 0
@@ -511,17 +636,17 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
                 "\n")
             theta0 <- thetatilde
             if (verbose > 1) {
-                cat(sprintf("delta coef:  %.12f\n", sum(abs(coef0 - lobj@pp$beta))))
+                cat(sprintf("delta coef:  %.12f\n", sum(abs(coef0 - .fixef(lobj)))))
                 cat(sprintf("delta u:     %.12f\n", sum(abs(b.s0 - b.s(lobj)))))
-                cat(sprintf("delta sigma: %.12f\n", abs(sigma0 - lobj@pp$sigma)))
-                coef0 <- lobj@pp$beta
+                cat(sprintf("delta sigma: %.12f\n", abs(sigma0 - .sigma(lobj))))
+                coef0 <- .fixef(lobj)
                 b.s0 <- b.s(lobj)
-                sigma0 <- lobj@pp$sigma
+                sigma0 <- .sigma(lobj)
                 if (verbose > 2) {
                     cat("theta:", format(thetatilde, nsmall=20, scientific=FALSE), "\n")
-                    cat("coef:   ", lobj@pp$beta,"\n")
+                    cat("coef:   ", .fixef(lobj),"\n")
                     cat("b.s:    ", b.s(lobj), "\n")
-                    cat("sigmae: ", lobj@pp$sigma, "\n")
+                    cat("sigmae: ", .sigma(lobj), "\n")
                 }
             }
         }
@@ -533,7 +658,7 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
                     feval = iter,
                     warnings = list(),
                     val = diff)
-    
+
     if (iter == max.iter) {
         warning(wt <- "iterations did not converge, returning unconverged estimate.")
         optinfo$warnings <- list(wt)
@@ -564,9 +689,9 @@ rlmer.fit.DAS <- function(lobj, verbose, max.iter, rel.tol) {
     converged <- FALSE
     theta0 <- theta(lobj)
     if (verbose > 1) {
-        coef0 <- lobj@pp$beta
+        coef0 <- .fixef(lobj)
         b.s0 <- b.s(lobj)
-        sigma0 <- lobj@pp$sigma
+        sigma0 <- .sigma(lobj)
     }
     iter <- 0
     while (!converged && iter < max.iter) {
@@ -579,17 +704,17 @@ rlmer.fit.DAS <- function(lobj, verbose, max.iter, rel.tol) {
         if (verbose > 0) {
             cat(sprintf("delta theta: %.12f\n", sum(abs(theta0 - theta1))))
             if (verbose > 1) {
-                cat(sprintf("delta coef:  %.12f\n", sum(abs(coef0 - lobj@pp$beta))))
+                cat(sprintf("delta coef:  %.12f\n", sum(abs(coef0 - .fixef(lobj)))))
                 cat(sprintf("delta u:     %.12f\n", sum(abs(b.s0 - b.s(lobj)))))
-                cat(sprintf("delta sigma: %.12f\n", abs(sigma0 - lobj@pp$sigma)))
-                coef0 <- lobj@pp$beta
+                cat(sprintf("delta sigma: %.12f\n", abs(sigma0 - .sigma(lobj))))
+                coef0 <- .fixef(lobj)
                 b.s0 <- b.s(lobj)
-                sigma0 <- lobj@pp$sigma
+                sigma0 <- .sigma(lobj)
                 if (verbose > 2) {
                     cat("theta:  ", theta(lobj),"\n")
-                    cat("coef:   ", lobj@pp$beta,"\n")
+                    cat("coef:   ", .fixef(lobj),"\n")
                     cat("b.s:    ", b.s(lobj), "\n")
-                    cat("sigmae: ", lobj@pp$sigma, "\n")
+                    cat("sigmae: ", .sigma(lobj), "\n")
                 }
             }
         }
@@ -609,7 +734,7 @@ rlmer.fit.DAS <- function(lobj, verbose, max.iter, rel.tol) {
                     feval = iter,
                     warnings = list(),
                     val = diff)
-    
+
     if (iter == max.iter) {
         warning(wt <- "iterations did not converge, returning unconverged estimate.")
         optinfo$warnings <- list(wt)
@@ -617,6 +742,6 @@ rlmer.fit.DAS <- function(lobj, verbose, max.iter, rel.tol) {
     }
 
     lobj@optinfo <- optinfo
-    
+
     lobj
 }

@@ -8,6 +8,7 @@ require(robustlmm)
 .calcE.psi_bbt <- robustlmm:::.calcE.psi_bbt
 .calcE.psi_bpsi_bt <- robustlmm:::.calcE.psi_bpsi_bt
 setTheta <- robustlmm:::setTheta
+.zeroB <- robustlmm:::.zeroB
 
 calcMatrices <- function(object, numpoints=13) {
     X <- object@pp$X
@@ -15,11 +16,11 @@ calcMatrices <- function(object, numpoints=13) {
     rho.resp <- object@rho.e
     rho.re <- object@rho.b
     method <- object@method
-    
+
     p <- object@pp$p
     q <- object@pp$q
     n <- object@pp$n
-    
+
     ## D_e and D_b matrices, as well as
     ## Epsi2_e, Epsi2_b, Epsi_bbt and Epsi_bpsi_bt
     D_e <- Diagonal(x=rep(object@rho.e@EDpsi(), n))
@@ -39,44 +40,44 @@ calcMatrices <- function(object, numpoints=13) {
     Epsi_bpsi_bt <- bdiag(t3)
     Epsi2_b <- diag(Epsi_bpsi_bt)
     Lambda_b <- solve(D_b) * object@rho.e@EDpsi()
-    
+
     ## Matrices we need for calculating the Jacobian
     DX <- D_e %*% X
     ZtD <- Zt %*% D_e
     XtDX <- crossprod(X, DX)
     ZtDX <- ZtD %*% X
     ZtDZ <- tcrossprod(ZtD, Zt)
-    
+
     ## Initialize Jacobian Matrix (complete for given theta)
     J0 <- Matrix(0, p + q, p + q)
     J0[1:p, 1:p] <- XtDX
-    
+
     ## CXt = C X\tr = solve(X\tr D.resp X, X\tr)
     CXt <- solve(XtDX, t(X))
     ## H = X CXt
     H <- X %*% CXt
-    
+
     ## lfrac = la = \lambda_e / \lambda_b
     laD.re <- Lambda_b %*% D_b
-    
+
     I <- Matrix(diag(n))
     ## P = I - D.resp H
     P <- I - D_e %*% H
-    
+
     ZtPDZ <- tcrossprod(Zt %*% P, ZtD)
-    CXtD <- CXt %*% D_e 
-    
+    CXtD <- CXt %*% D_e
+
     ## Now we can assume that there are the matrices
     ## CXt, H, I, P, ZtPDZ, CXtD are in the environment
-    
+
     ## get index of non-zero U
-    idx <- !object@pp$zeroB
-    
+    idx <- !.zeroB(object)
+
     if (any(idx)) {
         ## La = \Lambda_\theta
         Lat <- t(La <- object@pp$U_b)
         LtZt <- Lat %*% Zt
-        
+
         ## Ms = M_\theta^* = solve(L\tr Z\tr D_resp P Z L + lD)
         ## Mst = Ms since D_resp is diagonal
         ## MsLtZt = solve(L\tr Z\tr P D_resp Z L + lD), L\tr Z\tr)
@@ -84,24 +85,24 @@ calcMatrices <- function(object, numpoints=13) {
         Ms <- solve(Lat %*% ZtPDZ %*% La +
                     laD.re)
         MsLtZt <- Ms %*% LtZt
-        
+
         ## Q = Q_\theta = CXt D.resp Z L Ms
         Qt <- tcrossprod(MsLtZt, CXtD)
         ## S = S_\theta = X Q
         St <- tcrossprod(Qt, X)
         ## T = Z L S\tr
         T <- crossprod(LtZt, St)
-        
+
         ## K = K_\theta = Q\tr X\tr - Ms Z\tr
         K <- St - MsLtZt
         ## L = L_\theta = object@pp$lfrac * Ms
         L <- Ms %*% Lambda_b
-        
+
         ## A = H - T - T\tr P + Z L Ms L\tr Z\tr
         A <- H - T - crossprod(T, P) + crossprod(MsLtZt, LtZt)
-        ## B = lambda_e / lambda_b *(S - Z L Ms) 
+        ## B = lambda_e / lambda_b *(S - Z L Ms)
         B <- t(K) %*% Lambda_b
-        
+
         ## Complete Jacobian
         J <- J0
         J[p+(1:q), 1:p] <- t(J[1:p, p+(1:q)] <- crossprod(ZtDX, object@pp$U_b))
@@ -117,7 +118,7 @@ calcMatrices <- function(object, numpoints=13) {
         L <- Ms %*% Lambda_b
         J <- J0
     }
-    
+
     return(list(A = A, B = B, K = K, L = L, J = J,
                 D_e = D_e, D_b = D_b, Lambda_b = Lambda_b,
                 Epsi2_e = Epsi2_e, Epsi2_b = Epsi2_b,

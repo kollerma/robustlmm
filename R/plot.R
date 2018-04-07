@@ -85,7 +85,7 @@ rsc <- function(obj, title="") {
 ##' The robustness weights for estimating the fixed and random effects
 ##' are used in the plots, e.g., the ones returned by
 ##' \code{getME(object, "w_e")} and \code{getME(object, "w_b")}.
-##' 
+##'
 ##' @title Plot Method for "rlmerMod" objects.
 ##' @param x an object as created by \code{rlmer} or \code{rlmer}; or
 ##'   an object as created by \code{plot.rlmerMod}
@@ -127,13 +127,13 @@ plot.rlmerMod <- function(x, y=NULL, which=1:4,
         stop("'which' must be in 1:4")
     show[which] <- TRUE
     plots <- list()
-    
+
     if (show[1])
         plots[[1]] <- ta(x, title=title[1])
-    if (show[2]) 
+    if (show[2])
         plots <- c(plots, list(qq(x, type="resid", title=title[2],
                                   multiply.weights=multiply.weights)))
-    if (show[3]) 
+    if (show[3])
         plots <- c(plots, list(qq(x, type="ranef", title=title[3],
                                   multiply.weights=multiply.weights)))
     if (show[4])

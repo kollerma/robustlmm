@@ -1,5 +1,10 @@
-## copied from robustbase
+##' @ImportFrom fastGHQuad gaussHermiteData
 ghq <- function(n = 1, modify = TRUE) {
+    rule <- fastGHQuad::gaussHermiteData(n)
+    return(list(nodes=rule$x,
+                weights= if (modify) rule$w*exp(rule$x^2) else rule$w))
+
+    ## (old version copied from robustbase)
     ## Adapted from gauss.quad in statmod package
     ## which itself has been adapted from Netlib routine gaussq.f
     ## Gordon Smyth, Walter and Eliza Hall Institute

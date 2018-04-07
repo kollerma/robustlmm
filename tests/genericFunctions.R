@@ -20,7 +20,7 @@ sleepstudy2 <- within(sleepstudy, {
 })
 rfm <- rlmer(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2,
              rho.e = cPsi, rho.b = cPsi, doFit=FALSE)
-fm <- lmer(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2)    
+fm <- lmer(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2)
 ## all three print the same:
 print(rfm)
 show(rfm)

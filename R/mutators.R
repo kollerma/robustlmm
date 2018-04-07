@@ -14,7 +14,11 @@ setSigma <- function(object, value) {
 
 ### Set fixed effects
 setFixef <- function(object, value, ...) {
-    object@pp$beta <- value 
+    if (inherits(object@pp, "rlmerPredD")) {
+        object@pp$beta <- value
+    } else {
+        object@pp$setBeta(value)
+    }
     ## update mu and wtres
     object@resp$updateMu(.mu(object))
     invisible(object)
@@ -34,21 +38,25 @@ setU <- function(object, value) {
 ## keep u<- for backwards compatiblity
 `u<-` <- function(object, value) {
     setU(object, value)
-    object@b.s <- object@pp$b.s
-    object@b.r <- object@pp$b.r
-   object
+    object@b.s <- b.s(object)
+    object@b.r <- .b(object)
+    object
 }
 
 ### Set b
 setB <- function(object, value) {
-    object@pp$setB(value)
+    if (inherits(object@pp, "rlmerPredD")) {
+        object@pp$setB(value)
+    } else {
+        object@pp$setB_r(value)
+    }
     invisible(object)
 }
 ## keep b<- for backwards compatibility
 `b<-` <- function(object, value) {
     setB(object, value)
-    object@b.s <- object@pp$b.s
-    object@b.r <- object@pp$b.r
+    object@b.s <- b.s(object)
+    object@b.r <- .b(object)
     object
 }
 
@@ -82,15 +90,15 @@ setTheta <- function(object, value, eps = 1e-7, fit.effects = TRUE,
     if (fit.effects) {
         if (update.sigma) {
             updateSigma(object, fit.effects = fit.effects)
-            ##cat("Updated sigma to", object@pp$sigma, "\n")
+            ##cat("Updated sigma to", .sigma(object), "\n")
         } else {
-            ## cat("Starting values:", object@pp$beta, object@pp$b.s, "\n")
-            fitEffects(c(object@pp$beta, object@pp$b.s), object)
+            ## cat("Starting values:", .fixef(object), b.s(object), "\n")
+            fitEffects(c(.fixef(object), b.s(object)), object)
         }
     } else {
         ## update b.s according to the new Lambda
-        setB(object, object@pp$b.r)
-        setFixef(object, object@pp$beta)
+        setB(object, .b(object))
+        setFixef(object, .fixef(object))
         ## no need to update sigma here
     }
     invisible(object)

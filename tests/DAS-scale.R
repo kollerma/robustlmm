@@ -45,12 +45,12 @@ G2 <- Vectorize(function(tau=1, a, s, rho, rho.sigma,
     gh <- robustbase:::ghq(numpoints)
     ghz <- gh$nodes
     ghw <- gh$weights*dnorm(gh$nodes)
-    
+
     ## inner integration over z
     inner <- function(e) {
         x <- (e - a*rho@psi(e) - s*ghz)/tau
         sum(rho.sigma@wgt(x)*x^2*ghw)
-    }                
+    }
     ## outer integration over e
     sum(sapply(ghz, inner)*ghw)
 }, vectorize.args = c("tau", "a", "s"))
@@ -145,7 +145,7 @@ if (packageVersion("lme4") >= "0.99999911.0") {
                   all.equal(sigma(rfm), sigma0, tolerance = 1e-5))
     }
 
-    
+
     ## test final theta
     rfm <- rlmer(Yield ~ (1 | Batch), Dyestuff, rho.e = cPsi, rho.b = cPsi)
     runTests(rfm, theta(rfm))
@@ -183,7 +183,7 @@ testBlocks <- function(rfm) {
 
     blocks[["idx"]] <- blocksOld[["idx"]] <- NULL
     blocksOld[["dim"]] <- unique(blocksOld[["dim"]])
-    
+
     stopifnot(all.equal(blocks, blocksOld))
 }
 
@@ -206,6 +206,5 @@ stopifnot(all.equal(.wgtxy2(smoothPsi, r1, r1), smoothPsi@psi(r1)*r1),
           all.equal(.wgtxy2(smoothProp2, r1, r1), smoothPsi@psi(r1)^2),
           all.equal(.wgtxy2(smoothPsi, r1, r2), smoothPsi@wgt(r1)*r2*r2),
           all.equal(.wgtxy2(smoothProp2, r1, r2), smoothPsi@wgt(r1)^2*r2*r2))
-          
 
 cat('Time elapsed: ', proc.time(),'\n') # for ``statistical reasons''

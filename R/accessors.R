@@ -9,8 +9,9 @@
 ## @title Get Z from reModule
 ## @param object merMod object
 ## @param t transpose or not
+.Zt <- function(object) object@pp$Zt
 getZ <- function(object, t = FALSE) {
-    if (t) object@pp$Zt else t(object@pp$Zt)
+    if (t) .Zt(object) else t(.Zt(object))
 }
 
 ## Get X
@@ -18,8 +19,9 @@ getZ <- function(object, t = FALSE) {
 ## @title Get X from predModule
 ## @param object merMod object
 ## @param t transpose or not
+.X <- function(object) object@pp$X
 getX <- function(object, t = FALSE) {
-    if (t) t(object@pp$X) else object@pp$X
+    if (t) t(.X(object)) else .X(object)
 }
 
 ## Get rho-function used for residuals
@@ -66,7 +68,8 @@ Lambda <- function(object) {
 ## @title Get U_b
 ## @param object merMod object
 U_b <- function(object) {
-   if (class(object)[1] == "lmerMod") t(object@pp$Lambdat) else object@pp$U_b
+   if (class(object)[1] == "lmerMod") t(object@pp$Lambdat) else
+     if (inherits(object@pp, "rlmerPredD")) object@pp$U_b else object@pp$U_b()
 }
 
 ## Get Lind
@@ -74,7 +77,7 @@ U_b <- function(object) {
 ## @title Get Lind
 ## @param object merMod object
 Lind <- function(object) {
-    object@pp$Lind
+  if (inherits(object@pp, "rlmerPredD")) object@pp$Lind else attr(object@pp, "input")[["Lind"]]
 }
 
 ## Get lower
@@ -90,7 +93,7 @@ lower <- function(object) {
 ##
 ## @title Get indices of r.e. corresp. to zero v.c.
 ## @param object merMod object
-getZeroU <- function(object) object@pp$zeroB
+getZeroU <- function(object) .zeroB(object)
 
 ## Get various numbers of parameters / lengths of vectors.
 ##
@@ -106,7 +109,7 @@ getZeroU <- function(object) object@pp$zeroB
 ## @param what length is requested
 len <- function(x, what) switch(what,
                                 u=,
-                                b=nrow(x@pp$Zt),
+                                b=nrow(.Zt(x)),
                                 coef=,
                                 beta=length(x@beta),
                                 theta=length(x@theta),
@@ -160,7 +163,8 @@ residuals.rlmerMod <- function(object, type = c("response", "weighted"),
 }
 
 ### Get sigma (so that we are not coercing all the time)
-.sigma <- function(object, ...) object@pp$sigma
+.sigma <- function(object, ...)
+  if (inherits(object@pp, "rlmerPredD")) object@pp$sigma else object@pp$sigma()
 ##' @importFrom lme4 sigma
 ##' @S3method sigma rlmerMod
 sigma.rlmerMod <- .sigma
@@ -181,16 +185,18 @@ deviance.rlmerMod <- .deviance
     ## Author: Manuel Koller, Date: 11 Apr 2011, 11:40
 
     ## FIXME: ?? offset will be added in updateMu
-    drop(crossprod(object@pp$Zt, object@pp$b.r) + (object@pp$X %*% object@pp$beta))
+    drop(crossprod(.Zt(object), .b(object)) + (.X(object) %*% .fixef(object)))
 }
 
 ### Get fixed effects
-.fixef <- function(object) object@pp$beta
+.fixef <- function(object)
+  if (inherits(object@pp, "rlmerPredD")) object@pp$beta else object@pp$beta()
 
 ### Get u
-b.s <- .u <- function(object, ...) object@pp$b.s
+b.s <- .u <- function(object, ...)
+  if (inherits(object@pp, "rlmerPredD")) object@pp$b.s else object@pp$b_s()
 u.rlmerMod <- function(object, ...) {
-    ret <- object@pp$b.s
+    ret <- b.s(object)
     names(ret) <- dimnames(getZ(object))[[2]]
     ret
 }
@@ -198,9 +204,10 @@ u.rlmerMod <- function(object, ...) {
 u.lmerMod <- function(object, ...) object@u
 
 ### Get b
-.b <- function(object, ...) object@pp$b.r
+.b <- function(object, ...)
+  if (inherits(object@pp, "rlmerPredD")) object@pp$b.r else object@pp$b()
 b.rlmerMod <- function(object, ...) {
-    ret <- object@pp$b.r
+    ret <- .b(object)
     names(ret) <- dimnames(getZ(object))[[2]]
     ret
 }
@@ -242,8 +249,8 @@ uArrangedNames <- function(object, b.s = b.s(object)) {
 }
 ## same as uArrangedNames, but do not set names
 ## and do not group by id name
-uArranged <- function(object, b.s = b.s(object)) {
-    ret <- lapply(object@idx, function(bidx) {
+uArranged <- function(object, b.s = b.s(object), idx = object@idx) {
+    ret <- lapply(idx, function(bidx) {
         lret <- b.s[bidx]
         dim(lret) <- dim(bidx)
         t(lret)
@@ -308,7 +315,7 @@ tnames <- function(object,diag.only=FALSE,old=TRUE,prefix=NULL) {
 ##'     \item{mu}{conditional mean of the response}
 ##'     \item{u}{conditional mode of the \dQuote{spherical} random effects variable}
 ##'     \item{b.s}{synonym for \dQuote{u}}
-##'     \item{b}{onditional mode of the random effects variable}
+##'     \item{b}{conditional mode of the random effects variable}
 ##'     \item{Gp}{groups pointer vector.  A pointer to the beginning of each group
 ##'               of random effects corresponding to the random-effects terms.}
 ##'     \item{Tp}{theta pointer vector.  A pointer to the beginning
@@ -476,8 +483,8 @@ getME.rlmerMod <-
            "w_b" = uArrangedNames(object, wgt.b(object)),
            "w_b_vector" = wgt.b(object),
            "w_sigma_e" = wgt.e(object, use.rho.sigma=TRUE),
-           "w_sigma_b" = uArrangedNames(object, wgt.b(object, center=TRUE)),
-           "w_sigma_b_vector" = wgt.b(object, center=TRUE),
+           "w_sigma_b" = uArrangedNames(object, wgt.b(object, center=FALSE)),
+           "w_sigma_b_vector" = wgt.b(object, center=FALSE),
            "is_REML" = TRUE,
 	   "..foo.." =# placeholder!
 	   stop(gettextf("'%s' is not implemented yet",
@@ -496,7 +503,8 @@ getME.rlmerMod <-
 theta <- function(object) {
     if (is(object, "rlmerMod")) {
         ## add names like lme4
-        tt <- object@pp$theta
+        tt <- if (inherits(object@pp, "rlmerPredD"))
+          object@pp$theta else object@pp$theta()
         nc <- c(unlist(mapply(function(g,e) {
             mm <- outer(e,e,paste,sep=".")
             diag(mm) <- e
@@ -507,3 +515,27 @@ theta <- function(object) {
         tt
     } else getME(object, "theta")
 }
+
+.zeroB <- function(object, pp = object@pp)
+  if (inherits(pp, "rlmerPredD")) pp$zeroB else pp$zeroB()
+
+.U_btZt.U_et <- function(object)
+  if (inherits(object@pp, "rlmerPredD")) object@pp$U_btZt.U_et else object@pp$invU_btZtU_et()
+
+..U_eX <- function(object)
+  if (inherits(object@pp, "rlmerPredD")) object@pp$.U_eX else object@pp$invU_eX()
+
+.U_e <- function(object)
+  if (inherits(object@pp, "rlmerPredD")) object@pp$U_e else object@pp$U_e()
+
+.U_b <- function(object)
+  if (inherits(object@pp, "rlmerPredD")) object@pp$U_b else object@pp$U_b()
+
+.Lambda_b <- function(object)
+  if (inherits(object@pp, "rlmerPredD")) object@pp$Lambda_b else object@pp$Lambda_b()
+
+.kappa_b <- function(object)
+  if (inherits(object@pp, "rlmerPredD")) object@pp$kappa_b else object@pp$kappa_b()
+
+.kappa_e <- function(object)
+  if (inherits(object@pp, "rlmerPredD")) object@pp$kappa_e else object@pp$kappa_e()

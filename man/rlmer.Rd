@@ -1,9 +1,16 @@
 \name{rlmer}
 \alias{lmerNoFit}
 \alias{rlmer}
+\alias{rlmerRcpp}
 \title{Robust linear mixed models}
 \usage{
   rlmer(formula, data, ..., method = "DAStau",
+    rho.e = smoothPsi, rho.b = smoothPsi, rho.sigma.e,
+    rho.sigma.b, rel.tol = 1e-08,
+    max.iter = 40 * (r + 1)^2, verbose = 0, doFit = TRUE,
+    init)
+    
+  rlmerRcpp(formula, data, ..., method = "DASvar",
     rho.e = smoothPsi, rho.b = smoothPsi, rho.sigma.e,
     rho.sigma.b, rel.tol = 1e-08,
     max.iter = 40 * (r + 1)^2, verbose = 0, doFit = TRUE,
@@ -198,6 +205,9 @@
 \examples{
 ## dropping of VC
 system.time(print(rlmer(Yield ~ (1|Batch), Dyestuff2, method="DASvar")))
+
+## new Rcpp implementation
+system.time(print(rlmerRcpp(Yield ~ (1|Batch), Dyestuff2, method="DASvar")))
 
 \dontrun{
   ## Default method "DAStau"

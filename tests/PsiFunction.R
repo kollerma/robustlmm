@@ -19,20 +19,20 @@ psiFuncCached <- function(rho,psi,wgt,Dwgt,Dpsi,name=NULL, ...) {
         stop("arguments of function '",fnam,"' are (",
              paste(nf,  collapse=","),") but should be (",
              paste(argn,collapse=","),").")
-      
+
       formals(f)[-1] <- dotsargs
       environment(f) <- ef
       assign(fnam, f, inherits = FALSE)
     }
   }
-  
+
   Erho.val <- integrate(function(x) rho(x)*dnorm(x),-Inf, Inf,
                         rel.tol = .Machine$double.eps^0.5)$value
   Epsi2.val <- integrate(function(x) psi(x)^2*dnorm(x),-Inf, Inf,
                          rel.tol = .Machine$double.eps^0.5)$value
   EDpsi.val <- integrate(function(x) Dpsi(x)*dnorm(x),-Inf, Inf,
                          rel.tol = .Machine$double.eps^0.5)$value
-  
+
   new("psi_func_cached",
       rho = new("functionX", rho),
       psi = new("functionX", psi),
@@ -52,7 +52,7 @@ F0 <- function(x=1, .) rep.int(0, length(x))
 F1 <- function(x=1, .) rep.int(1, length(x))
 cPsi2 <- psiFuncCached(rho = function(x, .) x^2 / 2,
                        psi = function(x, .) x,
-                       wgt = F1, Dwgt = F0, Dpsi = F1, 
+                       wgt = F1, Dwgt = F0, Dpsi = F1,
                        name = "classic (x^2/2)",
                        . = Inf ## dummy, need at least one parameter
 )
@@ -60,7 +60,7 @@ stopifnot(all.equal(cPsi@Erho(), cPsi2@Erho()),
           all.equal(cPsi@Epsi2(), cPsi2@Epsi2()),
           all.equal(cPsi@EDpsi(), cPsi2@EDpsi()))
 
-smoothPsiOld <- 
+smoothPsiOld <-
   psiFuncCached(rho = function(x, k, s) {
     a <- s^(1/(s+1))
     c <- k - a^(-s)
@@ -115,7 +115,7 @@ chgDefaults.old <- function(object, ...) {
       stop("invalid tuning parameter names: ",
            paste(nt,    collapse=",")," instead of ",
            paste(nf[-1],collapse=","),".")
-    
+
     for(fnam in list("rho", "psi", "wgt", "Dwgt", "Dpsi")) {
       f <- slot(object, fnam)
       ef <- environment(f)
@@ -126,7 +126,7 @@ chgDefaults.old <- function(object, ...) {
     }
     object@tDefs <- unlist(dotsargs)
   }
-  
+
   Erho.val <- integrate(function(x) object@rho(x)*dnorm(x),-Inf, Inf,
                         rel.tol = .Machine$double.eps^0.5)$value
   Epsi2.val <- integrate(function(x) object@psi(x)^2*dnorm(x),-Inf, Inf,
@@ -136,7 +136,7 @@ chgDefaults.old <- function(object, ...) {
   object@Erho <- new("functionXal", function(arg=1) rep(Erho.val, length(arg)))
   object@Epsi2 <- new("functionXal", function(arg=1) rep(Epsi2.val, length(arg)))
   object@EDpsi <- new("functionXal", function(arg=1) rep(EDpsi.val, length(arg)))
-  
+
   object
 }
 
@@ -173,14 +173,14 @@ stopifnot(all.equal(huberPsiRcpp@wgt(x), robustbase::huberPsi@wgt(x)),
 .psi2propII <- function(object, ...) {
   ## do not do anything for cPsi
   if (identical(object, cPsi)) return(object)
-  
+
   ## Convert a regular psi-function into a proposal II psi function
   ## (with squared weights)
   f <- formals(object@psi)
   nf <- names(f)
   args <- paste(nf, collapse=",")
   x <- nf[1]
-  
+
   ## wgt
   fun <- paste("function(",args,") object@wgt(", args, ")^2")
   wgt <- eval(parse(text=fun))
@@ -210,7 +210,7 @@ stopifnot(all.equal(huberPsiRcpp@wgt(x), robustbase::huberPsi@wgt(x)),
   fun <- paste("function(",args,") intRho(psi,",args,")")
   rho <- eval(parse(text=fun))
   formals(rho) <- f
-  
+
   ret <- do.call(psiFuncCached, c(list(wgt=wgt, Dwgt=Dwgt, psi=psi, Dpsi=Dpsi, rho=rho),
                                   f[-1], name=paste(object@name, ", Proposal II", sep="")))
   ## if ... is given: pass it to chgDefaults
@@ -248,7 +248,7 @@ stopifnot(all.equal(sP2@wgt(x), sPOld2@wgt(x)),
           all.equal(sP2@Erho(), sPOld2@Erho()),
           all.equal(sP2@Epsi2(), sPOld2@Epsi2()),
           all.equal(sP2@EDpsi(), sPOld2@EDpsi()))
-  
+
 test1 <- psi2propII(smoothPsi, k = 2.2)
 test2 <- psi2propII(chgDefaults(smoothPsi, k = 2.2))
 test3 <- chgDefaults(psi2propII(smoothPsi), k = 2.2)
@@ -282,13 +282,13 @@ stopifnot(all.equal(sPc@psi(x), sP@psi(x, k = 1.2, s = 9.)),
           all.equal(sP2c@psi(x), sP2@psi(x, k = 1.2, s = 9.)))
 
 ## test chgDefaults croaks on additional arguments, too many arguments
-stopifnot(inherits(try(chgDefaults(sP, k = 1.2, h = 1.3, s = 10.), silent = TRUE), 
+stopifnot(inherits(try(chgDefaults(sP, k = 1.2, h = 1.3, s = 10.), silent = TRUE),
                 "try-error"),
-          inherits(try(chgDefaults(sP, 1.2, 1.3, 10.), silent = TRUE), 
+          inherits(try(chgDefaults(sP, 1.2, 1.3, 10.), silent = TRUE),
                    "try-error"),
-          inherits(try(chgDefaults(sP, 1.2, s = 10.), silent = TRUE), 
+          inherits(try(chgDefaults(sP, 1.2, s = 10.), silent = TRUE),
                    "try-error"),
-          inherits(try(chgDefaults(sP2, k = 1.2, h = 1.3, s = 10.), silent = TRUE), 
+          inherits(try(chgDefaults(sP2, k = 1.2, h = 1.3, s = 10.), silent = TRUE),
                    "try-error"))
 
 ## test unnamed arguments work as expected

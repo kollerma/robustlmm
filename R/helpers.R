@@ -1,4 +1,66 @@
-######################################################
+#######################################################
+## new functions for Rcpp implementation             ##
+#######################################################
+
+createInput <- function(init, object) {
+  if (is(init@pp, "rlmerPredD_Rcpp")) {
+    return(init@pp$input)
+  }
+
+  Lambdat <- getME(init, "Lambdat")
+  Lind <- getME(init, "Lind")
+  b <- findBlocks(Lambdat = Lambdat, Lind = Lind)
+  rho_e_instance <- object@rho.e@getInstanceWithOriginalDefaults();
+  rhoSigma_e_instance <- object@rho.sigma.e@getInstanceWithOriginalDefaults()
+  rho_b_instance <- lapply(object@rho.b, function(x) x@getInstanceWithOriginalDefaults())
+  rhoSigma_b_instance <- lapply(object@rho.sigma.b, function(x) x@getInstanceWithOriginalDefaults())
+  input <- list(Lambdat = Lambdat,
+                lower = getME(init, "lower"),
+                dim = as.integer(b$dim),
+                v_e = weights(init),
+                Lind = as.integer(Lind),
+                ind = as.integer(b$ind),
+                k = as.integer(b$k),
+                idx = b$idx,
+                blockBMap = unlist(unlist(lapply(b$idx, apply, 2, list), recursive = FALSE), recursive = FALSE),
+                thetaBlockMap = lapply(b$blocks, function(b) b[lower.tri(b, diag = TRUE)]),
+                rho_e_src = object@rho.e,
+                rho_e_instance = rho_e_instance,
+                rho_e = rho_e_instance$.pointer,
+                rhoSigma_e_src = object@rho.sigma.e,
+                rhoSigma_e_instance = rhoSigma_e_instance,
+                rhoSigma_e = rhoSigma_e_instance$.pointer,
+                rho_b_src = object@rho.b,
+                rho_b_instance = rho_b_instance,
+                rho_b = lapply(rho_b_instance, function(x) x$field(".pointer")),
+                rhoSigma_b_src = object@rho.sigma.b,
+                rhoSigma_b_instance = rhoSigma_b_instance,
+                rhoSigma_b = lapply(rhoSigma_b_instance, function(x) x$field(".pointer")),
+                theta = getME(init, "theta"),
+                beta = getME(init, "beta"),
+                b.s = getME(init, "u"),
+                sigma = getME(init, "sigma"),
+                ## for DAS
+                maxOperations = 200,
+                relativeTolerance = 1e-6,
+                ## for DAStau
+                nodes = 13
+  )
+  return(input)
+}
+
+convToRlmerPredD <- function(init, object, ...) {
+  input <- createInput(init, object)
+  pp <- do.call(rlmerPredD_Rcpp$new, list(input = input,
+                                          method = object@method,
+                                          X = getME(init, "X"),
+                                          Zt = getME(init, "Zt")))
+  pp
+}
+
+
+
+#######################################################
 ## Functions to generate commonly required objects   ##
 #######################################################
 
@@ -12,14 +74,14 @@
 ## @param drop apply drop to result?
 ## @param t transpose result
 ## @rdname std
-std.b <- function(object, sigma = object@pp$sigma, matrix, drop=TRUE, t=FALSE) 
+std.b <- function(object, sigma = .sigma(object), matrix, drop=TRUE, t=FALSE)
     object@pp$stdB(sigma, matrix, drop, t)
 
 ## std.e: Calculate the standardized residuals or
 ##   "Standardize" the Matrix sigma: \eqn{R^{-1} matrix / \sigma}{R^-1 matrix / sigma}
 ##
 ## @rdname std
-std.e <- function(object, sigma = object@pp$sigma, matrix, drop=TRUE) {
+std.e <- function(object, sigma = .sigma(object), matrix, drop=TRUE) {
     if (missing(matrix)) return(object@resp$wtres / sigma)
     ## for the moment: just divide by sigma
     if (drop) matrix <- drop(matrix)
@@ -42,7 +104,7 @@ std.e <- function(object, sigma = object@pp$sigma, matrix, drop=TRUE) {
         if (s == 1) return(us)
         ## else: square, sum and subtract s
         ret <- rowSums(us*us)
-        if (center) ret <- ret - object@pp$kappa_b[bt]*s
+        if (center) ret <- ret - .kappa_b(object)[bt]*s
         ret
         }))
 }
@@ -53,7 +115,7 @@ std.e <- function(object, sigma = object@pp$sigma, matrix, drop=TRUE) {
     if (s == 1) return(bs)
     if (is.matrix(bs)) sqrt(rowSums(bs*bs)) else sqrt(sum(bs*bs))
 }
-## same function, but assume we've already summed 
+## same function, but assume we've already summed
 .d2 <- function(sbs2, s) {
     if (s == 1) stop("s must be larger than 1") ## disable this test?
     sqrt(sbs2)
@@ -79,7 +141,7 @@ std.e <- function(object, sigma = object@pp$sigma, matrix, drop=TRUE) {
 ## @param center whether to use the centered distances
 ## @param ... passed on to internal functions.
 ## @rdname dist
-dist.b <- function(object, sigma = object@pp$sigma, center=FALSE, ...) {
+dist.b <- function(object, sigma = .sigma(object), center=FALSE, ...) {
     db <- .dk(object, sigma, center, ...)
    ## need to take square root if not centering and dim > 1
     if (!center && any(object@dim > 1)) {
@@ -93,7 +155,7 @@ dist.b <- function(object, sigma = object@pp$sigma, center=FALSE, ...) {
 ##   always assume they are uncorrelated
 ##
 ## @rdname dist
-dist.e <- function(object, sigma = object@pp$sigma) {
+dist.e <- function(object, sigma = .sigma(object)) {
     std.e(object, sigma) ## just the usual rescaled residuals
 }
 
@@ -115,7 +177,7 @@ dist.e <- function(object, sigma = object@pp$sigma) {
 ## @param center whether return the centered robustness weights, see Details.
 ## @rdname wgt
 ## @export
-wgt.b <- function(object, sigma = object@pp$sigma, center = FALSE) {
+wgt.b <- function(object, sigma = .sigma(object), center = FALSE) {
     db <- dist.b(object, sigma, center)
     rho <- rho.b(object, if (center) "sigma" else "default")
     ret <- numeric()
@@ -131,10 +193,9 @@ wgt.b <- function(object, sigma = object@pp$sigma, center = FALSE) {
 ## @param use.rho.sigma return the weights computed using rho.sigma.
 ## @rdname wgt
 ## @export
-wgt.e <- function(object, sigma = object@pp$sigma, use.rho.sigma = FALSE)
+wgt.e <- function(object, sigma = .sigma(object), use.rho.sigma = FALSE)
     if (use.rho.sigma) object@rho.sigma.e@wgt(dist.e(object, sigma)) else
        object@rho.e@wgt(dist.e(object, sigma))
-
 ### Calculate robustness weights * squared effect
 ### Return sensible result in the infinite case
 ## Assume: x infinite <=> y infinite
@@ -167,7 +228,7 @@ findBlocks <- function(obj, Lambdat=obj$Lambdat(), Lind=obj$Lind) {
     bind <- match(blocks, ublocks <- unique(blocks))
     k <- unlist(lapply(1:nblocks, function(i) rep(i, length(bidx[[i]]))))
     bdim <- sapply(ublocks, NCOL)
-    bidx <- lapply(1:length(ublocks), function (i) 
+    bidx <- lapply(1:length(ublocks), function (i)
                    matrix(unlist(bidx[bind == i]),nrow = bdim[i]))
     q <- sapply(bidx, length)
     list(blocks = ublocks, ind = bind, idx = bidx, dim = bdim, q = q, k = k)
@@ -211,7 +272,7 @@ print.summary.rlmerMod <- function(x, digits = max(3, getOption("digits") - 3),
     .prt.VC(x$varcor, digits=digits, useScale= x$useScale,
 	    comp = ranef.comp, ...)
     .prt.grps(x$ngrps, nobs= x$devcomp$dims[["n"]])
-    
+
     ## fixed effecs
     ## this part is 1:1 from printMerenv
     p <- nrow(x$coefficients)
@@ -316,7 +377,7 @@ summary.rlmerMod <- function(object, ...) {
     dd <- devC$dims
     cmp <- devC$cmp
     sig <- sigma(object)
-    
+
     coefs <- cbind("Estimate" = fixef(object),
                    "Std. Error" = sig * sqrt(diag(object@pp$unsc())))
     if (nrow(coefs) > 0) {
@@ -372,13 +433,13 @@ compare <- function(..., digits = 3, dnames = NULL,
     ## local helper functions
     .NULLtoNA <- function(lst)
         lapply(lst, function(x) if (is.null(x)) NA else x)
-    .getComp <- function(lst, comp) 
+    .getComp <- function(lst, comp)
         sapply(lst, function(x) .NULLtoNA(x[comp]))
     .getComp2 <- function(lst, comp)
         sapply(lst, function(x) x[comp])
     .dropComp <- function(lst, comp)
         lapply(lst, function(x) { x[comp] <- NULL; x })
-    .getNames <- function(lst) 
+    .getNames <- function(lst)
         unique(unlist(lapply(lst, names)))
     .combineComp <- function(lst) {
         names <- .getNames(lst)
@@ -407,10 +468,10 @@ compare <- function(..., digits = 3, dnames = NULL,
     })
     ## combine
     ## coefficients
-    ret <- rbind(Coef=split, 
+    ret <- rbind(Coef=split,
                  .combineComp(.getComp(linfos, "coef")))
     ## variance components
-    ret <- rbind(ret, NULL=split, VarComp=split, 
+    ret <- rbind(ret, NULL=split, VarComp=split,
                  .combineComp(.getComp(linfos, "varcomp")))
     ## correlations if there are any
     if (any(sapply(linfos, function(linfo) !is.null(linfo$correlations))))
@@ -422,7 +483,7 @@ compare <- function(..., digits = 3, dnames = NULL,
     ## drop the items already included
     linfos <- .dropComp(linfos, c("data", "coef", "varcomp", "correlations", "sigma"))
     ## drop rho functions if requested
-    if (!show.rho.functions) 
+    if (!show.rho.functions)
         linfos <- .dropComp(linfos, grep("^rho", .getNames(linfos), value=TRUE))
     ## show the rest if there is any
     if (length(.getNames(linfos)) > 0) {
@@ -521,7 +582,7 @@ getInfo.rlmerMod <- function(object, ...) {
 ##' \code{print.xtable.comparison.table} are wrapper functions for the
 ##' respective \code{\link{xtable}} and \code{\link{print.xtable}}
 ##' functions.
-##' 
+##'
 ##' @rdname compare
 ##' @param x object of class "comparison.table" or "xtable.comparison.table"
 ##' @param caption see \code{\link{xtable}}.
@@ -611,7 +672,7 @@ print.xtable.comparison.table <- function(x, add.hlines=TRUE,
     args$x <- x
     do.call(print.xtable, args)
 }
- 
+
 ##' @S3method update rlmerMod
 update.rlmerMod <- function(object, formula., ..., evaluate = TRUE) {
     ## update call
@@ -633,10 +694,11 @@ update.rlmerMod <- function(object, formula., ..., evaluate = TRUE) {
             ## copy pp and resp (to really get a new object)
             extras$init@pp <- object@pp$copy()
             ## Make sure we get the rho functions correct
-            extras$init@pp$rho_e <- object@pp$rho_e
-            extras$init@pp$rho_sigma_e <- object@pp$rho_sigma_e
-            extras$init@pp$rho_b <- object@pp$rho_b
-            extras$init@pp$rho_sigma_b <- object@pp$rho_sigma_b
+            ## this should be not required anymore
+            # extras$init@pp$rho_e <- object@pp$rho_e
+            # extras$init@pp$rho_sigma_e <- object@pp$rho_sigma_e
+            # extras$init@pp$rho_b <- object@pp$rho_b
+            # extras$init@pp$rho_sigma_b <- object@pp$rho_sigma_b
             ## reset calledInit... fields to FALSE:
             fields <- grep("calledInit", names(getRefClass(class(extras$init@pp))$fields()), value=TRUE)
             Map(function(field) extras$init@pp$field(field, FALSE), fields)

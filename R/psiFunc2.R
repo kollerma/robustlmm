@@ -2,9 +2,9 @@ loadModule("psi_function_module", TRUE)
 
 #' @importFrom robustbase psiFunc
 #' @importClassesFrom robustbase psi_func
-setClass("psi_func_rcpp", 
+setClass("psi_func_rcpp",
          slots = c(getRcppClass = "function",
-                   getInstanceWithOriginalDefaults = "function"), 
+                   getInstanceWithOriginalDefaults = "function"),
          contains = "psi_func")
 
 fixTDefs <- function(..., defaultTDefs) {
@@ -12,18 +12,18 @@ fixTDefs <- function(..., defaultTDefs) {
   if (length(tDefs) > 0) {
     if (is.null(names(tDefs))) {
       if (length(tDefs) > length(defaultTDefs)) {
-        stop("Expected only ", length(defaultTDefs), " arguments but got ", 
+        stop("Expected only ", length(defaultTDefs), " arguments but got ",
              length(tDefs), ".")
       }
       names(tDefs) <- names(defaultTDefs)[seq_along(tDefs)]
     } else {
       if (any(sapply(names(tDefs), is.null))) {
-        stop("Either all parameters need to be named or none of them.") 
+        stop("Either all parameters need to be named or none of them.")
       }
     }
     unknownTDefs <- setdiff(names(tDefs), names(defaultTDefs))
     if (length(unknownTDefs) > 0) {
-      stop("Found tuning parameter names not present in defaults: ", 
+      stop("Found tuning parameter names not present in defaults: ",
            paste(unknownTDefs, collapse = ", "), ".")
     }
   }
@@ -32,7 +32,7 @@ fixTDefs <- function(..., defaultTDefs) {
     tDefs <- c(tDefs, defaultTDefs[missingTDefs])
   }
   if (length(tDefs) == 0) {
-    tDefs <- c(`.` = NA_real_) 
+    tDefs <- c(`.` = NA_real_)
   } else {
     tDefs <- tDefs[names(defaultTDefs)]
   }
@@ -96,7 +96,7 @@ psiFuncRcpp <- function(rcppClass, ...) {
   Erho <- createEFun("Erho")
   Epsi2 <- createEFun("Epsi2")
   EDpsi <- createEFun("EDpsi")
-  func <- do.call(psiFunc, 
+  func <- do.call(psiFunc,
                   c(list(rho, psi, wgt, Dpsi, Dwgt, Erho, Epsi2, EDpsi,
                          ..Instance..$name()), ..TDefs..))
   args <- list("psi_func_rcpp")
@@ -104,12 +104,12 @@ psiFuncRcpp <- function(rcppClass, ...) {
      args[[slotName]] <- slot(func, slotName)
   }
   args[["getRcppClass"]] <- function() {
-    return(..RcppClass..) 
+    return(..RcppClass..)
   }
   args[["getInstanceWithOriginalDefaults"]] <- function() {
     instance <- createInstance()
     instance$chgDefaults(..TDefs..)
-    return(instance) 
+    return(instance)
   }
   funcRcpp <- do.call("new", args)
   return(funcRcpp)
@@ -120,7 +120,7 @@ psiFuncRcpp <- function(rcppClass, ...) {
 ##' weights. Change tuning parameters using \code{\link{chgDefaults}}
 ##' and convert to squared robustness weights using the
 ##' \code{\link{psi2propII}} function.
-##' 
+##'
 ##' The \bold{\dQuote{classical} \eqn{\psi}{psi}-function \code{cPsi}}
 ##' can be used to get a non-robust, i.e., classical, fit.
 ##' The \code{psi} slot equals the identity function, and
@@ -151,7 +151,7 @@ psiFuncRcpp <- function(rcppClass, ...) {
 ##' for changing tuning parameters;
 ##' \code{\link{PsiFunction}} and
 ##' \code{\link{SmoothPsi}} for a more detailed description of the
-##' slots; 
+##' slots;
 ##' @examples
 ##' plot(cPsi)
 ##' plot(huberPsiRcpp)
@@ -171,8 +171,8 @@ setLoadAction(function(ns) assign("smoothPsi", psiFuncRcpp("SmoothPsi"), envir =
 .chgDefaults <- function(object, ...) {
   if (identical(object, cPsi))
     return(cPsi)
-  clone <- do.call(psiFuncRcpp, 
-                   c(list(object@getRcppClass()), 
+  clone <- do.call(psiFuncRcpp,
+                   c(list(object@getRcppClass()),
                      fixTDefs(..., defaultTDefs = object@tDefs)))
   return(clone)
 }
@@ -226,13 +226,14 @@ setGeneric("psi2propII", function(object, ...) standardGeneric("psi2propII"))
   if (identical(object, cPsi))
     return(cPsi)
   if (object@getRcppClass()[1] == "PsiFunctionToPropIIPsiFunctionWrapper") {
-    stop("Cannot apply psi2propII multiple times.") 
+    stop("Cannot apply psi2propII multiple times.")
   }
   func <- do.call(psiFuncRcpp,
-                  c(list(c("PsiFunctionToPropIIPsiFunctionWrapper", 
-                           object@getRcppClass()), 
+                  c(list(c("PsiFunctionToPropIIPsiFunctionWrapper",
+                           object@getRcppClass()),
                          fixTDefs(..., defaultTDefs = object@tDefs))))
   return(func)
 }
+
 ##' @rdname psi2propII
 setMethod("psi2propII", signature("psi_func_rcpp"), .psi2propII)

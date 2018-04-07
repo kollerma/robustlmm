@@ -46,6 +46,8 @@ E2 <- function(fun, ...) {
 }
 
 rfm <- rlmer(Yield ~ (1|Batch), Dyestuff)
+## FIXME make this an argument of the original call
+rfm@pp$initGH(50)
 
 testTau <- function(rho, rho.sigma, wExp, a, s) {
     psi <- rho@psi
@@ -59,7 +61,7 @@ testTau <- function(rho, rho.sigma, wExp, a, s) {
                       wgt <- function(x) ifelse(x == 0, rho.e$Dpsi(0)/2, rho@rho(x)/(x*x))
                       function(w, v, tau) {
                           t <- (v-a[i]*psi(v)+w*s[i])/tau
-                          rho.e$rho(t) - kappa*wgt(t)
+                          rho.e@rho(t) - kappa*wgt(t)
                       } }, ## wExp.e == 1:
                   function(w, v, tau) {
                       t <- (v-a[i]*psi(v)+w*s[i])/tau
@@ -75,6 +77,7 @@ testTau <- function(rho, rho.sigma, wExp, a, s) {
 
     ret <- tau
     for (i in seq_along(a)) ret[i] <- E2(fun, tau = tau[i])
+    print(ret)
 
     ret
 }
@@ -106,4 +109,5 @@ rfm2@pp$.setTau_e <- rfm@pp$.setTau_e
 rfm2@pp$.tau_e <- rfm@pp$.tau_e
 rfm2@pp$.setTbk <- rfm@pp$.setTbk
 rfm2@pp$.Tbk <- rfm@pp$.Tbk
+rfm@pp$initGH()
 stopifnot(all.equal(rfm, rfm2, tolerance = 1e-6))

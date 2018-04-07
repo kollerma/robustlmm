@@ -12,7 +12,7 @@ fit <- function(formula, data, methods =  c("DASvar", "DAStau"),
         if (classic) fits[[method]][["lmer"]] <- fm
         cat("\n########", method, "########\n")
         try({cat("Time elapsed:",
-                 system.time(m <- rlmer(formula, data, method=method,
+                 system.time(m <- rlmerRcpp(formula, data, method=method,
                                         rho.e = rho.e, rho.b = rho.b, ...)),
                  "\n")
              fits[[method]][["IRWLS"]] <- m

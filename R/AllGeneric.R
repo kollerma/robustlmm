@@ -16,7 +16,7 @@ u <- function(object, ...) UseMethod("u")
 ## Summary / printing methods                      ##
 #####################################################
 
-##' The function \code{getInfo} is internally used to 
+##' The function \code{getInfo} is internally used to
 ##' prepare object for producing a comparison chart in
 ##' \code{compare}.
 ##'

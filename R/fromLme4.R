@@ -62,7 +62,7 @@ fitted.rlmerMod <- getS3method("fitted", "merMod")
 ##' @S3method fixef rlmerMod
 ## @export
 fixef.rlmerMod <- function(object, ...)
-    structure(object@beta, names = dimnames(object@pp$X)[[2]])
+    structure(object@beta, names = dimnames(.X(object))[[2]])
 
 ##' @importFrom lme4 nobars
 getFixedFormula <- function(form) {
@@ -102,7 +102,7 @@ model.frame.rlmerMod <- getS3method("model.frame", "merMod")
 
 ##' @importFrom stats model.matrix
 ##' @S3method model.matrix rlmerMod
-model.matrix.rlmerMod <- function(object, ...) object@pp$X
+model.matrix.rlmerMod <- function(object, ...) .X(object)
 
 ## we have our own nobs.rlmerMod method
 
@@ -441,3 +441,4 @@ predict.rlmerMod <- function(object, newdata=NULL,
     }
 }
 
+forceCopy <- function(x) deepcopy(x)

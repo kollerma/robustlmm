@@ -247,6 +247,11 @@ testDqagIntegration2d_aB(function(x, y) (x^2 + y^2) * dnorm(x) * dnorm(y), c(-3,
 ## test Hcubature_ninfInf integration
 
 testHcubature_ninfInf <- function(func, ndim, fdim, expected, tol = 1e-5) {
+  if (!("cubature" %in% installed.packages()[, 1])) {
+    cat("testHcubature_ninfInf skipping as cubature package is missing\n")
+    return()
+  }
+
   cat("testHcubature_ninfInf for", deparse(func), "...")
   if (doBench) start <- get_nanotime()
   actual <- robustlmm:::test_Hcubature_ninfInf(func, ndim, fdim)
@@ -260,7 +265,6 @@ testHcubature_ninfInf(dnorm, 1, 1, 1)
 testHcubature_ninfInf(function(x) prod(dnorm(x)), 2, 1, 1)
 testHcubature_ninfInf(function(x) c(prod(dnorm(x)), prod(x^2*dnorm(x))), 2, 2, c(1, 1))
 
-
 ## the following tests are disabled as pcubature somehow only
 ## produces NaNs here
 if (FALSE) {
@@ -269,6 +273,11 @@ if (FALSE) {
   ## test Pcubature_ninfInf integration
 
   testPcubature_ninfInf <- function(func, ndim, fdim, expected, tol = 1e-5) {
+    if (!("cubature" %in% installed.packages()[, 1])) {
+      cat("testPcubature_ninfInf skipping as cubature package is missing\n")
+      return()
+    }
+
     cat("testPcubature_ninfInf for", deparse(func), "...")
     if (doBench) start <- get_nanotime()
     actual <- robustlmm:::test_Pcubature_ninfInf(func, ndim, fdim)
@@ -286,6 +295,11 @@ if (FALSE) {
   ## test Pcubature_aInf integration
 
   testPcubature_aInf <- function(func, ndim, fdim, bound, expected, tol = 1e-5) {
+    if (!("cubature" %in% installed.packages()[, 1])) {
+      cat("testPcubature_aInf skipping as cubature package is missing\n")
+      return()
+    }
+
     cat("testPcubature_aInf for", deparse(func), "...")
     if (doBench) start <- get_nanotime()
     actual <- robustlmm:::test_Pcubature_aInf(func, ndim, fdim, bound)
@@ -304,6 +318,11 @@ if (FALSE) {
   ## test Pcubature_ninfB integration
 
   testPcubature_ninfB <- function(func, ndim, fdim, bound, expected, tol = 1e-5) {
+    if (!("cubature" %in% installed.packages()[, 1])) {
+      cat("testPcubature_ninfB skipping as cubature package is missing\n")
+      return()
+    }
+
     cat("testPcubature_ninfB for", deparse(func), "...")
     if (doBench) start <- get_nanotime()
     actual <- robustlmm:::test_Pcubature_ninfB(func, ndim, fdim, bound)
@@ -324,6 +343,11 @@ if (FALSE) {
 ## test Pcubature_aB integration
 
 testPcubature_aB <- function(func, ndim, fdim, a, b, expected, tol = 1e-5) {
+  if (!("cubature" %in% installed.packages()[, 1])) {
+    cat("testPcubature_aB skipping as cubature package is missing\n")
+    return()
+  }
+
   cat("testPcubature_aB for", deparse(func), "...")
   if (doBench) start <- get_nanotime()
   actual <- robustlmm:::test_Pcubature_aB(func, ndim, fdim, a, b)
@@ -344,6 +368,11 @@ testPcubature_aB(function(x) c(prod(dnorm(x)), prod(x^2*dnorm(x))), 2, 2,
 ## test Hcubature2d_ninfInf
 
 testHcubature2d_ninfInf <- function(func, tol = 1e-5) {
+  if (!("cubature" %in% installed.packages()[, 1])) {
+    cat("testHcubature2d_ninfInf skipping as cubature package is missing\n")
+    return()
+  }
+
   cat("testHcubature2d_ninfInf for", deparse(func), "...")
   if (doBench) start <- get_nanotime()
   actual <- robustlmm:::test_Hcubature2d_ninfInf(func)
@@ -367,6 +396,11 @@ testHcubature2d_ninfInf(function(x, y) (x^2 + y^2) * dnorm(x) * dnorm(y))
 ## test Hcubature2d_aInf
 
 testHcubature2d_aInf <- function(func, a, tol = 1e-5) {
+  if (!("cubature" %in% installed.packages()[, 1])) {
+    cat("testHcubature2d_aInf skipping as cubature package is missing\n")
+    return()
+  }
+
   cat("testHcubature2d_aInf for", deparse(func), "...")
   if (doBench) start <- get_nanotime()
   actual <- robustlmm:::test_Hcubature2d_aInf(func, a)
@@ -396,6 +430,11 @@ testHcubature2d_aInf(function(x, y) (x^2 + y^2) * dnorm(x) * dnorm(y), c(-3, 0))
 ## test Hcubature2d_ninfB
 
 testHcubature2d_ninfB <- function(func, b, tol = 1e-5) {
+  if (!("cubature" %in% installed.packages()[, 1])) {
+    cat("testHcubature2d_ninfB skipping as cubature package is missing\n")
+    return()
+  }
+
   cat("testHcubature2d_ninfB for", deparse(func), "...")
   if (doBench) start <- get_nanotime()
   actual <- robustlmm:::test_Hcubature2d_ninfB(func, b)
@@ -425,6 +464,11 @@ testHcubature2d_ninfB(function(x, y) (x^2 + y^2) * dnorm(x) * dnorm(y), c(3, -1)
 ## test Hcubature2d_aB
 
 testHcubature2d_aB <- function(func, a, b, tol = 1e-5) {
+  if (!("cubature" %in% installed.packages()[, 1])) {
+    cat("testHcubature2d_aB skipping as cubature package is missing\n")
+    return()
+  }
+
   cat("testHcubature2d_aB for", deparse(func), "...")
   if (doBench) start <- get_nanotime()
   actual <- robustlmm:::test_Hcubature2d_aB(func, a, b)
@@ -458,6 +502,11 @@ if (FALSE) {
   ## test Pcubature2d_ninfInf
 
   testPcubature2d_ninfInf <- function(func, tol = 1e-5) {
+    if (!("cubature" %in% installed.packages()[, 1])) {
+      cat("testPcubature2d_ninfInf skipping as cubature package is missing\n")
+      return()
+    }
+
     cat("testPcubature2d_ninfInf for", deparse(func), "...")
     if (doBench) start <- get_nanotime()
     actual <- robustlmm:::test_Pcubature2d_ninfInf(func)
@@ -481,6 +530,11 @@ if (FALSE) {
   ## test Pcubature2d_aInf
 
   testPcubature2d_aInf <- function(func, a, tol = 1e-5) {
+    if (!("cubature" %in% installed.packages()[, 1])) {
+      cat("testPcubature2d_aInf skipping as cubature package is missing\n")
+      return()
+    }
+
     cat("testPcubature2d_aInf for", deparse(func), "...")
     if (doBench) start <- get_nanotime()
     actual <- robustlmm:::test_Pcubature2d_aInf(func, a)
@@ -510,6 +564,11 @@ if (FALSE) {
   ## test Pcubature2d_ninfB
 
   testPcubature2d_ninfB <- function(func, b, tol = 1e-5) {
+    if (!("cubature" %in% installed.packages()[, 1])) {
+      cat("testPcubature2d_ninfB skipping as cubature package is missing\n")
+      return()
+    }
+
     cat("testPcubature2d_ninfB for", deparse(func), "...")
     if (doBench) start <- get_nanotime()
     actual <- robustlmm:::test_Pcubature2d_ninfB(func, b)
@@ -541,6 +600,11 @@ if (FALSE) {
 ## test Pcubature2d_aB
 
 testPcubature2d_aB <- function(func, a, b, tol = 1e-5) {
+  if (!("cubature" %in% installed.packages()[, 1])) {
+    cat("testPcubature2d_aB skipping as cubature package is missing\n")
+    return()
+  }
+
   cat("testPcubature2d_aB for", deparse(func), "...")
   if (doBench) start <- get_nanotime()
   actual <- robustlmm:::test_Pcubature2d_aB(func, a, b)
@@ -667,6 +731,11 @@ testExpectation2d_numerator(400)
 ## test HcubatureNormalExpectation_ninfInf integration
 
 testHcubatureNormalExpectation_ninfInf <- function(func, ndim, fdim, expected, tol = 1e-5) {
+  if (!("cubature" %in% installed.packages()[, 1])) {
+    cat("testHcubatureNormalExpectation_ninfInf skipping as cubature package is missing\n")
+    return()
+  }
+
   cat("testHcubatureNormalExpectation_ninfInf for", deparse(func), "...")
   if (doBench) start <- get_nanotime()
   actual <- robustlmm:::test_HcubatureNormalExpectation_ninfInf(func, ndim, fdim)

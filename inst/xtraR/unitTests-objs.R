@@ -11,12 +11,12 @@ test.wgt <- function(i) {
     expected <- wgt.e(objs[[i]])
     actual <- robustlmm:::wgt_e(rPDASs[[i]]$.pointer, resps[[i]]$.pointer)
     stopifnot(all.equal(actual, expected, check.attributes = FALSE,
-                        tolerance = 1-12))
+                        tolerance = 1e-12))
 
     expected <- wgt.b(objs[[i]])
     actual <- robustlmm:::wgt_b(rPDASs[[i]]$.pointer, resps[[i]]$.pointer)
     stopifnot(all.equal(actual, expected, check.attributes = FALSE,
-                        tolerance = 1-12))
+                        tolerance = 1e-12))
   }
   lsetTheta <- function(theta) {
     rPDs[[i]]$setTheta(theta)

@@ -48,7 +48,7 @@ family(rfm)
 if (packageVersion("lme4") > "1.1") ae(fitted(fm), fitted(rfm))
 ae(fixef(fm), fixef(rfm))
 stopifnot(inherits(try(logLik(rfm), silent=TRUE), "try-error"))
-ae(chgClass(ranef(fm)), ranef(rfm))
+ae(chgClass(ranef(fm, condVar=FALSE)), ranef(rfm))
 ## after version 1.1 fitted values are named
 if (packageVersion("lme4") > "1.1") ae(resid(fm), resid(rfm))
 ae(sigma(fm), sigma(rfm))

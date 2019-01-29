@@ -32,10 +32,10 @@ data <- within(data, {
 testFormula <- function(formula, data) {
     print(summary(fm <- lmer(formula, data)))
     print(summary(rm <- rlmerRcpp(formula, data, rho.e = cPsi, rho.b = cPsi)))
-    
+    ranef.fm <- ranef(fm, condVar=FALSE)
     stopifnot(all.equal(coef(fm), coef(rm), tolerance = 1e-1, check.attributes = FALSE),
               all.equal(fixef(fm), fixef(rm), tolerance = 1e-2, check.attributes = FALSE),
-              all.equal(ranef(fm), ranef(rm), tolerance = 1e-1, check.attributes = FALSE))
+              all.equal(ranef.fm , ranef(rm), tolerance = 1e-1, check.attributes = FALSE))
     invisible(list(fm, rm))
 }
 

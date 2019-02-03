@@ -99,6 +99,16 @@
 ##' to specify the tuning parameters by hand using the
 ##' \code{\link{psi2propII}} and \code{\link{chgDefaults}} functions.
 ##'
+##' \item{Specifying (multiple) weight functions:}{
+##' If custom weight functions are specified using the argument
+##' \code{rho.b} (\code{rho.e}) but the argument \code{rho.sigma.b}
+##' (\code{rho.sigma.e}) is missing, then the squared weights are used
+##' for simple variance components and the regular weights are used for
+##' variance components including correlation parameters. The same
+##' tuning parameters will be used, to get higher efficiency one has
+##' to specify the tuning parameters by hand using the
+##' \code{\link{psi2propII}} and \code{\link{chgDefaults}} functions.
+##'
 ##' To specify separate weight functions \code{rho.b} and
 ##' \code{rho.sigma.b} for different variance components, it is
 ##' possible to pass a list instead of a psi_func object. The list
@@ -185,20 +195,62 @@
 ##' @importFrom lme4 lmer
 ##' @importFrom stats getCall
 ##' @export
-rlmerRcpp <- function(formula, data, ..., method = "DASvar",
+rlmerRcpp <- function(formula, data, ..., method = "DAStau",
+                      rho.e = smoothPsi, rho.b = smoothPsi,
+                      rho.sigma.e, rho.sigma.b, rel.tol = 1e-8,
+                      max.iter = 40 * (r + 1)^2, verbose = 0,
+                      doFit = TRUE, init)
+{
+    lcall <- match.call()
+    pf <- parent.frame()
+    linit <- .rlmerInit(lcall, pf, formula, data, method, rho.e, rho.b, rho.sigma.e,
+                        rho.sigma.b, rel.tol, max.iter, verbose, init, ...)
+    lobj <- linit$obj
+    init <- linit$init
+
+    ## FIXME this should be moved to .convLme4Rlmer
+    lobj@pp <- convToRlmerPredD(init, lobj)
+
+    ## required for max.iter:
+    r <- len(lobj, "theta")
+
+    return(.rlmer(lobj, method, rel.tol, max.iter, verbose, doFit))
+}
+
+##' @export
+##' @rdname rlmer
+rlmer <- function(formula, data, ..., method = "DAStau",
                   rho.e = smoothPsi, rho.b = smoothPsi,
                   rho.sigma.e, rho.sigma.b, rel.tol = 1e-8,
-                  max.iter = 40*(r+1)^2, verbose = 0,
+                  max.iter = 40 * (r + 1)^2, verbose = 0,
                   doFit = TRUE, init)
 {
     lcall <- match.call()
+    pf <- parent.frame()
+    lobj <- .rlmerInit(lcall, pf, formula, data, method, rho.e, rho.b, rho.sigma.e,
+                       rho.sigma.b, rel.tol, max.iter, verbose, init, ...)$obj
+    if (substr(method, 1, 3) == "DAS") {
+        lobj@pp <- as(lobj@pp, "rlmerPredD_DAS")
+        lobj@pp$method <- method
+    }
+    lobj@pp$initRho(lobj)
+    lobj@pp$initMatrices(lobj)
+    lobj@pp$updateMatrices()
+
+    ## required for max.iter:
+    r <- len(lobj, "theta")
+
+    return(.rlmer(lobj, method, rel.tol, max.iter, verbose, doFit))
+}
+
+.rlmerInit <- function(lcall, pf, formula, data, method, rho.e, rho.b, rho.sigma.e,
+                       rho.sigma.b, rel.tol, max.iter, verbose, init, ...) {
     if (missing(init) || is.null(init) || is.list(init)) {
         lcall2 <- lcall
         lcall2[setdiff(names(formals(rlmer)), names(formals(lmer)))] <- NULL
         lcall2$doFit <- NULL
         lcall2$REML <- TRUE
         lcall2[[1]] <- as.name("lmer")
-        pf <- parent.frame()
         linit <- eval(lcall2, pf)
         if (!missing(init) && is.list(init)) {
             ## check sanity of input
@@ -268,10 +320,10 @@ rlmerRcpp <- function(formula, data, ..., method = "DASvar",
         method <- "DASvar"
     }
     lobj@method <- method
+    return(list(obj = lobj, init = init))
+}
 
-    ## FIXME this should be moved to .convLme4Rlmer
-    lobj@pp <- convToRlmerPredD(init, lobj)
-
+.rlmer <- function(lobj, method, rel.tol, max.iter, verbose, doFit) {
     if (!doFit) return(updateWeights(lobj))
 
     ## do not start with theta == 0
@@ -294,20 +346,12 @@ rlmerRcpp <- function(formula, data, ..., method = "DASvar",
             cat("b.s: ", b.s(lobj), "\n")
     }
 
-    ## required for max.iter:
-    r <- len(lobj, "theta")
-
-    ## do fit: non diagonal case differently
-    if (!isDiagonal(.U_b(lobj))) {
-        if (method == "DASvar") {
-            lobj <- rlmer.fit.DAS.nondiag(lobj, verbose, max.iter, rel.tol)
-        } else if (method == "DAStau") {
-            lobj <- rlmer.fit.DAS.nondiag(lobj, verbose, max.iter, rel.tol, method="DAStau")
-        } else
-            stop("Non-diagonal case only supported by DAStau and DASvar")
-    } else {
-        lobj <- rlmer.fit.DAS(lobj, verbose, max.iter, rel.tol)
-    }
+    curWarnings <- list()
+    lobj <- withCallingHandlers(.rlmer.fit(lobj, method, rel.tol, max.iter, verbose),
+                                warning = function(w) {
+                                    curWarnings <<- append(curWarnings,list(w$message))
+                                })
+    lobj@optinfo$warnings <- curWarnings
 
     if (verbose > 0) {
         cat("sigma, theta: ", .sigma(lobj), ", ", theta(lobj), "\n")
@@ -319,145 +363,19 @@ rlmerRcpp <- function(formula, data, ..., method = "DASvar",
     return(updateWeights(lobj))
 }
 
-##' @export
-##' @rdname rlmer
-rlmer <- function(formula, data, ..., method = "DAStau",
-                  rho.e = smoothPsi, rho.b = smoothPsi,
-                  rho.sigma.e, rho.sigma.b, rel.tol = 1e-8,
-                  max.iter = 40*(r+1)^2, verbose = 0,
-                  doFit = TRUE, init)
-{
-  lcall <- match.call()
-  if (missing(init) || is.null(init) || is.list(init)) {
-    lcall2 <- lcall
-    lcall2[setdiff(names(formals(rlmer)), names(formals(lmer)))] <- NULL
-    lcall2$doFit <- NULL
-    lcall2$REML <- TRUE
-    lcall2[[1]] <- as.name("lmer")
-    pf <- parent.frame()
-    linit <- eval(lcall2, pf)
-    if (!missing(init) && is.list(init)) {
-      ## check sanity of input
-      stopifnot(length(init$fixef) == length(fixef(linit)),
-                length(init$u) == length(getME(linit, "u")),
-                length(init$sigma) == length(sigma(linit)),
-                length(init$theta) == length(getME(linit, "theta")))
-      ## convert object to rlmerMod
-      linit <- as(linit, "rlmerMod")
-      ## set all of the initial parameters, but do not fit yet
-      setFixef(linit, unname(init$fixef))
-      setSigma(linit, init$sigma)
-      setTheta(linit, init$theta, fit.effects=FALSE, update.sigma=FALSE)
-      setU(linit, init$u)
+.rlmer.fit <- function(lobj, method, rel.tol, max.iter, verbose) {
+    ## do fit: non diagonal case differently
+    if (!isDiagonal(.U_b(lobj))) {
+        if (method == "DASvar") {
+            lobj <- rlmer.fit.DAS.nondiag(lobj, verbose, max.iter, rel.tol)
+        } else if (method == "DAStau") {
+            lobj <- rlmer.fit.DAS.nondiag(lobj, verbose, max.iter, rel.tol, method="DAStau")
+        } else
+            stop("Non-diagonal case only supported by DAStau and DASvar")
+    } else {
+        lobj <- rlmer.fit.DAS(lobj, verbose, max.iter, rel.tol)
     }
-    init <- linit
-  } else if (is.function(init)) {
-    init <- do.call(init,list(formula=formula, data=data, REML=TRUE, ...))
-  } else if (is(init, "merMod") || is(init, "rlmerMod")) {
-    ## check whether formula and data match with
-    ## the ones in the provided in init
-    if (is.null(icall <- getCall(init)))
-      stop("Object 'init' should contain a 'call' component")
-    if (!identical(as.character(lcall$formula), as.character(icall$formula)) |
-        !identical(lcall$data, icall$data))
-      warning("Arguments 'data' and 'formula' do not match with 'init': ",
-              "using model specification from 'init'")
-  } else stop("Unsuitable init object, aborting.",
-              "Expecting no, list (see ?rlmer), rlmerMod or merMod object")
-  lobj <- as(init, "rlmerMod")
-  lobj@call <- lcall
-
-  ## give a warning if weights or offset are used
-  if (any(lobj@resp$weights != 1))
-    stop("Argument weights is unsave to use at the moment.")
-  if (any(lobj@resp$offset != 0))
-    warning("Argument offset is untested.")
-
-  ## set arguments only relevant to rlmerMod
-  ## convert rho argument to list if necessary
-  convRho <- function(l)
-    if (!is.list(l)) rep.int(list(l), length(lobj@dim)) else l
-  lobj@rho.b <- rho.b <- convRho(rho.b)
-  if (missing("rho.sigma.b")) {
-    rho.sigma.b <- list()
-    ## set default wExp.b
-    wExp.b <- ifelse(lobj@dim == 1, 2, 1) ## if s==1 then 2 else 1
-    ## check length of c.sigma.b
-    for (bt in seq_along(lobj@blocks)) {
-      ## set higher tuning constants by default
-
-      rho.sigma.b[[bt]] <- switch(wExp.b[bt],
-                                  rho.b[[bt]],
-                                  psi2propII(rho.b[[bt]]),
-                                  stop("only wExp = 1 and 2 are supported"))
-    }
-  }
-  lobj@rho.sigma.b <- convRho(rho.sigma.b)
-  if (!isTRUE(chk <- validObject(lobj))) stop(chk)
-  lobj@rho.e <- rho.e
-  if (missing("rho.sigma.e"))
-    rho.sigma.e <- psi2propII(rho.e) ## prop II is the default
-  lobj@rho.sigma.e <- rho.sigma.e
-  if (method == "DAStau" & any(sapply(lobj@idx, nrow) > 2)) {
-    warning("Method 'DAStau' does not support blocks of size larger than 2. ",
-            "Falling back to method 'DASvar'.")
-    method <- "DASvar"
-  }
-  lobj@method <- method
-  if (substr(method, 1, 3) == "DAS") {
-    lobj@pp <- as(lobj@pp, "rlmerPredD_DAS")
-    lobj@pp$method <- method
-  }
-  lobj@pp$initRho(lobj)
-  lobj@pp$initMatrices(lobj)
-  lobj@pp$updateMatrices()
-
-
-  if (!doFit) return(updateWeights(lobj))
-
-  ## do not start with theta == 0
-  if (any(theta(lobj)[lobj@lower == 0] == 0)) {
-    if (verbose > 0)
-      cat("Setting variance components from 0 to 1\n")
-    theta0 <- theta(lobj)
-    theta0[lobj@lower == 0 & theta0 == 0] <- 1
-    setTheta(lobj, theta0, fit.effects = TRUE, update.sigma = method != "Opt")
-  } else {
-    ## set theta at least once
-    setTheta(lobj, theta(lobj), fit.effects = FALSE)
-  }
-
-  if (verbose > 0) {
-    cat("\nrlmer starting values:\n")
-    cat("sigma, theta: ", .sigma(lobj), ", ", theta(lobj), "\n")
-    cat("coef: ", .fixef(lobj), "\n")
-    if (verbose > 1)
-      cat("b.s: ", b.s(lobj), "\n")
-  }
-
-  ## required for max.iter:
-  r <- len(lobj, "theta")
-
-  ## do fit: non diagonal case differently
-  if (!isDiagonal(lobj@pp$U_b)) {
-    if (method == "DASvar") {
-      lobj <- rlmer.fit.DAS.nondiag(lobj, verbose, max.iter, rel.tol)
-    } else if (method == "DAStau") {
-      lobj <- rlmer.fit.DAS.nondiag(lobj, verbose, max.iter, rel.tol, method="DAStau")
-    } else
-      stop("Non-diagonal case only supported by DAStau and DASvar")
-  } else {
-    lobj <- rlmer.fit.DAS(lobj, verbose, max.iter, rel.tol)
-  }
-
-  if (verbose > 0) {
-    cat("sigma, theta: ", .sigma(lobj), ", ", theta(lobj), "\n")
-    cat("coef: ", .fixef(lobj), "\n")
-    if (verbose > 1)
-      cat("b.s: ", b.s(lobj), "\n")
-  }
-
-  return(updateWeights(lobj))
+    return(lobj)
 }
 
 ## DAS method
@@ -533,7 +451,7 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
                 ## tuning constants than for delta to get the same efficiency
                 wbsEta[lidx] <- lobj@rho.sigma.b[[type]]@wgt(db[lidx])
                 wbsDelta[lidx] <- (lobj@rho.sigma.b[[type]]@psi(db[lidx]) -
-                                     lobj@rho.sigma.b[[type]]@psi(db[lidx] - s*kappas[type]))/s
+                                       lobj@rho.sigma.b[[type]]@psi(db[lidx] - s*kappas[type]))/s
             } else {
                 lw <- lobj@rho.sigma.b[[type]]@wgt(db[lidx])
                 wbsEta[lidx] <- lw
@@ -669,10 +587,8 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
         optinfo$warnings <- c(optinfo$warnings, list(wt))
         optinfo$conv$opt <- 2
     }
-
     lobj@optinfo <- optinfo
-
-    lobj
+    return(lobj)
 }
 
 ## DAS method
@@ -740,8 +656,6 @@ rlmer.fit.DAS <- function(lobj, verbose, max.iter, rel.tol) {
         optinfo$warnings <- list(wt)
         optinfo$conv$opt <- 1
     }
-
     lobj@optinfo <- optinfo
-
-    lobj
+    return(lobj)
 }

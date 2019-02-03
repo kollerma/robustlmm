@@ -9,8 +9,8 @@
     rho.sigma.b, rel.tol = 1e-08,
     max.iter = 40 * (r + 1)^2, verbose = 0, doFit = TRUE,
     init)
-    
-  rlmerRcpp(formula, data, ..., method = "DASvar",
+
+  rlmerRcpp(formula, data, ..., method = "DAStau",
     rho.e = smoothPsi, rho.b = smoothPsi, rho.sigma.e,
     rho.sigma.b, rel.tol = 1e-08,
     max.iter = 40 * (r + 1)^2, verbose = 0, doFit = TRUE,

@@ -720,13 +720,3 @@ update.rlmerMod <- function(object, formula., ..., evaluate = TRUE) {
     else call
 }
 
-#######################################################
-## predict method                                    ##
-#######################################################
-
-##' @importFrom stats predict
-##' @S3method predict rlmerMod
-predict.rlmerMod <- function(object, ...) {
-    class(object) <- "lmerMod"
-    predict(object, ...)
-}

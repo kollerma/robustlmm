@@ -6,7 +6,7 @@ fit <- function(formula, data, methods =  c("DASvar", "DAStau"),
     fits <- list()
     ## compare with result of lmer if rho arguments are not given
     classic <- ! any(c("rho.e", "rho.b") %in% names(match.call())[-1])
-    if (classic) fm <- lmer(formula, data)
+    if (classic) fm <- lmer(formula, data, control=lmerControl(optimizer="bobyqa"))
     for (method in methods) {
         fits[[method]] <- list()
         if (classic) fits[[method]][["lmer"]] <- fm

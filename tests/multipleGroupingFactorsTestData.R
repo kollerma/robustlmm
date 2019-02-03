@@ -30,8 +30,8 @@ data <- within(data, {
 })
 
 testFormula <- function(formula, data) {
-    print(summary(fm <- lmer(formula, data)))
-    print(summary(rm <- rlmerRcpp(formula, data, rho.e = cPsi, rho.b = cPsi)))
+    print(summary(fm <- lmer(formula, data, control=lmerControl(optimizer="bobyqa"))))
+    print(summary(rm <- rlmerRcpp(formula, data, rho.e = cPsi, rho.b = cPsi, init = fm)))
     ranef.fm <- ranef(fm, condVar=FALSE)
     stopifnot(all.equal(coef(fm), coef(rm), tolerance = 1e-1, check.attributes = FALSE),
               all.equal(fixef(fm), fixef(rm), tolerance = 1e-2, check.attributes = FALSE),

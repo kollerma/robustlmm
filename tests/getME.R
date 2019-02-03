@@ -9,6 +9,8 @@ rfm <- rlmer(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2,
              rho.e = smoothPsi, rho.b=smoothPsi,
              rho.sigma.e = psi2propII(smoothPsi, k=2.28),
              rho.sigma.b = psi2propII(smoothPsi, k=2.28),
+             init = lmer(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2,
+                         control=lmerControl(optimizer="bobyqa")),
              doFit=FALSE)
 
 (nmME <- eval(formals(robustlmm:::getME.rlmerMod)$name))

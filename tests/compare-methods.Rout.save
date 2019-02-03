@@ -1,5 +1,5 @@
 
-R Under development (unstable) (2018-03-24 r74453) -- "Unsuffered Consequences"
+R version 3.5.2 (2018-12-20) -- "Eggshell Igloo"
 Copyright (C) 2018 The R Foundation for Statistical Computing
 Platform: x86_64-apple-darwin15.6.0 (64-bit)
 
@@ -26,7 +26,7 @@ Loading required package: Matrix
 +     fits <- list()
 +     ## compare with result of lmer if rho arguments are not given
 +     classic <- ! any(c("rho.e", "rho.b") %in% names(match.call())[-1])
-+     if (classic) fm <- lmer(formula, data)
++     if (classic) fm <- lmer(formula, data, control=lmerControl(optimizer="bobyqa"))
 +     for (method in methods) {
 +         fits[[method]] <- list()
 +         if (classic) fits[[method]][["lmer"]] <- fm
@@ -42,7 +42,8 @@ Loading required package: Matrix
 +                  ## compare with lmer fit
 +                  cat("#### Checking equality with lmer... ####\n")
 +                  cat("Fixed effects: ", all.equal(fixef(fm), fixef(m), tolerance = 1e-4), "\n")
-+                  cat("Random effects:", all.equal(ranef(fm), ranef(m), tolerance = 1e-4,
++                  ranef.fm <- ranef(fm, condVar=FALSE)# lme4 now has default  condVar=TRUE
++                  cat("Random effects:", all.equal(ranef.fm, ranef(m), tolerance = 1e-4,
 +                                                   check.attributes=FALSE), "\n")
 +                  cat("Theta:         ", all.equal(theta(fm), theta(m), tolerance = 1e-4), "\n")
 +                  cat("Sigma:         ", all.equal(sigma(fm), sigma(m), tolerance = 1e-4), "\n")
@@ -105,7 +106,7 @@ Loading required package: Matrix
 +     rho.e = smoothPsi, rho.b = smoothPsi)
 
 ######## DASvar ########
-Time elapsed: 0.243 0.015 0.259 0 0 
+Time elapsed: 0.231 0.015 0.247 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -143,7 +144,7 @@ Rho functions used for fitting:
 -19.822   1.081  33.966 -30.283  67.013 -51.900 
 
 ######## DAStau ########
-Time elapsed: 0.145 0.001 0.145 0 0 
+Time elapsed: 0.141 0 0.142 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -209,7 +210,8 @@ sigma               55.3
 +     rho.e = smoothPsi, rho.b = smoothPsi)
 
 ######## DASvar ########
-Time elapsed: 0.154 0.001 0.155 0 0 
+singular fit
+Time elapsed: 0.137 0.001 0.137 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -247,7 +249,8 @@ A B C D E F
 0 0 0 0 0 0 
 
 ######## DAStau ########
-Time elapsed: 0.172 0.001 0.175 0 0 
+singular fit
+Time elapsed: 0.151 0 0.152 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -313,7 +316,7 @@ sigma               4.06
 +     rho.e = smoothPsi, rho.b = smoothPsi)
 
 ######## DASvar ########
-Time elapsed: 0.162 0.002 0.165 0 0 
+Time elapsed: 0.131 0.001 0.132 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -365,7 +368,7 @@ Rho functions used for fitting:
 -2.667e-02 -7.956e-01 
 
 ######## DAStau ########
-Time elapsed: 0.164 0.001 0.165 0 0 
+Time elapsed: 0.138 0 0.138 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -474,8 +477,8 @@ sigma                0.558
 + }
 > 
 > cat('Time elapsed: ', proc.time(),'\n') # for ``statistical reasons''
-Time elapsed:  5.735 0.246 6.109 0.003 0.006 
+Time elapsed:  4.972 0.174 5.139 0.003 0.005 
 > 
 > proc.time()
    user  system elapsed 
-  5.738   0.252   6.109 
+  4.976   0.179   5.139 

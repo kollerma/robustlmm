@@ -20,7 +20,7 @@ Type 'q()' to quit R.
 Loading required package: robustlmm
 Loading required package: lme4
 Loading required package: Matrix
-> 
+>
 > fit <- function(formula, data, methods =  c("DASvar", "DAStau"),
 +                 rho.e = cPsi, rho.b = cPsi, ...) {
 +     fits <- list()
@@ -66,18 +66,18 @@ Loading required package: Matrix
 +         print.default(cmp, quote="FALSE")
 +     }
 + }
-> 
+>
 > if (FALSE) {
 +     ## classic (REML)
 +     fit(Yield ~ (1 | Batch), Dyestuff)
 +     fit(Yield ~ (1 | Batch), Dyestuff2)
 +     fit(diameter ~ (1|plate) + (1|sample), Penicillin)
-+ 
++
 +     ## classic (no init)
 +     fit(Yield ~ (1 | Batch), Dyestuff, init = lmerNoFit)
 +     fit(Yield ~ (1 | Batch), Dyestuff2, init = lmerNoFit)
 +     fit(diameter ~ (1|plate) + (1|sample), Penicillin, init = lmerNoFit)
-+ 
++
 +     ## smoothPsi, wExp = 1
 +     fit(Yield ~ (1 | Batch), Dyestuff,
 +         rho.e = smoothPsi, rho.b = smoothPsi,
@@ -88,7 +88,7 @@ Loading required package: Matrix
 +     fit(diameter ~ (1|plate) + (1|sample), Penicillin,
 +         rho.e = smoothPsi, rho.b = smoothPsi,
 +         rho.sigma.b = smoothPsi, rho.sigma.e = smoothPsi)
-+ 
++
 +     ## smoothPsi Proposal II for estimating sigma only
 +     fit(Yield ~ (1 | Batch), Dyestuff,
 +         rho.e = smoothPsi, rho.b = smoothPsi,
@@ -100,351 +100,351 @@ Loading required package: Matrix
 +         rho.e = smoothPsi, rho.b = smoothPsi,
 +         rho.sigma.b = smoothPsi)
 + }
-> 
+>
 > ## smoothPsi Proposal II (default)
 > fit(Yield ~ (1 | Batch), Dyestuff,
 +     rho.e = smoothPsi, rho.b = smoothPsi)
 
 ######## DASvar ########
-Time elapsed: 0.231 0.015 0.247 0 0 
-Robust linear mixed model fit by DASvar 
-Formula: formula 
-   Data: data 
+Time elapsed: 0.231 0.015 0.247 0 0
+Robust linear mixed model fit by DASvar
+Formula: formula
+   Data: data
 
-Scaled residuals: 
-    Min      1Q  Median      3Q     Max 
--1.2872 -0.6775  0.1308  0.7136  1.7416 
+Scaled residuals:
+    Min      1Q  Median      3Q     Max
+-1.2872 -0.6775  0.1308  0.7136  1.7416
 
 Random effects:
  Groups   Name        Variance Std.Dev.
- Batch    (Intercept) 2184     46.73   
- Residual             2933     54.16   
+ Batch    (Intercept) 2184     46.73
+ Residual             2933     54.16
 Number of obs: 30, groups: Batch, 6
 
 Fixed effects:
             Estimate Std. Error t value
 (Intercept)  1526.82      22.04   69.27
 
-Robustness weights for the residuals: 
+Robustness weights for the residuals:
  25 weights are ~= 1. The remaining 5 ones are
-    2     3     5    18    23 
-0.988 0.988 0.984 0.770 0.988 
+    2     3     5    18    23
+0.988 0.988 0.984 0.770 0.988
 
-Robustness weights for the random effects: 
+Robustness weights for the random effects:
 [1] 1.000 1.000 1.000 1.000 0.999 1.000
 
 Rho functions used for fitting:
   Residuals:
-    eff: smoothed Huber (k = 1.345, s = 10) 
-    sig: smoothed Huber, Proposal II (k = 1.345, s = 10) 
+    eff: smoothed Huber (k = 1.345, s = 10)
+    sig: smoothed Huber, Proposal II (k = 1.345, s = 10)
   Random Effects, variance component 1 (Batch):
-    eff: smoothed Huber (k = 1.345, s = 10) 
-    vcp: smoothed Huber, Proposal II (k = 1.345, s = 10) 
-      A       B       C       D       E       F 
--19.822   1.081  33.966 -30.283  67.013 -51.900 
+    eff: smoothed Huber (k = 1.345, s = 10)
+    vcp: smoothed Huber, Proposal II (k = 1.345, s = 10)
+      A       B       C       D       E       F
+-19.822   1.081  33.966 -30.283  67.013 -51.900
 
 ######## DAStau ########
-Time elapsed: 0.141 0 0.142 0 0 
-Robust linear mixed model fit by DAStau 
-Formula: formula 
-   Data: data 
+Time elapsed: 0.141 0 0.142 0 0
+Robust linear mixed model fit by DAStau
+Formula: formula
+   Data: data
 
-Scaled residuals: 
-    Min      1Q  Median      3Q     Max 
--1.2656 -0.6593  0.1234  0.6972  1.7041 
+Scaled residuals:
+    Min      1Q  Median      3Q     Max
+-1.2656 -0.6593  0.1234  0.6972  1.7041
 
 Random effects:
  Groups   Name        Variance Std.Dev.
- Batch    (Intercept) 2359     48.57   
- Residual             3059     55.31   
+ Batch    (Intercept) 2359     48.57
+ Residual             3059     55.31
 Number of obs: 30, groups: Batch, 6
 
 Fixed effects:
             Estimate Std. Error t value
 (Intercept)  1526.84      22.82    66.9
 
-Robustness weights for the residuals: 
+Robustness weights for the residuals:
  25 weights are ~= 1. The remaining 5 ones are
-    2     3     5    18    23 
-0.996 0.996 0.992 0.787 0.994 
+    2     3     5    18    23
+0.996 0.996 0.992 0.787 0.994
 
-Robustness weights for the random effects: 
+Robustness weights for the random effects:
 [1] 1 1 1 1 1 1
 
 Rho functions used for fitting:
   Residuals:
-    eff: smoothed Huber (k = 1.345, s = 10) 
-    sig: smoothed Huber, Proposal II (k = 1.345, s = 10) 
+    eff: smoothed Huber (k = 1.345, s = 10)
+    sig: smoothed Huber, Proposal II (k = 1.345, s = 10)
   Random Effects, variance component 1 (Batch):
-    eff: smoothed Huber (k = 1.345, s = 10) 
-    vcp: smoothed Huber, Proposal II (k = 1.345, s = 10) 
-      A       B       C       D       E       F 
--19.761   1.048  33.601 -29.717  66.229 -51.399 
+    eff: smoothed Huber (k = 1.345, s = 10)
+    vcp: smoothed Huber, Proposal II (k = 1.345, s = 10)
+      A       B       C       D       E       F
+-19.761   1.048  33.601 -29.717  66.229 -51.399
 
 ################################################
 ################################################
 ################################################
 
 ################ results for DASvar  ##############
-                    IRWLS    
-Coef                         
+                    IRWLS
+Coef
 (Intercept)         1527 (22)
-                             
-VarComp                      
-(Intercept) | Batch 46.7     
-                             
-sigma               54.2     
-                             
+
+VarComp
+(Intercept) | Batch 46.7
+
+sigma               54.2
+
 
 ################ results for DAStau  ##############
-                    IRWLS      
-Coef                           
+                    IRWLS
+Coef
 (Intercept)         1527 (22.8)
-                               
-VarComp                        
-(Intercept) | Batch 48.6       
-                               
-sigma               55.3       
-                               
+
+VarComp
+(Intercept) | Batch 48.6
+
+sigma               55.3
+
 > fit(Yield ~ (1 | Batch), Dyestuff2,
 +     rho.e = smoothPsi, rho.b = smoothPsi)
 
 ######## DASvar ########
-singular fit
-Time elapsed: 0.137 0.001 0.137 0 0 
-Robust linear mixed model fit by DASvar 
-Formula: formula 
-   Data: data 
+boundary (singular) fit: see ?isSingular
+Time elapsed: 0.137 0.001 0.137 0 0
+Robust linear mixed model fit by DASvar
+Formula: formula
+   Data: data
 
-Scaled residuals: 
-     Min       1Q   Median       3Q      Max 
--1.62421 -0.71050 -0.06088  0.63520  1.95517 
+Scaled residuals:
+     Min       1Q   Median       3Q      Max
+-1.62421 -0.71050 -0.06088  0.63520  1.95517
 
 Random effects:
  Groups   Name        Variance Std.Dev.
- Batch    (Intercept)  0.00    0.000   
- Residual             16.02    4.002   
+ Batch    (Intercept)  0.00    0.000
+ Residual             16.02    4.002
 Number of obs: 30, groups: Batch, 6
 
 Fixed effects:
             Estimate Std. Error t value
 (Intercept)   5.6087     0.7495   7.484
 
-Robustness weights for the residuals: 
+Robustness weights for the residuals:
  24 weights are ~= 1. The remaining 6 ones are
-    8     9    10    11    13    21 
-0.997 0.863 0.824 0.951 0.687 0.971 
+    8     9    10    11    13    21
+0.997 0.863 0.824 0.951 0.687 0.971
 
-Robustness weights for the random effects: 
+Robustness weights for the random effects:
 [1] 1 1 1 1 1 1
 
 Rho functions used for fitting:
   Residuals:
-    eff: smoothed Huber (k = 1.345, s = 10) 
-    sig: smoothed Huber, Proposal II (k = 1.345, s = 10) 
+    eff: smoothed Huber (k = 1.345, s = 10)
+    sig: smoothed Huber, Proposal II (k = 1.345, s = 10)
   Random Effects, variance component 1 (Batch):
-    eff: smoothed Huber (k = 1.345, s = 10) 
-    vcp: smoothed Huber, Proposal II (k = 1.345, s = 10) 
-A B C D E F 
-0 0 0 0 0 0 
+    eff: smoothed Huber (k = 1.345, s = 10)
+    vcp: smoothed Huber, Proposal II (k = 1.345, s = 10)
+A B C D E F
+0 0 0 0 0 0
 
 ######## DAStau ########
-singular fit
-Time elapsed: 0.151 0 0.152 0 0 
-Robust linear mixed model fit by DAStau 
-Formula: formula 
-   Data: data 
+boundary (singular) fit: see ?isSingular
+Time elapsed: 0.151 0 0.152 0 0
+Robust linear mixed model fit by DAStau
+Formula: formula
+   Data: data
 
-Scaled residuals: 
-     Min       1Q   Median       3Q      Max 
--1.60162 -0.70046 -0.05976  0.62677  1.92861 
+Scaled residuals:
+     Min       1Q   Median       3Q      Max
+-1.60162 -0.70046 -0.05976  0.62677  1.92861
 
 Random effects:
  Groups   Name        Variance Std.Dev.
- Batch    (Intercept)  0.00    0.000   
- Residual             16.47    4.058   
+ Batch    (Intercept)  0.00    0.000
+ Residual             16.47    4.058
 Number of obs: 30, groups: Batch, 6
 
 Fixed effects:
             Estimate Std. Error t value
 (Intercept)   5.6075     0.7599   7.379
 
-Robustness weights for the residuals: 
+Robustness weights for the residuals:
  25 weights are ~= 1. The remaining 5 ones are
-    9    10    11    13    21 
-0.874 0.835 0.960 0.697 0.979 
+    9    10    11    13    21
+0.874 0.835 0.960 0.697 0.979
 
-Robustness weights for the random effects: 
+Robustness weights for the random effects:
 [1] 1 1 1 1 1 1
 
 Rho functions used for fitting:
   Residuals:
-    eff: smoothed Huber (k = 1.345, s = 10) 
-    sig: smoothed Huber, Proposal II (k = 1.345, s = 10) 
+    eff: smoothed Huber (k = 1.345, s = 10)
+    sig: smoothed Huber, Proposal II (k = 1.345, s = 10)
   Random Effects, variance component 1 (Batch):
-    eff: smoothed Huber (k = 1.345, s = 10) 
-    vcp: smoothed Huber, Proposal II (k = 1.345, s = 10) 
-A B C D E F 
-0 0 0 0 0 0 
+    eff: smoothed Huber (k = 1.345, s = 10)
+    vcp: smoothed Huber, Proposal II (k = 1.345, s = 10)
+A B C D E F
+0 0 0 0 0 0
 
 ################################################
 ################################################
 ################################################
 
 ################ results for DASvar  ##############
-                    IRWLS       
-Coef                            
+                    IRWLS
+Coef
 (Intercept)         5.61 (0.749)
-                                
-VarComp                         
-(Intercept) | Batch 0           
-                                
-sigma               4           
-                                
+
+VarComp
+(Intercept) | Batch 0
+
+sigma               4
+
 
 ################ results for DAStau  ##############
-                    IRWLS      
-Coef                           
+                    IRWLS
+Coef
 (Intercept)         5.61 (0.76)
-                               
-VarComp                        
-(Intercept) | Batch 0          
-                               
-sigma               4.06       
-                               
+
+VarComp
+(Intercept) | Batch 0
+
+sigma               4.06
+
 > fit(diameter ~ (1|plate) + (1|sample), Penicillin,
 +     rho.e = smoothPsi, rho.b = smoothPsi)
 
 ######## DASvar ########
-Time elapsed: 0.131 0.001 0.132 0 0 
-Robust linear mixed model fit by DASvar 
-Formula: formula 
-   Data: data 
+Time elapsed: 0.131 0.001 0.132 0 0
+Robust linear mixed model fit by DASvar
+Formula: formula
+   Data: data
 
-Scaled residuals: 
-    Min      1Q  Median      3Q     Max 
--2.2164 -0.6474  0.0528  0.5885  3.4336 
+Scaled residuals:
+    Min      1Q  Median      3Q     Max
+-2.2164 -0.6474  0.0528  0.5885  3.4336
 
 Random effects:
  Groups   Name        Variance Std.Dev.
- plate    (Intercept) 0.8798   0.9380  
- sample   (Intercept) 4.3155   2.0774  
- Residual             0.2954   0.5435  
+ plate    (Intercept) 0.8798   0.9380
+ sample   (Intercept) 4.3155   2.0774
+ Residual             0.2954   0.5435
 Number of obs: 144, groups: plate, 24; sample, 6
 
 Fixed effects:
             Estimate Std. Error t value
 (Intercept)  23.0116     0.8929   25.77
 
-Robustness weights for the residuals: 
+Robustness weights for the residuals:
  122 weights are ~= 1. The remaining 22 ones are summarized as
-   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-  0.392   0.669   0.843   0.822   0.978   0.999 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max.
+  0.392   0.669   0.843   0.822   0.978   0.999
 
-Robustness weights for the random effects: 
+Robustness weights for the random effects:
  25 weights are ~= 1. The remaining 5 ones are
-    7    13    19    24    30 
-0.893 0.853 0.893 0.982 0.905 
+    7    13    19    24    30
+0.893 0.853 0.893 0.982 0.905
 
 Rho functions used for fitting:
   Residuals:
-    eff: smoothed Huber (k = 1.345, s = 10) 
-    sig: smoothed Huber, Proposal II (k = 1.345, s = 10) 
+    eff: smoothed Huber (k = 1.345, s = 10)
+    sig: smoothed Huber, Proposal II (k = 1.345, s = 10)
   Random Effects, variance component 1 (plate):
-    eff: smoothed Huber (k = 1.345, s = 10) 
-    vcp: smoothed Huber, Proposal II (k = 1.345, s = 10) 
+    eff: smoothed Huber (k = 1.345, s = 10)
+    vcp: smoothed Huber, Proposal II (k = 1.345, s = 10)
   Random Effects, variance component 2 (sample):
-    eff: smoothed Huber (k = 1.345, s = 10) 
-    vcp: smoothed Huber, Proposal II (k = 1.345, s = 10) 
-         a          b          c          d          e          f          g 
- 4.436e-01  4.436e-01  1.241e-01  2.030e-01 -1.046e-06 -2.536e-01 -8.075e-01 
-         h          i          j          k          l          m          n 
- 4.872e-01 -4.441e-01 -4.541e-01  5.688e-01  2.945e-01  8.498e-01  2.945e-01 
-         o          p          q          r          s          t          u 
- 5.481e-01  2.012e-02 -1.615e-01 -1.623e-01 -8.075e-01  5.688e-01 -4.951e-01 
-         v          w          x          A          B          C          D 
--1.628e-01 -4.495e-01 -7.084e-01  5.551e-01 -2.672e-01  4.955e-01 -3.700e-02 
-         E          F 
--2.667e-02 -7.956e-01 
+    eff: smoothed Huber (k = 1.345, s = 10)
+    vcp: smoothed Huber, Proposal II (k = 1.345, s = 10)
+         a          b          c          d          e          f          g
+ 4.436e-01  4.436e-01  1.241e-01  2.030e-01 -1.046e-06 -2.536e-01 -8.075e-01
+         h          i          j          k          l          m          n
+ 4.872e-01 -4.441e-01 -4.541e-01  5.688e-01  2.945e-01  8.498e-01  2.945e-01
+         o          p          q          r          s          t          u
+ 5.481e-01  2.012e-02 -1.615e-01 -1.623e-01 -8.075e-01  5.688e-01 -4.951e-01
+         v          w          x          A          B          C          D
+-1.628e-01 -4.495e-01 -7.084e-01  5.551e-01 -2.672e-01  4.955e-01 -3.700e-02
+         E          F
+-2.667e-02 -7.956e-01
 
 ######## DAStau ########
-Time elapsed: 0.138 0 0.138 0 0 
-Robust linear mixed model fit by DAStau 
-Formula: formula 
-   Data: data 
+Time elapsed: 0.138 0 0.138 0 0
+Robust linear mixed model fit by DAStau
+Formula: formula
+   Data: data
 
-Scaled residuals: 
-   Min     1Q Median     3Q    Max 
--2.161 -0.642  0.057  0.574  3.333 
+Scaled residuals:
+   Min     1Q Median     3Q    Max
+-2.161 -0.642  0.057  0.574  3.333
 
 Random effects:
  Groups   Name        Variance Std.Dev.
- plate    (Intercept) 0.9054   0.9515  
- sample   (Intercept) 4.5339   2.1293  
- Residual             0.3114   0.5581  
+ plate    (Intercept) 0.9054   0.9515
+ sample   (Intercept) 4.5339   2.1293
+ Residual             0.3114   0.5581
 Number of obs: 144, groups: plate, 24; sample, 6
 
 Fixed effects:
             Estimate Std. Error t value
 (Intercept)  23.0002     0.9148   25.14
 
-Robustness weights for the residuals: 
+Robustness weights for the residuals:
  126 weights are ~= 1. The remaining 18 ones are summarized as
-   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-  0.404   0.684   0.838   0.802   0.920   0.997 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max.
+  0.404   0.684   0.838   0.802   0.920   0.997
 
-Robustness weights for the random effects: 
+Robustness weights for the random effects:
  25 weights are ~= 1. The remaining 5 ones are
-    7    13    19    24    30 
-0.906 0.866 0.906 0.989 0.926 
+    7    13    19    24    30
+0.906 0.866 0.906 0.989 0.926
 
 Rho functions used for fitting:
   Residuals:
-    eff: smoothed Huber (k = 1.345, s = 10) 
-    sig: smoothed Huber, Proposal II (k = 1.345, s = 10) 
+    eff: smoothed Huber (k = 1.345, s = 10)
+    sig: smoothed Huber, Proposal II (k = 1.345, s = 10)
   Random Effects, variance component 1 (plate):
-    eff: smoothed Huber (k = 1.345, s = 10) 
-    vcp: smoothed Huber, Proposal II (k = 1.345, s = 10) 
+    eff: smoothed Huber (k = 1.345, s = 10)
+    vcp: smoothed Huber, Proposal II (k = 1.345, s = 10)
   Random Effects, variance component 2 (sample):
-    eff: smoothed Huber (k = 1.345, s = 10) 
-    vcp: smoothed Huber, Proposal II (k = 1.345, s = 10) 
-        a         b         c         d         e         f         g         h 
- 0.450838  0.450838  0.128410  0.205545  0.000502 -0.256535 -0.815539  0.490628 
-        i         j         k         l         m         n         o         p 
--0.446899 -0.456519  0.575339  0.297994  0.858936  0.297994  0.554159  0.020649 
-        q         r         s         t         u         v         w         x 
--0.163812 -0.164205 -0.815539  0.575339 -0.501182 -0.164248 -0.451685 -0.717135 
-        A         B         C         D         E         F 
- 0.559397 -0.265494  0.499107 -0.034026 -0.023533 -0.794299 
+    eff: smoothed Huber (k = 1.345, s = 10)
+    vcp: smoothed Huber, Proposal II (k = 1.345, s = 10)
+        a         b         c         d         e         f         g         h
+ 0.450838  0.450838  0.128410  0.205545  0.000502 -0.256535 -0.815539  0.490628
+        i         j         k         l         m         n         o         p
+-0.446899 -0.456519  0.575339  0.297994  0.858936  0.297994  0.554159  0.020649
+        q         r         s         t         u         v         w         x
+-0.163812 -0.164205 -0.815539  0.575339 -0.501182 -0.164248 -0.451685 -0.717135
+        A         B         C         D         E         F
+ 0.559397 -0.265494  0.499107 -0.034026 -0.023533 -0.794299
 
 ################################################
 ################################################
 ################################################
 
 ################ results for DASvar  ##############
-                     IRWLS     
-Coef                           
+                     IRWLS
+Coef
 (Intercept)          23 (0.893)
-                               
-VarComp                        
-(Intercept) | plate  0.938     
-(Intercept) | sample 2.077     
-                               
-sigma                0.543     
-                               
+
+VarComp
+(Intercept) | plate  0.938
+(Intercept) | sample 2.077
+
+sigma                0.543
+
 
 ################ results for DAStau  ##############
-                     IRWLS     
-Coef                           
+                     IRWLS
+Coef
 (Intercept)          23 (0.915)
-                               
-VarComp                        
-(Intercept) | plate  0.952     
-(Intercept) | sample 2.129     
-                               
-sigma                0.558     
-                               
-> 
+
+VarComp
+(Intercept) | plate  0.952
+(Intercept) | sample 2.129
+
+sigma                0.558
+
+>
 > if (FALSE) {
 +     ## correlated random effects
 +     fit(Reaction ~ Days + (Days|Subject), sleepstudy,
@@ -459,7 +459,7 @@ sigma                0.558
 +         rho.e = smoothPsi, rho.b = smoothPsi,
 +         methods = c("DASvar"), ##, "DAStau"),
 +         init = lmerNoFit)
-+ 
++
 +     ## ## including a 0 variance compontent
 +     sleepstudy2 <- within(sleepstudy, Group <- letters[1:4])
 +     fit(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2,
@@ -475,10 +475,10 @@ sigma                0.558
 +         methods = c("DASvar"), ##, "DAStau"),
 +         init = lmerNoFit)
 + }
-> 
+>
 > cat('Time elapsed: ', proc.time(),'\n') # for ``statistical reasons''
-Time elapsed:  4.972 0.174 5.139 0.003 0.005 
-> 
+Time elapsed:  4.972 0.174 5.139 0.003 0.005
+>
 > proc.time()
-   user  system elapsed 
-  4.976   0.179   5.139 
+   user  system elapsed
+  4.976   0.179   5.139

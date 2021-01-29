@@ -109,6 +109,26 @@
 ##' to specify the tuning parameters by hand using the
 ##' \code{\link{psi2propII}} and \code{\link{chgDefaults}} functions.
 ##'
+##' \item{Specifying (multiple) weight functions:}{
+##' If custom weight functions are specified using the argument
+##' \code{rho.b} (\code{rho.e}) but the argument \code{rho.sigma.b}
+##' (\code{rho.sigma.e}) is missing, then the squared weights are used
+##' for simple variance components and the regular weights are used for
+##' variance components including correlation parameters. The same
+##' tuning parameters will be used, to get higher efficiency one has
+##' to specify the tuning parameters by hand using the
+##' \code{\link{psi2propII}} and \code{\link{chgDefaults}} functions.
+##'
+##' \item{Specifying (multiple) weight functions:}{
+##' If custom weight functions are specified using the argument
+##' \code{rho.b} (\code{rho.e}) but the argument \code{rho.sigma.b}
+##' (\code{rho.sigma.e}) is missing, then the squared weights are used
+##' for simple variance components and the regular weights are used for
+##' variance components including correlation parameters. The same
+##' tuning parameters will be used, to get higher efficiency one has
+##' to specify the tuning parameters by hand using the
+##' \code{\link{psi2propII}} and \code{\link{chgDefaults}} functions.
+##'
 ##' To specify separate weight functions \code{rho.b} and
 ##' \code{rho.sigma.b} for different variance components, it is
 ##' possible to pass a list instead of a psi_func object. The list

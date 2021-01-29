@@ -32,7 +32,7 @@ Loading required package: Matrix
 +              init = lmer(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2,
 +                          control=lmerControl(optimizer="bobyqa")),
 +              doFit=FALSE)
-singular fit
+boundary (singular) fit: see ?isSingular
 > 
 > (nmME <- eval(formals(robustlmm:::getME.rlmerMod)$name))
  [1] "X"                "Z"                "Zt"               "Ztlist"          

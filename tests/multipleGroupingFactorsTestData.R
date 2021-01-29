@@ -10,7 +10,8 @@ group2 <- rep(LETTERS[1:8], each = 4)
 treat1 <- rep(c(TRUE, FALSE), each = 2)
 treat2 <- c(TRUE, FALSE)
 
-data <- data.frame(group1, group2, treat1 = factor(treat1), treat2 = factor(treat2))
+data <- data.frame(group1 = factor(group1), group2 = factor(group2),
+                   treat1 = factor(treat1), treat2 = factor(treat2))
 table(data)
 
 data <- data[rep(1L:NROW(data), 3), ]

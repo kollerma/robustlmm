@@ -353,7 +353,7 @@ int gaussHermiteDataDirect(int n, vector<double> *x, vector<double> *w) {
 
   // Calculate weights w
   int i;
-  double log2 = log(2.0), logsqrtpi = 0.5 * log(PI);
+  double log2 = log(2.0), logsqrtpi = 0.5 * log(M_PI);
   for (i = 0; i < n; i++) {
     // First, compute the log-weight
     (*w)[i] = (n - 1.) * log2 + lgamma(n + 1) + logsqrtpi -
@@ -380,7 +380,7 @@ int gaussHermiteDataGolubWelsch(int n, vector<double> *x, vector<double> *w) {
   buildHermiteJacobi(n, &D, &E);
 
   // Get nodes & weights
-  double mu0 = sqrt(PI);
+  double mu0 = sqrt(M_PI);
   quadInfoGolubWelsch(n, D, E, mu0, x, w);
 
   return 0;

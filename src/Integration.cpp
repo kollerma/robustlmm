@@ -37,10 +37,10 @@ DqagIntegration::DqagIntegration() : Integration(), neval_(0),
   ier_(0), limit_(100), lenw_(4*limit_), last_(0),
   epsabs_(std::pow(std::numeric_limits<double>::epsilon(), .5)),
   epsrel_(epsabs_), result_(0), noBound_(NA_REAL), abserr_(0),
-  iwork_(Calloc(limit_, int)), work_(Calloc(lenw_, double)) {}
+  iwork_(R_Calloc(limit_, int)), work_(R_Calloc(lenw_, double)) {}
 
 DqagIntegration::~DqagIntegration() {
-  Free(iwork_); Free(work_);
+  R_Free(iwork_); R_Free(work_);
 }
 
 double DqagIntegration::ninfInf(integr_fn *f, void *ex) {

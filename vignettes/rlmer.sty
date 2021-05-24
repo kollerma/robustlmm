@@ -81,11 +81,11 @@
 \renewcommand{\det}[1]{\abs{#1}}
 \newcommand{\vp}[1][e]{\Vec{\psi}_{#1}}
 \newcommand{\vchi}[1][e]{\Vec{\chi}_{#1}}
-\newcommand{\tv}[2][]{{\widetilde{\Vec{#2}}_{#1}}}
-\newcommand{\hv}[2][]{{\widehat{\Vec{#2}}_{#1}}}
-\newcommand{\tvp}[1][e]{\tv[#1]{\psi}}
-\newcommand{\hvp}[1][e]{\hv[#1]{\psi}}
-\newcommand{\tvc}[1][e]{\tv[#1]{\chi}}
+\newcommand{\tildev}[2][]{{\widetilde{\Vec{#2}}_{#1}}}
+\newcommand{\hatv}[2][]{{\widehat{\Vec{#2}}_{#1}}}
+\newcommand{\tvp}[1][e]{\tildev[#1]{\psi}}
+\newcommand{\hvp}[1][e]{\hatv[#1]{\psi}}
+\newcommand{\tvc}[1][e]{\tildev[#1]{\chi}}
 \newcommand{\s}[1][\rho]{#1^{(\sigma)}}
 \newcommand{\si}[2][w]{#1^{(\sigma)}_{#2}\kern-1pt}
 \newcommand{\exponent}{{\mbox{\emph{expt}}}}
@@ -137,25 +137,25 @@
 %%\newcommand{\vc}[1]{\Vec{#1}}
 %%\newcommand{\mx}[1]{\bld{#1}}
 %%\newcommand{\fn}[1]{\left(#1\right)}
-\newcommand{\U}[2][-0.15ex]{\bld{U}_{\hspace{#1}#2\hspace{0.25ex}}}
+\newcommand{\Umat}[2][-0.15ex]{\bld{U}_{\hspace{#1}#2\hspace{0.25ex}}}
 \newcommand{\V}[2][-0.15ex]{\bld{V}_{\hspace{#1}#2\hspace{0.25ex}}}
 \newcommand{\Vbth}{\V{b}\fn{\vec\theta}}
-\newcommand{\Vbtth}{\V{b}\fns{\tv\theta}}
-\newcommand{\Vbhth}{\V{b}\fns{\hv\theta}}
-\newcommand{\Ubth}{\U{b}\fn{\vec\theta}}
-\newcommand{\Ubtth}{\U{b}\fns{\tv\theta}}
-\newcommand{\Ubhth}{\U{b}\fns{\hv\theta}}
+\newcommand{\Vbtth}{\V{b}\fns{\tildev\theta}}
+\newcommand{\Vbhth}{\V{b}\fns{\hatv\theta}}
+\newcommand{\Ubth}{\Umat{b}\fn{\vec\theta}}
+\newcommand{\Ubtth}{\Umat{b}\fns{\tildev\theta}}
+\newcommand{\Ubhth}{\Umat{b}\fns{\hatv\theta}}
 \newcommand{\Vyth}{\V[-0.5ex]{y}\fn{\vec\theta}}
-\newcommand{\Vytth}{\V[-0.5ex]{y}\fns{\tv\theta}}
-\newcommand{\Vyhth}{\V[-0.5ex]{y}\fns{\hv\theta}}
+\newcommand{\Vytth}{\V[-0.5ex]{y}\fns{\tildev\theta}}
+\newcommand{\Vyhth}{\V[-0.5ex]{y}\fns{\hatv\theta}}
 \newcommand{\Vy}{\V[-0.5ex]{y}}
 \newcommand{\Ve}{\V[-0.6ex]{e}}
-\newcommand{\Ue}{\U{e}}
-\newcommand{\Ub}{\U{b}}
+\newcommand{\Ue}{\Umat{e}}
+\newcommand{\Ub}{\Umat{b}}
 % \newcommand{\Vbth}{\bld{V}_{b}\fn{\vec\theta}}
-% \newcommand{\Ubth}{\bld{U}_{b}\fn{\vec\theta}}
+% \newcommand{\Ubth}{\bld{Umat}_{b}\fn{\vec\theta}}
 % \newcommand{\Ve}{\bld{V}_{e}}
-% \newcommand{\Ue}{\bld{U}_{e}}
+% \newcommand{\Ue}{\bld{Umat}_{e}}
 \newcommand{\dVbth}{\frac{\partial\Ubth\tr}{\partial\theta_l}}
 \newcommand{\Tbk}{\bld{T}_{\hspace{-0.5ex}b,k\hspace{0.25ex}}}
 \newcommand{\hTbk}{\widehat{\bld{T}}_{\hspace{-0.5ex}b,k\hspace{0.25ex}}}
@@ -165,10 +165,10 @@
 \newcommand{\Qlk}{\Q{\ell,k}}
 \newcommand{\Qlth}{\Q{\ell}\fns{\vec\theta}}
 \newcommand{\Qlkth}{\Q{\ell,k}\fns{\vec\theta}}
-\newcommand{\Qltth}{\Q{\ell}\fns{\tv\theta}}
-\newcommand{\Qlhth}{\Q{\ell}\fns{\hv\theta}}
-\newcommand{\Qlktth}{\Q{\ell,k}\fns{\tv\theta}}
-\newcommand{\Qlkhth}{\Q{\ell,k}\fns{\hv\theta}}
+\newcommand{\Qltth}{\Q{\ell}\fns{\tildev\theta}}
+\newcommand{\Qlhth}{\Q{\ell}\fns{\hatv\theta}}
+\newcommand{\Qlktth}{\Q{\ell,k}\fns{\tildev\theta}}
+\newcommand{\Qlkhth}{\Q{\ell,k}\fns{\hatv\theta}}
 
 
 %% redefine \fn

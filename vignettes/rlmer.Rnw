@@ -40,9 +40,9 @@
 
   In this tutorial, we show how to fit robust linear mixed-effects models
   using \pkg{robustlmm}, how to assess the model fit, how to detect
-  outliers, and how to compare different fits. If you use the software, 
+  outliers, and how to compare different fits. If you use the software,
   please cite this article as published in the Journal of Statistic
-  Software \citep{vignette}.}  
+  Software \citep{vignette}.}
 
 \Keywords{robust statistics, mixed-effects model, hierarchical model,
   ANOVA, \proglang{R}, crossed, random effect}
@@ -104,27 +104,27 @@ Classic estimation of linear mixed-effects models is mainly provided by two func
 \centering
 \begin{tabular}{llp{.25\textwidth}p{.4\textwidth}}
 	\hline
-\Rp package & Function & Approach & 
+\Rp package & Function & Approach &
 		Details / Assumptions \\\hline
-	\pkg{nlme} & \code{lme} & classic & 
+	\pkg{nlme} & \code{lme} & classic &
 		optimized for nested hierarchical structures;
 		allows special random effects covariance structures \\
-	\pkg{lme4} & \code{lmer} & classic & 
+	\pkg{lme4} & \code{lmer} & classic &
 		no assumptions on grouping structure;
 		correlated and uncorrelated random effects within levels \\
-	\pkg{lqmm} & \code{lqmm} & quantile-based & 
-		allows median-type estimates; one grouping level with or 
+	\pkg{lqmm} & \code{lqmm} & quantile-based &
+		allows median-type estimates; one grouping level with or
 		without correlation between random effects \\
 	\pkg{heavy} & \code{heavyLme} & t distributions &
 		one grouping level; correlated random effects \\
 	--- & \code{lmeRob} & reformulation
 		as multivariate problem, then MM-estimation &
-		balanced nested hierarchical structures; 
+		balanced nested hierarchical structures;
 		uncorrelated random effects within levels \\
 	\pkg{rlme} & \code{rlme} & rank based &
 		unbalanced nested hierarchical structures (2 or 3 levels);
 		random intercepts only; does not support balanced data \\
-	\pkg{robustlmm} & \code{rlmer} & 
+	\pkg{robustlmm} & \code{rlmer} &
 		huberization of likelihood and DAS-Scale estimation &
 		no assumptions on grouping structure;
 		correlated and uncorrelated random effects within levels
@@ -136,7 +136,7 @@ Classic estimation of linear mixed-effects models is mainly provided by two func
 
 For robust estimation of linear mixed-effects models, there exists a variety of specialized implementations in \Rpns, all using different approaches to the robustness problem. Most of them are available on the Comprehensive R Archive Network (CRAN) as \Rp packages. Except the method presented in this paper, all other methods are applicable only for certain grouping structures, see Table~\ref{tab:functions} for an overview. The function \code{heavyLme} in the \pkg{heavy} package \citep{heavy} implements mixed-effects models using t distributions. However, it allows for a single grouping factor only, which limits the method to two-level data. As both, the residual errors and the random effects are modeled with a t distribution, the method can capture outliers on both the subject and the observational level. The degrees of freedom for the two t distributions are fixed to be the same. Hence, it is not possible to have a differing treatment of outliers on the two levels. Multiple random effects are fitted with a correlation parameter, uncorrelated random effects are not supported. The function \code{lmeRob} implements the method by \citet{copt2006high}. It is not available on CRAN but from the authors upon request. They reformulate the mixed-effects problem as multivariate problem and apply multivariate MM-estimation. This approach requires the grouping structure to be nested and the data to be balanced. Observations are down-weighted at the highest group level, so the high breakdown point of $50\%$ applies to the number of groups that can be contaminated, not to the number of observations. The implementation only supports uncorrelated random effects within levels. The function \code{rlme} in the \pkg{rlme} \Rp package implements nested hierarchical mixed-effects models using a rank-based approach \citep{rlme}. The function supports only simple random intercepts, and solutions might not be unique.
 
-This article is a tutorial for \pkg{robustlmm}, an implementation of a robust method to fit mixed-effects models for the statistical computing environment \Rp  \citep{R}. The \Rp package \pkg{robustlmm} is available on CRAN at \url{http://cran.r-project.org/package=robustlmm} under the GPL-v2 license. 
+This article is a tutorial for \pkg{robustlmm}, an implementation of a robust method to fit mixed-effects models for the statistical computing environment \Rp  \citep{R}. The \Rp package \pkg{robustlmm} is available on CRAN at \url{http://cran.r-project.org/package=robustlmm} under the GPL-v2 license.
 
 In the next section we provide background on \pkg{robustlmm}'s underlying estimating equations and algorithms. In Section~\ref{implementation}, we describe how \pkg{robustlmm} is implemented. In Section~\ref{usage}, we work an example and demonstrate how to do a full statistical analysis. Pointers to further information are given in Section~\ref{furtherInformation}. Details, tables of tuning parameters and formulas are contained in the Appendix.
 
@@ -160,7 +160,7 @@ We work with the general linear mixed-effects model in matrix form and, followin
 
 where $\vec y$ is the response vector of length $n$,  $\vec\beta$ is the fixed effects vector of length $p$ with design matrix $\bld X$, and $\vbs$ is the spherical random effects vector of length $q$ with design matrix $\bld Z$. The relation between the regular and the spherical random effects is $\vec b = \Ubth\vbs$. The lower triangular matrix $\Ubth$ is parameterized by the vector $\vec\theta$. The covariance matrix of the random effects is $\Vbth = \Ubth\Ubth\tr$. The matrix $\Ue$ is assumed to be a diagonal matrix of known weights.
 
-As mentioned in the introduction, we do not assume anything about the structure of the data (i.e., the design matrices $\bld X$ and $\bld Z$), though we do make the usual assumption which the model parameters are estimable. We do assume the covariance matrix of the random effects $\Vbth$ to be block-diagonal. This assumption excludes problems that cannot be written in block-diagonal form, like geostatistical problems with spatial dependence encoded in $\Vbth$ (see the \pkg{georob} package \citep{georobPkg} for robust methods to deal with this special case). 
+As mentioned in the introduction, we do not assume anything about the structure of the data (i.e., the design matrices $\bld X$ and $\bld Z$), though we do make the usual assumption which the model parameters are estimable. We do assume the covariance matrix of the random effects $\Vbth$ to be block-diagonal. This assumption excludes problems that cannot be written in block-diagonal form, like geostatistical problems with spatial dependence encoded in $\Vbth$ (see the \pkg{georob} package \citep{georobPkg} for robust methods to deal with this special case).
 
 To reduce the complexity of the algorithms, our implementation makes additional assumptions about the covariance matrices of the random effects and the residual errors that are not required by the theory \emph{per se}. Blocks of $\Vbth$ of size $2\times2$ and larger are assumed to be unstructured, i.e., unconstrained covariance matrices (other structures such as \emph{compound symmetry} are not supported). In the remainder of the text, we will call blocks of size $1\times1$ \emph{diagonal} and larger blocks \emph{unstructured}. Finally, the residual error covariance matrix is assumed to be a diagonal matrix with only one unknown scaling parameter.
 
@@ -199,17 +199,17 @@ Note the similarity to Huber's Proposal 2. (The function \code{psi2propII} can b
 
 Squared robustness weights are not required for block-diagonal parts of $\Vbth$. Instead of M-scale type estimating equations, the unstructured blocks require methods similar to multivariate M-estimators for estimating covariance matrices. Multivariate M-estimators, as introduced by \citet{stahel1987estimation}, use a derived set of $\psi$-functions that also yield bounded influence estimates for convex $\rho$-functions. (This derivation is handled internally in \pkg{robustlmm}.)
 
-The use of different $\rho$-functions in the estimating equations for $\sigma$ and $\vec\theta$ ensures the resulting estimates to be robust, but lowers the efficiency of the estimates $\widehat\sigma$ and $\hv\theta$. This might be acceptable for problems in which the scale parameter $\sigma$ is considered a nuisance parameter,  but in mixed-effects modeling one is usually interested in estimating the variance components and does not regard them as nuisance terms. If desired, the efficiency of the estimates of $\sigma$ and $\vec\theta$ can be increased by increasing the tuning parameters of $\si[\psi]{e}$ and $\si[\psi]{b}$. Tables of tuning parameters for popular $\psi$-functions are provided in the Appendix. 
+The use of different $\rho$-functions in the estimating equations for $\sigma$ and $\vec\theta$ ensures the resulting estimates to be robust, but lowers the efficiency of the estimates $\widehat\sigma$ and $\hatv\theta$. This might be acceptable for problems in which the scale parameter $\sigma$ is considered a nuisance parameter,  but in mixed-effects modeling one is usually interested in estimating the variance components and does not regard them as nuisance terms. If desired, the efficiency of the estimates of $\sigma$ and $\vec\theta$ can be increased by increasing the tuning parameters of $\si[\psi]{e}$ and $\si[\psi]{b}$. Tables of tuning parameters for popular $\psi$-functions are provided in the Appendix.
 
 \subsection{Estimation algorithms}
 
-The models are fit with a nested iterative reweighting algorithm. If there are no initial estimates, then the classic estimates are used as initial estimates.  The outer loop is updating $\hv\theta$ until it converges. For each new value of $\hv\theta$, we update $\hv\beta$ and $\hvbs$ and then $\widehat\sigma$. This algorithm converges to a local solution of the estimating equations. For convex $\rho$-functions and squared robustness weights, the solution can be expected to be unique aside from pathological, easily discarded solutions. A detailed description of the algorithm is given in Appendix~\ref{sec:estimationAlgorithm}.
+The models are fit with a nested iterative reweighting algorithm. If there are no initial estimates, then the classic estimates are used as initial estimates.  The outer loop is updating $\hatv\theta$ until it converges. For each new value of $\hatv\theta$, we update $\hatv\beta$ and $\hvbs$ and then $\widehat\sigma$. This algorithm converges to a local solution of the estimating equations. For convex $\rho$-functions and squared robustness weights, the solution can be expected to be unique aside from pathological, easily discarded solutions. A detailed description of the algorithm is given in Appendix~\ref{sec:estimationAlgorithm}.
 
 \section{Implementation}
 
 \label{implementation}
 
-The \pkg{robustlmm} package is built upon the \pkg{lme4} package, more specifically the \code{lmer} function. The structure of the objects and the methods are implemented to be as similar as possible to the ones of \pkg{lme4} with robustness specific extensions where needed. The object returned by \code{rlmer} is of class \code{rlmerMod}. Even though this class is close to the corresponding class \code{lmerMod} returned by \code{lmer}, \code{rlmerMod} does not extend \code{lmerMod}.  This is for two reasons. First, methods for classic estimates are in general not applicable to robust estimates without changes. Second, class inheritance would require a lot of maintenance when the corresponding code in \pkg{lme4} is changed.  While computational methods of the \pkg{lme4} package are implemented in \proglang{C++}, the \pkg{robustlmm} package is implemented in pure R. 
+The \pkg{robustlmm} package is built upon the \pkg{lme4} package, more specifically the \code{lmer} function. The structure of the objects and the methods are implemented to be as similar as possible to the ones of \pkg{lme4} with robustness specific extensions where needed. The object returned by \code{rlmer} is of class \code{rlmerMod}. Even though this class is close to the corresponding class \code{lmerMod} returned by \code{lmer}, \code{rlmerMod} does not extend \code{lmerMod}.  This is for two reasons. First, methods for classic estimates are in general not applicable to robust estimates without changes. Second, class inheritance would require a lot of maintenance when the corresponding code in \pkg{lme4} is changed.  While computational methods of the \pkg{lme4} package are implemented in \proglang{C++}, the \pkg{robustlmm} package is implemented in pure R.
 
 The main function of the package is \code{rlmer}, its name hinting at the fact that it is a robust version of the \code{lmer} function. Besides additional arguments to control the robustness of the fit, the usage of \code{rlmer} is identical to \code{lmer}. Most of the functions available for objects returned by \code{lmer} are also available for objects returned by \code{rlmer}, e.g., \code{predict} or \code{getME}. The \code{getME} function is a universal accessor function for quantities derived from the fitted object (see \code{help("getME")}). The function \code{anova} requires the log-likelihood statistic and is therefore unavailable. The simulation functions \code{simulate} and \code{bootMer} have not yet been implemented. The functions to create diagnostic plots, \code{dotplot}, \code{plot} and \code{qqmath} for objects returned by \code{ranef}, as well as \code{dotplot} and \code{plot} for objects returned by \code{coef}, are available and identical to the those from \pkg{lme4}. In addition to the mentioned plot methods, we have added a plot method \code{plot.rlmerMod} for objects returned by \code{rlmer} and \code{lmer}. It creates a Tukey-Anscombe plot, a QQ-plot of the residuals and the random effects as well as scatterplots of the random effects.
 
@@ -276,11 +276,11 @@ As usual, we get information about the fit using the \code{summary} function:
 summary(rfm)
 @
 
-The output is close to the output from \code{lmer}. The first part of the summary provides information about the model fit; the estimates of $\Vbth$ and $\sigma$; followed by the estimated fixed effects and derived statistics and (if applicable) the correlation of the fixed effects.  The second part gives information about the robustness weights and a list of the $\rho$-functions employed. 
+The output is close to the output from \code{lmer}. The first part of the summary provides information about the model fit; the estimates of $\Vbth$ and $\sigma$; followed by the estimated fixed effects and derived statistics and (if applicable) the correlation of the fixed effects.  The second part gives information about the robustness weights and a list of the $\rho$-functions employed.
 
 As we can read off the summary, the default $\rho$-function is the smoothed Huber $\rho$-function, which is a smoothed variant of the regular Huber function (the exact definition is given in the Appendix).  The functions for estimating $\sigma$ and $\vec\theta$ are suffixed by ``Proposal II'', indicating that squared robustness weights, with a high robustness but a low efficiency, are used by default (diagonal blocks only, for unstructured blocks the regular $\rho$-function is used by default).
 
-The summary also tells us that the lowest robustness weights for both the observations and the groups are about $0.2$. We can get a full named list of the robustness weights by using the calls \code{getME(rfm, "w\_e")} and \code{getME(rfm, "w\_b")} for the observations and the groups, respectively. 
+The summary also tells us that the lowest robustness weights for both the observations and the groups are about $0.2$. We can get a full named list of the robustness weights by using the calls \code{getME(rfm, "w\_e")} and \code{getME(rfm, "w\_b")} for the observations and the groups, respectively.
 
 With the call \code{plot(rfm)}, we can create simple residual analysis plots including normal QQ-plots of the predicted random effects. The resulting plots are shown in Figure~\ref{fig:plotPC}. The darker color indicates observations with a low robustness weight $w_.$. From the plot as well as from the summary shown above, we can see that the observations that were changed have been detected by the method, i.e., they have received a low robustness weight. There are also other observations that were assigned a rather low robustness weight and we would do good to investigate them.
 
@@ -293,14 +293,14 @@ theme_set(theme_bw())
 print(plot(rfm, which = 1)[[1]] + scale_color_continuous(guide = "none"))
 <<plotPC2, fig=TRUE, echo=FALSE, width=4, height=4>>=
 print(plot(rfm, which = 2)[[1]] + scale_color_continuous(guide = "none"))
-@ 
+@
 \setkeys{Gin}{width=0.75\textwidth}
 <<plotPC3, fig=TRUE, echo=FALSE, width=8, height=5>>=
 print(plot(rfm, which = 3)[[1]] + theme(legend.position = "bottom"))
 @
-\caption{Residual analysis plots for robust fit \code{rfm}. The coloring of the points gives information about the corresponding robustness weights.} 
+\caption{Residual analysis plots for robust fit \code{rfm}. The coloring of the points gives information about the corresponding robustness weights.}
 \label{fig:plotPC}
-\end{figure} 
+\end{figure}
 
 \subsection{Tuning the fit}
 
@@ -317,7 +317,7 @@ To specify different $\rho$-functions for different random effects, the argument
 
 <<updatePC2>>=
 rsb <- list(psi2propII(smoothPsi), psi2propII(smoothPsi, k = 2.28))
-rfm3 <- update(rfm2, rho.sigma.b = rsb) 
+rfm3 <- update(rfm2, rho.sigma.b = rsb)
 @
 
 Note the missing second argument \code{k} when generating the first element of the list \code{rsb}. In that case, the default tuning parameter $k = 1.345$ is used.
@@ -359,7 +359,7 @@ Detailed information on the properties of the robust method and validation using
 
 We avoided the topic of robust testing for linear mixed-effects models in this tutorial. The usual caveats of testing in mixed models apply for the methods presented here.  The wiki at \url{http://glmm.wikidot.com} is a good resource. Bootstrap presents itself as a simple (but data structure dependent) way to get $p$~values. One has to be careful, though, since the ordinary bootstrap quantiles are not robust \citep{ salibian2008fast, singh1998breakdown}.
 
-Development of \pkg{robustlmm} is hosted on GitHub at \url{http://www.github.com/kollerma/robustlmm}. Any issues with the package can also be reported there. 
+Development of \pkg{robustlmm} is hosted on GitHub at \url{http://www.github.com/kollerma/robustlmm}. Any issues with the package can also be reported there.
 
 \section*{Acknowledgments}
 
@@ -390,7 +390,7 @@ require(reshape2)
 xs <- seq.int(0, 3, length.out = 100)
 data <- data.frame(x = xs, Huber = huberPsiRcpp@psi(xs),
   "Smoothed" = smoothPsi@psi(xs))
-print(ggplot(melt(data, 1), aes(x, value, color = variable, 
+print(ggplot(melt(data, 1), aes(x, value, color = variable,
   linetype = variable)) + geom_line() +
   scale_colour_hue(expression(paste(psi, "-function"))) +
   scale_linetype_discrete(expression(paste(psi, "-function"))) +
@@ -435,7 +435,7 @@ This Appendix summarises the more extensive derivation of the robust estimating 
 
 \subsection{Fixed and random effects}
 
-Let $k\fn{j}$ be a function that maps random effect $j$ to the corresponding block $k$, then the squared Mahalanobis distances of the estimated random effects are 
+Let $k\fn{j}$ be a function that maps random effect $j$ to the corresponding block $k$, then the squared Mahalanobis distances of the estimated random effects are
 
 \begin{equation*}
 \vec d = \left(d\fn{\vbs_{k\fn{j}}/\sigma}\right)_{j=1,\dots,q}\;,
@@ -469,7 +469,7 @@ The robust estimating equations are then
 	\bld X\tr\Ue\trinv \bld\psi_e\fn{{\tves}/{\sigma}}
 	= {} & 0\;, \\
 	\Ub\tr\bld Z\tr\Ue\trinv \bld\psi_e\fn{{\tves}/{\sigma}} -
-	\bld\Lambda_b \W\fn{\tv d}{\tvbs}/{\sigma}
+	\bld\Lambda_b \W\fn{\tildev d}{\tvbs}/{\sigma}
 	= {} & 0\;,
 \end{split}
 \end{equation}
@@ -506,7 +506,7 @@ where the superscript $\s[\cdot]$ is used to distinguish the weighting functions
 	\s[\kappa]_e \si{e}\fn{\frac{\hes_i}{\tau_{e,i}\widehat\sigma}}} = 0\;,
 \end{equation}
 
-where the distribution of the residuals is approximated using a linear expansion of $\tv\beta$ and $\tvbs$ around their true values \citep[Appendix~C]{koller2013diss}, and $\s[\kappa]_e$ is
+where the distribution of the residuals is approximated using a linear expansion of $\tildev\beta$ and $\tvbs$ around their true values \citep[Appendix~C]{koller2013diss}, and $\s[\kappa]_e$ is
 
 \begin{equation*}
 \s[\kappa]_e =
@@ -524,7 +524,7 @@ For the covariance parameters, we have to treat the diagonal and the block-diago
 
 \subsubsection{Diagonal case}
 
-In the case of diagonal $\Ubth$, estimating $\tv\theta$ is essentially a scale estimation problem on $\tvbs$. It can be robustified just like the estimating equation for $\hat\sigma$, see Equation~\ref{eq:sigmaDAS}. For a model with only one random effects term, the robust estimating equations are
+In the case of diagonal $\Ubth$, estimating $\tildev\theta$ is essentially a scale estimation problem on $\tvbs$. It can be robustified just like the estimating equation for $\hat\sigma$, see Equation~\ref{eq:sigmaDAS}. For a model with only one random effects term, the robust estimating equations are
 
 \begin{equation}
 \label{eq:thetaDAS}
@@ -550,7 +550,7 @@ and normalizing constant
 {\ERWi{0}{\si{b}\fn{\bs}}}\;.
 \end{equation*}
 
-Generalization to multiple random effects terms is straightforward. We get one such equation for each of the random effects terms. 
+Generalization to multiple random effects terms is straightforward. We get one such equation for each of the random effects terms.
 
 \subsubsection{Block-diagonal case}
 
@@ -572,7 +572,7 @@ where $\kbtau$ is defined such that
 
 \begin{remark}
 
-The optimal $B$-robust estimator derived in \citet{stahel1987estimation} is given by $\w{\tau}\fn{d} = \min\fn{1/b_\tau, 1/d}$ and $\w{\eta}\fn{d} = \min{\fn{1/b_\eta, 1/d}}$. Other weight functions may be chosen, as long as $\psi\fn{d} = dw\fn{d}$ is a $\psi$-function. For $\w{\tau}$ and $\w{\eta}$ given above, this would be the Huber $\psi$-function. For low dimensions $s$, one may choose $\w{\tau} = \w{\eta}$. In higher dimensions, the efficiency loss for the estimated size is negligible. Hence, a smaller tuning parameter may be chosen for $\w{\eta}$. For $s=2$ and Huber or smoothed Huber $\psi$-functions (see Appendix~\ref{sec:tc}), the squared tuning parameter of $\s_e$ for $\w{\tau}$may be used to get approximately the same efficiency for $\hv\theta$ as for $\widehat\sigma$.  Tables of tuning parameters for higher dimensions for the Huber and the lqq $\psi$-functions can be found in Appendix~\ref{sec:tc}.
+The optimal $B$-robust estimator derived in \citet{stahel1987estimation} is given by $\w{\tau}\fn{d} = \min\fn{1/b_\tau, 1/d}$ and $\w{\eta}\fn{d} = \min{\fn{1/b_\eta, 1/d}}$. Other weight functions may be chosen, as long as $\psi\fn{d} = dw\fn{d}$ is a $\psi$-function. For $\w{\tau}$ and $\w{\eta}$ given above, this would be the Huber $\psi$-function. For low dimensions $s$, one may choose $\w{\tau} = \w{\eta}$. In higher dimensions, the efficiency loss for the estimated size is negligible. Hence, a smaller tuning parameter may be chosen for $\w{\eta}$. For $s=2$ and Huber or smoothed Huber $\psi$-functions (see Appendix~\ref{sec:tc}), the squared tuning parameter of $\s_e$ for $\w{\tau}$may be used to get approximately the same efficiency for $\hatv\theta$ as for $\widehat\sigma$.  Tables of tuning parameters for higher dimensions for the Huber and the lqq $\psi$-functions can be found in Appendix~\ref{sec:tc}.
 
 \end{remark}
 
@@ -621,16 +621,16 @@ The algorithm for finding the simultaneous roots of the estimating equations \eq
 
 \begin{enumerate}
 \item Compute initial estimates.
-\item For given $\tv\theta$, $\tilde\sigma$, find $\tv\beta$ and $\tvbs$ that solve \eqref{eq:robustEEq}.
-\item Keeping the intermediate solutions $\tv\beta$ and $\tvbs$ fixed, find $\tilde\sigma$ such that \eqref{eq:sigmaDAS} is fulfilled.
-\item Check the estimating equations for $\tv\theta$, \eqref{eq:thetaDAS} and/or \eqref{eq:thetaDASNonDiag}, for convergence. If they are not fulfilled, update $\tv\theta$ in some way and go back to step~2.
+\item For given $\tildev\theta$, $\tilde\sigma$, find $\tildev\beta$ and $\tvbs$ that solve \eqref{eq:robustEEq}.
+\item Keeping the intermediate solutions $\tildev\beta$ and $\tvbs$ fixed, find $\tilde\sigma$ such that \eqref{eq:sigmaDAS} is fulfilled.
+\item Check the estimating equations for $\tildev\theta$, \eqref{eq:thetaDAS} and/or \eqref{eq:thetaDASNonDiag}, for convergence. If they are not fulfilled, update $\tildev\theta$ in some way and go back to step~2.
 \end{enumerate}
 
 The algorithms for the four steps can be chosen independently from each other. We discuss the four steps below.
 
-When this algorithm stops, it has found a simultaneous solution of all the estimating equations, except in the block-diagonal case where some, but not all, components corresponding to a block might lie on the border of the parameter space. For those parameters, the estimating equations won't be satisfied. To avoid incorrect solutions, it is crucial that the estimates for $\tv\beta$ and $\tvbs$ are updated for each new candidate of $\tv\theta$ and that the initial estimate for $\vec\theta$ is large enough. Otherwise, the algorithm might wrongly set all components of $\vec\theta$ corresponding to one block to zero or close to zero. 
+When this algorithm stops, it has found a simultaneous solution of all the estimating equations, except in the block-diagonal case where some, but not all, components corresponding to a block might lie on the border of the parameter space. For those parameters, the estimating equations won't be satisfied. To avoid incorrect solutions, it is crucial that the estimates for $\tildev\beta$ and $\tvbs$ are updated for each new candidate of $\tildev\theta$ and that the initial estimate for $\vec\theta$ is large enough. Otherwise, the algorithm might wrongly set all components of $\vec\theta$ corresponding to one block to zero or close to zero.
 
-This is illustrated for a simple one-way anova in Figure~\ref{fig:multipleSolutions}. The expected sum of squares vanishes for $\tv\theta = \vec 0$ in the classic case. In the robust case, the expectation does not vanish, but there is a solution close to zero. This is an artifact of the linear approximation used to compute the expectation. As long as convex $\rho$-functions are used, the classic estimates are generally a good choice of initial estimates. Zero components of the initial $\tv\theta$ should be set to one at the start of the algorithm.
+This is illustrated for a simple one-way anova in Figure~\ref{fig:multipleSolutions}. The expected sum of squares vanishes for $\tildev\theta = \vec 0$ in the classic case. In the robust case, the expectation does not vanish, but there is a solution close to zero. This is an artifact of the linear approximation used to compute the expectation. As long as convex $\rho$-functions are used, the classic estimates are generally a good choice of initial estimates. Zero components of the initial $\tildev\theta$ should be set to one at the start of the algorithm.
 
 <<convergence-setup, echo=FALSE, eval=FALSE>>=
 require(robustbase)
@@ -646,7 +646,7 @@ true <- robustlmm:::theta(rfm)
 kappa <- robustlmm:::calcKappaTau(rfm@rho.sigma.b[[1]])
 fun <- function(theta, rfm) {
   robustlmm:::theta(rfm) <- theta
-  T <- diag(robustlmm:::len(rfm, "b")) - 
+  T <- diag(robustlmm:::len(rfm, "b")) -
     robustlmm:::rho.b(rfm)[[1]]@EDpsi() * (rfm@pp$L + t(rfm@pp$L)) +
     robustlmm:::rho.e(rfm)@Epsi2() * crossprod(rfm@pp$Kt) +
     robustlmm:::rho.b(rfm)[[1]]@Epsi2() * tcrossprod(rfm@pp$L)
@@ -669,8 +669,8 @@ false <- uniroot(spl, c(0, with(test.1, theta[which.max(difference)])))$root
 ## plot
 test.1 <- melt(test.1, "theta")
 print(ggplot(test.1, aes(theta, value, color = variable)) +
-  geom_line() + geom_vline(xintercept = c(true, false), linetype = 2) +      
-  scale_x_continuous(breaks = c(0:3, false, true), 
+  geom_line() + geom_vline(xintercept = c(true, false), linetype = 2) +
+  scale_x_continuous(breaks = c(0:3, false, true),
     labels = c(0:3, expression(theta^"\u2020"), expression(hat(theta)))) +
   xlab(expression(theta)) + geom_hline(yintercept = 0) +
   theme(legend.position = "bottom", legend.box = "horizontal"))
@@ -690,7 +690,7 @@ print(ggplot(test.1, aes(theta, value, color = variable)) +
 
 The methods described here work for convex $\rho$-functions as well as for redescender $\rho$-functions. If redescender $\rho$-functions are used, the algorithm as defined here converges to a local solution. It is up to the initial estimator to provide starting values that ensure the algorithm converges to the right local solution, whatever the right solution is. In case of MM-estimates for the fixed effects model, the initial S-estimate makes sure that the final estimate has the desired high breakdown point. The same would certainly also be desirable in case of mixed-effects models. However, to the best of our knowledge, there exists currently no such estimator. The S-estimators by \citet{copt2006high} and \citet{chervoneva2011constrained} do not seem suitable, since they are based on a different contamination model and are not as general as the method proposed here.
 
-If convex $\rho$-functions are used, this difficulty does not exist. Apart from the artificial solution $\tv\theta$ close to zero (see Figure~\ref{fig:multipleSolutions}) which is easily distinguishable from the true solution, we conjecture that the solutions are unique as they are for the Proposal II case in the location-scale problem \citep{koller2013diss}. We therefore consider it safe to use the classic solutions as initial estimates when convex $\rho$-functions are used.
+If convex $\rho$-functions are used, this difficulty does not exist. Apart from the artificial solution $\tildev\theta$ close to zero (see Figure~\ref{fig:multipleSolutions}) which is easily distinguishable from the true solution, we conjecture that the solutions are unique as they are for the Proposal II case in the location-scale problem \citep{koller2013diss}. We therefore consider it safe to use the classic solutions as initial estimates when convex $\rho$-functions are used.
 
 Redescender $\rho$-functions have the advantage that they can assign a weight of zero to some observations or random effects levels. This makes it possible that such observations have no influence on the estimates. When convex $\rho$-functions are used, an observation practically always has an influence on the estimates, since a weight of zero is only reached in the limit, when the residual or the random effect level approaches plus or minus infinity.  If one is interested in eliminating the influence of observations, then one might consider the following. First, compute the fit using a convex $\rho$-function. Then use the results as starting value for fitting using a redescender $\rho$-function in a second step. In the absence of good initial estimators for redescender $\rho$-functions, this approach might be used to get at least some of the desirable properties of redescender $\rho$-functions.
 
@@ -732,10 +732,10 @@ Then insert these weights into \eqref{eq:robustEEq} and expand $\tves$ to get th
 	\right]
 	\left[
 		\begin{array}{c}
-			\tv\beta \\ \tvbs
+			\tildev\beta \\ \tvbs
 		\end{array}
 	\right] \\
-	= 
+	=
 	\left[
 		\begin{array}{c}
 			\bld X\tr\Ue\trinv\W[e]\vec y \\
@@ -745,7 +745,7 @@ Then insert these weights into \eqref{eq:robustEEq} and expand $\tves$ to get th
 \end{split}
 \end{equation*}
 
-By alternating between computing $\tv\beta$ and $\tvbs$ for a given set of weights and updating the weights for a given set of estimates, we get a simple and efficient algorithm for computing the fixed and random effects.
+By alternating between computing $\tildev\beta$ and $\tvbs$ for a given set of weights and updating the weights for a given set of estimates, we get a simple and efficient algorithm for computing the fixed and random effects.
 
 We start the algorithm with either a predefined set of weights or set all the weights to one. When the relative change of the estimates is small enough, the algorithm can stop.
 
@@ -756,11 +756,11 @@ Equation~\ref{eq:sigmaDAS} can be written as
 \begin{equation*}
 \tilde\sigma^2 = \frac
 {\sum_{i=1}^n\si{e}\fn{\frac{\tes_i}{\tau_{e,i}\tilde\sigma}} \tes_i{}^2}
-{\s[\kappa]_e\sum_{i=1}^n\tau_{e,i}^2 
+{\s[\kappa]_e\sum_{i=1}^n\tau_{e,i}^2
 	\si{e}\fn{\frac{\tes_i}{\tau_{e,i}\tilde\sigma}}}\;.
 \end{equation*}
 
-This suggests a simple two-step algorithm, namely alternating between computing $\tilde\sigma$ using the above formula and updating the weights given $\tilde\sigma$. This algorithm is quick and reliable, especially if the overall algorithm has almost converged and $\tilde\sigma$ only changes little between iterations of $\tv\theta$. 
+This suggests a simple two-step algorithm, namely alternating between computing $\tilde\sigma$ using the above formula and updating the weights given $\tilde\sigma$. This algorithm is quick and reliable, especially if the overall algorithm has almost converged and $\tilde\sigma$ only changes little between iterations of $\tildev\theta$.
 
 A similar procedure can also be derived for the computation of $\tau_{e,i}$. Solving \eqref{eq:tau_ei} for $\tau_{e,i}$ yields
 
@@ -770,65 +770,65 @@ A similar procedure can also be derived for the computation of $\tau_{e,i}$. Sol
 {\ERW{\s[\kappa]_e \si{e}\fn{\frac{\hes_i}{\tau_{e,i}\widehat\sigma}}}}\;,
 \end{equation*}
 
-which again suggests to use the same two-step procedure as lined out above. The values $\tau_{e,i}$ have to be recomputed for every new value of $\tv\theta$, preferably using the values of the last candidate $\tv\theta$ as starting values. 
+which again suggests to use the same two-step procedure as lined out above. The values $\tau_{e,i}$ have to be recomputed for every new value of $\tildev\theta$, preferably using the values of the last candidate $\tildev\theta$ as starting values.
 
 \subsection{Step 4: Covariance parameters}
 
 In the following, we will assume that we have only one block type. The algorithms mentioned below can be easily generalized to multiple block types. One iteration then consists of computing the updates for every block type separately before applying all of them together.
 
-In case of diagonal $\Ubth$, $\tv\theta$ may be computed using the analogue of the algorithm for Step~3. This has proven to be much more efficient and robust compared to using a generic root solving procedure. 
+In case of diagonal $\Ubth$, $\tildev\theta$ may be computed using the analogue of the algorithm for Step~3. This has proven to be much more efficient and robust compared to using a generic root solving procedure.
 
 The same is true in the non-diagonal case. Nevertheless, if we assume a special covariance structure, the only options are generic root solving procedures such as Newton-Raphson. The Newton-Raphson algorithm, however, can be quite unstable and often does not converge for problems with many parameters.
 
-In the case of unstructured covariance matrices, there exists a better algorithm of EM-type. Let the function $\chol\fn{\bld A}$ return the lower triangular Cholesky factor of $\bld A$, and $\chol\inv$ return the inverse of the factor. Then, for unstructured covariance matrices and in terms of the first block $\U{b,1}$ of $\Ub$, the update is 
+In the case of unstructured covariance matrices, there exists a better algorithm of EM-type. Let the function $\chol\fn{\bld A}$ return the lower triangular Cholesky factor of $\bld A$, and $\chol\inv$ return the inverse of the factor. Then, for unstructured covariance matrices and in terms of the first block $\Umat{b,1}$ of $\Ub$, the update is
 
 \begin{equation}
 \label{eq:deltaUbth}
-\U{b,1}\fn{\tv{\theta}\iter} = 
-\U{b,1}\fn{\tv{\theta}\lastiter}\frac{1}{\sigma}
+\Umat{b,1}\fn{\tildev{\theta}\iter} =
+\Umat{b,1}\fn{\tildev{\theta}\lastiter}\frac{1}{\sigma}
 \chol\fn{\sum_{k=1}^K\hw[b,k]{\eta}\tvbs_k\tvbstr_k}
 \chol\inv\fn{\sum_{k=1}^K\hw[b,k]{\delta}\Tbk} \;,
 \end{equation}
 
-where the superscript in square brackets denotes the iteration. The right-hand side is computed using $\tv\theta\lastiter$, the value from the last iteration, and $\hw[b,k]{.}$ is the corresponding $k$-th robustness weight. 
+where the superscript in square brackets denotes the iteration. The right-hand side is computed using $\tildev\theta\lastiter$, the value from the last iteration, and $\hw[b,k]{.}$ is the corresponding $k$-th robustness weight.
 
 \begin{remark}
 To see that \eqref{eq:deltaUbth} is indeed a sensible update, we have to first rewrite the $r$ scalar valued estimating equations into one matrix valued estimating equation. We may write \eqref{eq:thetaDAS} as
 \begin{equation*}
-	\sum_{k=1}^K \left[ 
+	\sum_{k=1}^K \left[
 		\trace\fn{
 			\left(\hw[b,k]{\eta}\tvbs_k\tvbstr_k/{\widehat\sigma^2} -
-			\hw[b,k]{\delta}\Tbk\right)\Qlkhth} 
+			\hw[b,k]{\delta}\Tbk\right)\Qlkhth}
 		\right] = 0 \quad \text{for } l=1,\dots, r\;.
 \end{equation*}
 When assuming an unstructured covariance matrix for the random effects, $\Qlk$ has only one non-zero value and does not depend on $k$. (For other block types, $\Qlk$ vanishes, thus decoupling the problem for different block types.) Since $r = s(s+1)/2$, we may thus write the estimating equation as
 \begin{equation*}
-	\sum_{k=1}^K \left[ 
-		\hw[b,k]{\eta}\tvbs_k\tvbstr_k - 
+	\sum_{k=1}^K \left[
+		\hw[b,k]{\eta}\tvbs_k\tvbstr_k -
 		\widehat\sigma^2\hw[b,k]{\delta}\Tbk
 	\right] = \vec 0\;.
 \end{equation*}
-The dependence of the robustness weights on $\tv\theta$ will be neglected from now on, thereby reducing the problem to solving a system of linear equations. In terms of the actual random effects, the estimating equation in iteration $[\text{it}]$ reads
+The dependence of the robustness weights on $\tildev\theta$ will be neglected from now on, thereby reducing the problem to solving a system of linear equations. In terms of the actual random effects, the estimating equation in iteration $[\text{it}]$ reads
 \begin{equation*}
 	\sum_{k=1}^K \left[
-		\hw[b,k]{\eta}\U{b,1}\inv\fn{\tv\theta\lastiter}\tv[k]{b}
-		\tv[k]{b}\tr\U{b,1}\trinv\fn{\tv\theta\lastiter} - 
+		\hw[b,k]{\eta}\Umat{b,1}\inv\fn{\tildev\theta\lastiter}\tildev[k]{b}
+		\tildev[k]{b}\tr\Umat{b,1}\trinv\fn{\tildev\theta\lastiter} -
 		\widehat\sigma^2\hw[b,k]{\delta}\Tbk
 	\right] = \vec 0\;.
 \end{equation*}
-As long as the algorithm has not converged, the estimating equation is not fulfilled for $\tv\theta\lastiter$, but there exists a $\tv\theta\iter$, such that it is. For
+As long as the algorithm has not converged, the estimating equation is not fulfilled for $\tildev\theta\lastiter$, but there exists a $\tildev\theta\iter$, such that it is. For
 \begin{equation*}
-	\U{b,1}\fn{\tv\theta\iter} = \U{b,1}\fn{\tv\theta\lastiter}\Delta\U{b}\iter\;,
+	\Umat{b,1}\fn{\tildev\theta\iter} = \Umat{b,1}\fn{\tildev\theta\lastiter}\Delta\Umat{b}\iter\;,
 \end{equation*}
-where $\Delta\U{b}\iter$ is a lower triangular matrix, we have after multiplying the equation by $\Delta\U{b}\iter$ from the left and by $\Delta\U{b}\itertr$ from the right,
+where $\Delta\Umat{b}\iter$ is a lower triangular matrix, we have after multiplying the equation by $\Delta\Umat{b}\iter$ from the left and by $\Delta\Umat{b}\itertr$ from the right,
 \begin{equation*}
 	\sum_{k=1}^K \left[
-		\hw[b,k]{\eta}\tvbs_k\tvbstr_k - 
+		\hw[b,k]{\eta}\tvbs_k\tvbstr_k -
 		\widehat\sigma^2\hw[b,k]{\delta}
-		\Delta\U{b}\iter\Tbk\Delta\U{b}\itertr
+		\Delta\Umat{b}\iter\Tbk\Delta\Umat{b}\itertr
 	\right] = \vec 0\;.
 \end{equation*}
-By splitting the left-hand side into two sums, moving the second sum to the right-hand side, and replacing both sides by the corresponding lower-triangular Cholesky factor, we get an equation that can be solved for $\Delta\U{b}\iter$ and thus an expression for $\U{b,1}\fn{\tv\theta\iter}$, which is exactly update \eqref{eq:deltaUbth} mentioned above.
+By splitting the left-hand side into two sums, moving the second sum to the right-hand side, and replacing both sides by the corresponding lower-triangular Cholesky factor, we get an equation that can be solved for $\Delta\Umat{b}\iter$ and thus an expression for $\Umat{b,1}\fn{\tildev\theta\iter}$, which is exactly update \eqref{eq:deltaUbth} mentioned above.
 \end{remark}
 
 The resulting algorithm, considering steps 2 to 4 together, is then of EM-type. It converges fairly quickly, except when the solution is zero, i.e., some variance components are dropped. An illustration of the problem and potential improvements to the algorithm can be found in \citet[Section~2.12]{demidenko2004mixed}.

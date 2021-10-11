@@ -45,5 +45,5 @@ You can also install the package directly from github:
 
     install.packages("devtools") ## if not already installed
     require(devtools)
-    install_github("robustlmm", "kollerma")
+    install_github("kollerma/robustlmm")
     require(robustlmm)

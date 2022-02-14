@@ -1,8 +1,8 @@
 Package: robustlmm
 Type: Package
 Title: Robust Linear Mixed Effects Models
-Version: 2.4-4
-Date: 2021-04-24
+Version: 2.5-0
+Date: 2022-02-14
 Author: Manuel Koller
 Maintainer: Manuel Koller <koller.manuel@gmail.com>
 Description: A method to fit linear mixed effects models robustly.
@@ -49,3 +49,4 @@ LinkingTo: Rcpp, RcppEigen, robustbase, cubature (> 1.3-8)
 Encoding: UTF-8
 RcppModules: psi_function_module
 SystemRequirements: C++11
+RoxygenNote: 7.1.2

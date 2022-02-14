@@ -6,7 +6,7 @@
 ##' @rdname rlmer
 ##' @param initTheta parameter to initialize theta with (optional)
 ##' @examples
-## \dontrun{
+##' \dontrun{
 ##'   rlmer(Yield ~ (1|Batch), Dyestuff, init = lmerNoFit)
 ##' }
 ##' @importFrom lme4 mkMerMod

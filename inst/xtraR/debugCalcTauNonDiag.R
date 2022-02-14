@@ -3,7 +3,7 @@ require(rgl)
 
 .d <- function(bs, s=length(bs)) {
     if (s == 1) return(bs)
-    if (is.matrix(bs)) sqrt(rowSums(bs*bs)) else sqrt(sum(bs*bs))
+    if (is.matrix(bs)) rowSums(bs*bs) else sum(bs*bs)
 }
 colorRampRgb <- function(vals, colors = c("blue", "red")) {
   vals <- vals
@@ -29,9 +29,9 @@ gh$weights <- gh$weights / sqrt(pi)
 ghZ <- as.matrix(expand.grid(gh$nodes, gh$nodes, gh$nodes, gh$nodes))
 ghw <- apply(as.matrix(expand.grid(gh$weights, gh$weights, gh$weights, gh$weights)), 1, prod)
 
-wgt <- chgDefaults(smoothPsi, k = 1.2, s = 10)$wgt
-wgt.sigma <- chgDefaults(smoothPsi, k = 1.5, s = 10)$wgt
-psi.sigma <- chgDefaults(smoothPsi, k = 1.5, s = 10)$psi
+wgt <- chgDefaults(smoothPsi, k = 1.2, s = 10)@wgt
+wgt.sigma <- chgDefaults(smoothPsi, k = 1.5, s = 10)@wgt
+psi.sigma <- chgDefaults(smoothPsi, k = 1.5, s = 10)@psi
 wgtDelta <- function(u) (psi.sigma(u) - psi.sigma(u-skappa))/s
 
 lTbk <- matrix(c(0.6532058, 0.3874415, 0.3874415, 0.4323062), 2, 2)

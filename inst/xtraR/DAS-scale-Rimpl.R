@@ -1,13 +1,13 @@
 .d <- function(bs, s=length(bs)) {
   if (s == 1) return(bs)
-  if (is.matrix(bs)) sqrt(rowSums(bs*bs)) else sqrt(sum(bs*bs))
+  if (is.matrix(bs)) rowSums(bs*bs) else sum(bs*bs)
 }
 .d2 <- function(sbs2, s) {
   if (s == 1) stop("s must be larger than 1") ## disable this test?
-  sqrt(sbs2)
+  sbs2
 }
 .Dd2 <- function(sbs2, s) {
-  1/.d2(sbs2,s)
+  2.
 }
 .zeroB <- function(object, pp = object@pp)
   if (inherits(pp, "rlmerPredD_test")) pp$zeroB else pp$zeroB()
@@ -21,32 +21,33 @@ lchol <- function(x) {
 }
 
 ## calculate the expected value to be used in D.re
-calcE.D.re <- function(s, rho) {
+calcE.D.re <- function(s, rho, rel.tol = .Machine$double.eps^0.5) {
   if (s == 1) return(rho@EDpsi())
   tfun <- function(v) rho@Dwgt(.d2(v,s))*.Dd2(v,s)*v*dchisq(v, s)
   tfun2 <- function(v) rho@wgt(.d2(v,s))*dchisq(v, s)
-  integrate(tfun, 0, Inf)$value / s + integrate(tfun2, 0, Inf)$value
+  integrate(tfun, 0, Inf, rel.tol = rel.tol)$value / s +
+      integrate(tfun2, 0, Inf, rel.tol = rel.tol)$value
 }
 calcE.D.re2 <- function(rho, s) calcE.D.re(s, rho)
 
-calcE.psi_bbt <- function(rho, s) {
+calcE.psi_bbt <- function(rho, s, rel.tol = .Machine$double.eps^0.5) {
   if (s == 1) {
     Matrix(rho@EDpsi())
   } else {
     wgt <- rho@wgt
     fun <- function(v) wgt(.d2(v,s))*v*dchisq(v,s)
-    tmp <- integrate(fun, 0, Inf)$value / s
+    tmp <- integrate(fun, 0, Inf, rel.tol = rel.tol)$value / s
     Diagonal(x=rep(tmp, s))
   }
 }
 
-calcE.psi_bpsi_bt <- function(rho, s) {
+calcE.psi_bpsi_bt <- function(rho, s, rel.tol = .Machine$double.eps^0.5) {
   if (s == 1) {
     Matrix(rho@Epsi2())
   } else {
     wgt <- rho@wgt
     fun <- function(v) wgt(.d2(v,s))^2*v*dchisq(v, s)
-    tmp <- integrate(fun, 0, Inf)$value / s
+    tmp <- integrate(fun, 0, Inf, rel.tol = rel.tol)$value / s
     Diagonal(x=rep(tmp, s))
   }
 }
@@ -215,11 +216,6 @@ std.e <- function(object, sigma = .sigma(object), matrix, drop=TRUE) {
 ## @rdname dist
 dist.b <- function(object, sigma = .sigma(object), center=FALSE, ...) {
   db <- .dk(object, sigma, center, ...)
-  ## need to take square root if not centering and dim > 1
-  if (!center && any(object@dim > 1)) {
-    bidx <- object@ind %in% which(object@dim > 1)
-    db[bidx] <- sqrt(db[bidx])
-  }
   db[object@k]
 }
 

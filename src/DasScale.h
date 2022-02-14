@@ -4,11 +4,11 @@
 #include "globals.h"
 
 inline double d2(const double value) {
-  return std::sqrt(value);
+  return value;
 }
 
 inline double Dd2(const double value) {
-  return 1. / d2(value);
+  return 2.;
 }
 
 double calcED_re(const PsiFuncXPtr& rho_b, unsigned s, Integration* const integration);

@@ -119,7 +119,7 @@ len <- function(x, what) switch(what,
 
 .nobsLmerMod <- function(object, ...) len(object, "e")
 ##' @importFrom stats nobs
-##' @S3method nobs rlmerMod
+##' @export
 nobs.rlmerMod <- .nobsLmerMod
 
 ### Get REML (so that we are not coercing all the time)
@@ -145,7 +145,7 @@ nobs.rlmerMod <- .nobsLmerMod
 ##'                       resid(fm) * getME(fm, "w_e")))
 ##' }
 ##' @importFrom stats residuals resid
-##' @S3method residuals rlmerMod
+##' @export
 residuals.rlmerMod <- function(object, type = c("response", "weighted"),
                                scaled=FALSE, ...) {
     type <- match.arg(type)
@@ -166,14 +166,14 @@ residuals.rlmerMod <- function(object, type = c("response", "weighted"),
 .sigma <- function(object, ...)
   if (inherits(object@pp, "rlmerPredD")) object@pp$sigma else object@pp$sigma()
 ##' @importFrom lme4 sigma
-##' @S3method sigma rlmerMod
+##' @export
 sigma.rlmerMod <- .sigma
 
 
 ### Get deviance
 .deviance <- function(object, ...)
     stop("Deviance is not defined for rlmerMod objects")
-##' @S3method deviance rlmerMod
+##' @export
 deviance.rlmerMod <- .deviance
 
 .mu <- function(object)
@@ -219,7 +219,7 @@ b.lmerMod <- function(object, ...) {
 
 ### Get ranef
 ##' @importFrom nlme ranef
-##' @S3method ranef rlmerMod
+##' @export
 ranef.rlmerMod <- function(object, ...) {
     ## FIXME: add postVar, drop and whichel arguments
     b <- b(object)
@@ -296,6 +296,8 @@ tnames <- function(object,diag.only=FALSE,old=TRUE,prefix=NULL) {
 ##' sense -- from a fitted mixed-effects model, i.e. from an object
 ##' of class \code{\linkS4class{rlmerMod}} or \code{\linkS4class{merMod}}.
 ##'
+##' The function \code{theta} is short for \code{getME(, "theta")}.
+##'
 ##' The goal is to provide \dQuote{everything a user may want} from a fitted
 ##' \code{rlmerMod} object \emph{as far} as it is not available by methods, such
 ##' as \code{\link{fixef}}, \code{\link{ranef}}, \code{\link{vcov}}, etc.
@@ -360,8 +362,8 @@ tnames <- function(object,diag.only=FALSE,old=TRUE,prefix=NULL) {
 ##' }
 ##' @param ... potentially further arguments; not here.
 ##' @return Unspecified, as very much depending on the \code{\link{name}}.
-##' @seealso \code{\link{getCall}()},
-##' More standard methods for rlmerMod objects, such as \code{\link{ranef}},
+##' @seealso \code{\link{getCall}()};
+##' more standard methods for rlmerMod objects, such as \code{\link{ranef}},
 ##' \code{\link{fixef}}, \code{\link{vcov}}, etc.:
 ##' see \code{methods(class="rlmerMod")}
 ##' @keywords utilities
@@ -376,7 +378,6 @@ tnames <- function(object,diag.only=FALSE,old=TRUE,prefix=NULL) {
 ##'       "w_e", "w_b", "w_b_vector", "w_sigma_e",
 ##'       "w_sigma_b", "w_sigma_b_vector", "is_REML"))
 ##' @examples
-##'
 ##' ## shows many methods you should consider *before* using getME():
 ##' methods(class = "rlmerMod")
 ##'
@@ -397,9 +398,11 @@ tnames <- function(object,diag.only=FALSE,old=TRUE,prefix=NULL) {
 ##' str(parts <- sapply(nmME, function(nm) try(getME(fm1, nm)),
 ##'                     simplify=FALSE))
 ##' }% dont..
-##' % S3 generic now imported:
+## % S3 generic now imported:
 ##' @importFrom lme4 getME
-##' @S3method getME rlmerMod
+##' @rdname getME
+##' @export
+##' @method getME rlmerMod
 getME.rlmerMod <-
     function(object,
              name = c("X", "Z", "Zt", "Ztlist", "y", "mu",
@@ -483,8 +486,8 @@ getME.rlmerMod <-
            "w_b" = uArrangedNames(object, wgt.b(object)),
            "w_b_vector" = wgt.b(object),
            "w_sigma_e" = wgt.e(object, use.rho.sigma=TRUE),
-           "w_sigma_b" = uArrangedNames(object, wgt.b(object, center=FALSE)),
-           "w_sigma_b_vector" = wgt.b(object, center=FALSE),
+           "w_sigma_b" = uArrangedNames(object, wgt.b(object, use.rho.sigma=TRUE)),
+           "w_sigma_b_vector" = wgt.b(object, use.rho.sigma=TRUE),
            "is_REML" = TRUE,
 	   "..foo.." =# placeholder!
 	   stop(gettextf("'%s' is not implemented yet",

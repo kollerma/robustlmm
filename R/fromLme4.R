@@ -17,8 +17,8 @@
 ##' @importFrom utils getS3method
 
 ##' @importFrom stats coef
-##' @S3method coef rlmerMod
 coefMer <- getS3method("coef", "merMod")
+##' @export
 coef.rlmerMod <- function(object, ...) {
     val <- coefMer(object, ...)
     class(val) <- "coef.rlmerMod"
@@ -30,16 +30,16 @@ coef.rlmerMod <- function(object, ...) {
 ## FIXME what about drop1
 
 ##' @importFrom stats extractAIC
-##' @S3method extractAIC rlmerMod
+##' @export
 extractAIC.rlmerMod <- function(fit, scale = 0, k = 2, ...)
    stop("AIC is not defined for rlmerMod objects")
 
 ##' @importFrom stats family
-##' @S3method family rlmerMod
+##' @export
 family.rlmerMod <- function(object, ...) gaussian()
 
 ##' @importFrom stats fitted
-##' @S3method fitted rlmerMod
+##' @export
 fitted.rlmerMod <- getS3method("fitted", "merMod")
 
 ## Extract the fixed-effects estimates.
@@ -59,8 +59,7 @@ fitted.rlmerMod <- getS3method("fitted", "merMod")
 ## ## doFit = FALSE to speed up example
 ## fixef(rlmer(Reaction ~ Days + (Days|Subject), sleepstudy, doFit=FALSE))
 ##' @importFrom nlme fixef
-##' @S3method fixef rlmerMod
-## @export
+##' @export
 fixef.rlmerMod <- function(object, ...)
     structure(object@beta, names = dimnames(.X(object))[[2]])
 
@@ -71,37 +70,37 @@ getFixedFormula <- function(form) {
 }
 
 ##' @importFrom stats formula
-##' @S3method formula rlmerMod
+##' @export
 formula.rlmerMod <- getS3method("formula", "merMod")
 
 ##' @importFrom lme4 isREML
-##' @S3method isREML rlmerMod
+##' @export
 isREML.rlmerMod <- function(x, ...) .isREML(x, ...)
 
 ## needed for predict():
 ##' @importFrom lme4 isGLMM
-##' @S3method isGLMM rlmerMod
+##' @export
 isGLMM.rlmerMod <- function(x, ...) FALSE
 
 ##' @importFrom lme4 isLMM
-##' @S3method isLMM rlmerMod
+##' @export
 isLMM.rlmerMod <- function(x, ...) TRUE
 
 ##' @importFrom lme4 isNLMM
-##' @S3method isNLMM rlmerMod
+##' @export
 isNLMM.rlmerMod <- function(x, ...) FALSE
 
 ##' @importFrom stats logLik
-##' @S3method logLik rlmerMod
+##' @export
 logLik.rlmerMod <- function(object, REML = NULL, ...)
    stop("log-likelihood is not defined for rlmerMod objects")
 
 ##' @importFrom stats model.frame
-##' @S3method model.frame rlmerMod
+##' @export
 model.frame.rlmerMod <- getS3method("model.frame", "merMod")
 
 ##' @importFrom stats model.matrix
-##' @S3method model.matrix rlmerMod
+##' @export
 model.matrix.rlmerMod <- function(object, ...) .X(object)
 
 ## we have our own nobs.rlmerMod method
@@ -120,7 +119,7 @@ model.matrix.rlmerMod <- function(object, ...) .X(object)
 ## no simulate method
 
 ##' @importFrom stats terms
-##' @S3method terms rlmerMod
+##' @export
 terms.rlmerMod <- getS3method("terms", "merMod")
 
 ## update is in helpers.R
@@ -183,11 +182,11 @@ setMethod("show", "rlmerMod", function(object) print.rlmerMod(object))
 globalVariables("forceSymmetric", add=TRUE)
 
 ##' @importFrom stats vcov
-##' @S3method vcov rlmerMod
+##' @export
 vcov.rlmerMod <- getS3method("vcov", "merMod")
 
 ##' @importFrom stats vcov
-##' @S3method vcov summary.rlmerMod
+##' @export
 vcov.summary.rlmerMod <- function(object, correlation = TRUE, ...) {
     if(is.null(object$vcov)) stop("logic error in summary of rlmerMod object")
     object$vcov
@@ -204,29 +203,29 @@ VarCorr.rlmerMod <- function(x, ...)# <- 3 args from nlme
     val
 }
 
-##' @S3method VarCorr summary.rlmerMod
+##' @export
 VarCorr.summary.rlmerMod <- function(x, ...) x$varcor
 
-##' @S3method print VarCorr.rlmerMod
+##' @export
 print.VarCorr.rlmerMod <- getS3method("print", "VarCorr.merMod")
 
-##' __NOT YET EXPORTED__
-##' "format()" the 'VarCorr' matrix of the random effects -- for
-##' print()ing and show()ing
-##'
-##' @title Format the 'VarCorr' Matrix of Random Effects
-##' @param varc a \code{\link{VarCorr}} (-like) matrix with attributes.
-##' @param digits the number of significant digits.
-##' @param comp character vector of length one or two indicating which
-##' columns out of "Variance" and "Std.Dev." should be shown in the
-##' formatted output.
-##' @param formatter the \code{\link{function}} to be used for
-##' formatting the standard deviations and or variances (but
-##' \emph{not} the correlations which (currently) are always formatted
-##' as "0.nnn"
-##' @param ... optional arguments for \code{formatter(*)} in addition
-##' to the first (numeric vector) and \code{digits}.
-##' @return a character matrix of formatted VarCorr entries from \code{varc}.
+## __NOT YET EXPORTED__
+## "format()" the 'VarCorr' matrix of the random effects -- for
+## print()ing and show()ing
+##
+## @title Format the 'VarCorr' Matrix of Random Effects
+## @param varc a \code{\link{VarCorr}} (-like) matrix with attributes.
+## @param digits the number of significant digits.
+## @param comp character vector of length one or two indicating which
+## columns out of "Variance" and "Std.Dev." should be shown in the
+## formatted output.
+## @param formatter the \code{\link{function}} to be used for
+## formatting the standard deviations and or variances (but
+## \emph{not} the correlations which (currently) are always formatted
+## as "0.nnn"
+## @param ... optional arguments for \code{formatter(*)} in addition
+## to the first (numeric vector) and \code{digits}.
+## @return a character matrix of formatted VarCorr entries from \code{varc}.
 formatVC <- function(varcor, digits = max(3, getOption("digits") - 2),
                      comp = "Std.Dev.", formatter = format,
                      useScale = attr(varcor, "useSc"),
@@ -278,7 +277,7 @@ formatVC <- function(varcor, digits = max(3, getOption("digits") - 2),
 ## plots are in plots.R
 
 ##' @importFrom stats weights
-##' @S3method weights rlmerMod
+##' @export
 weights.rlmerMod <- function(object, ...) {
   object@resp$weights
 }
@@ -307,7 +306,7 @@ reFormHack <- function(re.form,ReForm,REForm,REform) {
 
 ##' @importFrom stats predict
 ##' @importFrom lme4 mkReTrms findbars
-##' @S3method predict rlmerMod
+##' @export
 ## FIXME: This is slightly modified from lme4 version 1.0-6.
 ##        Newer versions have an improved version.
 predict.rlmerMod <- function(object, newdata=NULL,

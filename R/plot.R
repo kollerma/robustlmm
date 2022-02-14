@@ -112,7 +112,7 @@ rsc <- function(obj, title="") {
 ##' }
 ##' @export plot.rlmerMod
 ##' @method plot rlmerMod
-##' @S3method plot rlmerMod
+##' @export
 plot.rlmerMod <- function(x, y=NULL, which=1:4,
                           title = c("Fitted Values vs. Residuals",
                               "Normal Q-Q vs. Residuals",
@@ -145,7 +145,7 @@ plot.rlmerMod <- function(x, y=NULL, which=1:4,
 
 ##' @rdname plot.rlmerMod
 ##' @method print rlmerMod_plots
-##' @S3method print rlmerMod_plots
+##' @export
 print.rlmerMod_plots <- function(x, ask=interactive() & length(x) > 1, ...) {
     if (ask) {
         oldAsk <- devAskNewPage(ask=TRUE)
@@ -158,19 +158,19 @@ print.rlmerMod_plots <- function(x, ask=interactive() & length(x) > 1, ...) {
 ### --- them in ggplot at some point.
 
 ##' @importFrom lattice dotplot
-##' @S3method  dotplot ranef.rlmerMod
+##' @export
 dotplot.ranef.rlmerMod <- getS3method("dotplot", "ranef.mer")
 
 ##' @importFrom graphics plot
-##' @S3method plot ranef.rlmerMod
+##' @export
 plot.ranef.rlmerMod <- getS3method("plot", "ranef.mer")
 
 ##' @importFrom lattice qqmath
-##' @S3method qqmath ranef.rlmerMod
+##' @export
 qqmath.ranef.rlmerMod <- getS3method("qqmath", "ranef.mer")
 
 ##' @importFrom graphics plot
-##' @S3method plot coef.rlmerMod
+##' @export
 plot.coef.rlmerMod <- function(x, y, ...) {
     ## remove non-varying columns from frames
     reduced <- lapply(x, function(el)
@@ -179,7 +179,7 @@ plot.coef.rlmerMod <- function(x, y, ...) {
 }
 
 ##' @importFrom lattice dotplot
-##' @S3method dotplot coef.rlmerMod
+##' @export
 dotplot.coef.rlmerMod <- function(x, data, ...) {
     mc <- match.call()
     mc[[1]] <- as.name("dotplot.ranef.rlmerMod")

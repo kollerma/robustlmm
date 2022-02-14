@@ -114,8 +114,6 @@ stopifnot(all.equal(.dk(rfm1, 1, center=FALSE), unname(b(rfm1)) / diag(Lambda(rf
 rfm4 <- update(rfm4, rho.e = smoothPsi, rho.b = smoothPsi)
 
 tmp <- rep(.dk(rfm4, 1, center=FALSE), each=2)[c(1:37, 40, 42, 44)]
-## need to take square root of random effects for block dim > 1
-tmp[1:36] <- sqrt(tmp[1:36])
 stopifnot(all.equal(tmp, dist.b(rfm4, 1)))
 
 ####

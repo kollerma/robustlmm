@@ -361,8 +361,6 @@ test.distB <- function(i) {
   k <- attr(rPDs[[i]], "input")[["k"]]
   dk <- unlist(lapply(robustlmm:::uArranged(b.s = with(rPDTests[[i]], b.s / sigma), idx = idx),
                       function(us) if (ncol(us) == 1) us else rowSums(us * us)))
-  bidx <- ind %in% which(dim > 1)
-  dk[bidx] <- sqrt(dk[bidx])
   expected <- dk[k]
 
   actual <- rPDs[[i]]$distB()

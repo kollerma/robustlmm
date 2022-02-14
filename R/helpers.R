@@ -113,17 +113,17 @@ std.e <- function(object, sigma = .sigma(object), matrix, drop=TRUE) {
 ## modularize distance function: compute sum(bs^2) - s
 .d <- function(bs, s=length(bs)) {
     if (s == 1) return(bs)
-    if (is.matrix(bs)) sqrt(rowSums(bs*bs)) else sqrt(sum(bs*bs))
+    if (is.matrix(bs)) rowSums(bs*bs) else sum(bs*bs)
 }
 ## same function, but assume we've already summed
 .d2 <- function(sbs2, s) {
     if (s == 1) stop("s must be larger than 1") ## disable this test?
-    sqrt(sbs2)
+    sbs2
 }
 ## inner derivative of .d2:
 .Dd2 <- function(sbs2, s) {
     ##if (s == 1) stop("s must be larger than 1")
-    1/.d2(sbs2,s)
+    2
 }
 
 
@@ -143,11 +143,6 @@ std.e <- function(object, sigma = .sigma(object), matrix, drop=TRUE) {
 ## @rdname dist
 dist.b <- function(object, sigma = .sigma(object), center=FALSE, ...) {
     db <- .dk(object, sigma, center, ...)
-   ## need to take square root if not centering and dim > 1
-    if (!center && any(object@dim > 1)) {
-        bidx <- object@ind %in% which(object@dim > 1)
-        db[bidx] <- sqrt(db[bidx])
-    }
     db[object@k]
 }
 
@@ -177,9 +172,10 @@ dist.e <- function(object, sigma = .sigma(object)) {
 ## @param center whether return the centered robustness weights, see Details.
 ## @rdname wgt
 ## @export
-wgt.b <- function(object, sigma = .sigma(object), center = FALSE) {
+wgt.b <- function(object, sigma = .sigma(object), center = FALSE,
+                  use.rho.sigma = center) {
     db <- dist.b(object, sigma, center)
-    rho <- rho.b(object, if (center) "sigma" else "default")
+    rho <- rho.b(object, if (use.rho.sigma) "sigma" else "default")
     ret <- numeric()
     for (bt in seq_along(object@blocks)) {
         bind <- as.vector(object@idx[[bt]])
@@ -250,7 +246,7 @@ lchol <- function(x) {
 
 ## Print method
 ## along the lines of printMerenv of lme4
-##' @S3method print summary.rlmerMod
+##' @export
 print.summary.rlmerMod <- function(x, digits = max(3, getOption("digits") - 3),
                            correlation = NULL, symbolic.cor = FALSE,
                            signif.stars = getOption("show.signif.stars"),
@@ -341,7 +337,7 @@ print.summary.rlmerMod <- function(x, digits = max(3, getOption("digits") - 3),
 .methTitle <- function(object)
     sprintf("Robust linear mixed model fit by %s", object@method)
 
-##' @S3method print rlmerMod
+##' @export
 print.rlmerMod <- function(x, digits = max(3, getOption("digits") - 3),
                            correlation = NULL, symbolic.cor = FALSE,
                            signif.stars = getOption("show.signif.stars"),
@@ -369,7 +365,7 @@ print.rlmerMod <- function(x, digits = max(3, getOption("digits") - 3),
     invisible(x)
 }
 
-##' @S3method summary rlmerMod
+##' @export
 ## this follows the lines of summary.merMod of lme4
 summary.rlmerMod <- function(object, ...) {
     resp <- object@resp
@@ -402,8 +398,17 @@ summary.rlmerMod <- function(object, ...) {
                    ), class = "summary.rlmerMod")
 }
 
-##' Use \code{compare} to quickly compare the estaimated parameters of
+##' Use \code{compare} to quickly compare the estimated parameters of
 ##' the fits of multiple lmerMod or rlmerMod objects.
+##'
+##' The functions \code{xtable.comparison.table} and
+##' \code{print.xtable.comparison.table} are wrapper
+##' functions for the respective \code{\link{xtable}} and
+##' \code{\link{print.xtable}} functions.
+##'
+##' The function \code{getInfo} is internally used to prepare
+##' object for producing a comparison chart in
+##' \code{compare}.
 ##'
 ##' @title Create comparison charts for multiple fits
 ##' @param ... objects to compare, or, for the \code{\link{xtable}}
@@ -501,7 +506,7 @@ compare <- function(..., digits = 3, dnames = NULL,
     ret
 }
 
-##' @S3method print comparison.table
+##' @export
 print.comparison.table <- function(x, ...) {
     class(x) <- "matrix"
     print(x, ..., quote=FALSE)
@@ -509,7 +514,7 @@ print.comparison.table <- function(x, ...) {
 
 ##' @rdname compare
 ##' @method getInfo lmerMod
-##' @S3method getInfo lmerMod
+##' @export
 getInfo.lmerMod <- function(object, ...) {
     lsum <- summary(object)
     coefs <- lsum$coefficients
@@ -563,7 +568,7 @@ getInfo.lmerMod <- function(object, ...) {
 
 ##' @rdname compare
 ##' @method getInfo rlmerMod
-##' @S3method getInfo rlmerMod
+##' @export
 getInfo.rlmerMod <- function(object, ...) {
     linfo <- getInfo.lmerMod(object)
     linfo$REML <- linfo$deviance <- NULL
@@ -590,9 +595,6 @@ getInfo.rlmerMod <- function(object, ...) {
 ##' @param align see \code{\link{xtable}}.
 ##' @param display see \code{\link{xtable}}.
 ##' @seealso \code{\link{xtable}}
-##' @examples
-##' require(xtable)
-##' xtable(compare(fm1, fm2))
 ##' @importFrom xtable xtable
 ##' @export
 ##' @method xtable comparison.table
@@ -673,7 +675,7 @@ print.xtable.comparison.table <- function(x, add.hlines=TRUE,
     do.call(print.xtable, args)
 }
 
-##' @S3method update rlmerMod
+##' @export
 update.rlmerMod <- function(object, formula., ..., evaluate = TRUE) {
     ## update call
     ## set old object as init object

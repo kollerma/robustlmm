@@ -27,7 +27,7 @@ test2 <- function(q, rho, npts = 1000000) {
     ## test .calcE.D.re
     integrand <- function(u2, v2, s2) {
         dk <- .d2(u2 + v2,q)
-        (rho@Dpsi(dk)/dk - rho@psi(dk)/dk^2)/dk*u2 + rho@psi(.d2(s2,q))/.d2(s2,q)
+        (rho@Dpsi(dk)/dk - rho@psi(dk)/dk^2)*2*u2 + rho@psi(.d2(s2,q))/.d2(s2,q)
     }
     u2 <- rnorm(npts)^2
     v2 <- rchisq(npts, q-1)
@@ -42,6 +42,23 @@ test2 <- function(q, rho, npts = 1000000) {
 for (q in c(2,4)) test2(q, cPsi)
 for (q in c(2,4,10)) test2(q, smoothPsi)
 
+
+require(robustlmm)
+
+integrand <- function(a2, b2) {
+       d <- sqrt(a2 + b2)
+       (rho@Dpsi(d)/d - rho@psi(d)/d^2)/d*a2 + rho@wgt(d)
+}
+
+npts <- 10000000
+a <- rnorm(npts)
+b <- rnorm(npts)
+rho <- smoothPsi
+
+value <- mean(integrand(a * a, b * b))
+
+value
+robustlmm:::.calcE.D.re(2, smoothPsi)
 
 
 

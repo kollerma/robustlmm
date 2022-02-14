@@ -1,4 +1,4 @@
-##' @ImportFrom fastGHQuad gaussHermiteData
+##' @importFrom fastGHQuad gaussHermiteData
 ghq <- function(n = 1, modify = TRUE) {
     rule <- fastGHQuad::gaussHermiteData(n)
     return(list(nodes=rule$x,

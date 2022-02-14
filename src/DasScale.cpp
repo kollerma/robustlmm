@@ -63,7 +63,7 @@ double calcED_re(const PsiFuncXPtr& rho_b, unsigned s, Integration* const integr
     return rho_b->EDpsi();
 
   SETUP_INTEGRATION(rho_b);
-  double bound = 0.;                                                     \
+  double bound = 0.;
   double expectation = integration->aInf(calcED_reIntegrand1, ex, &bound);
   expectation /= s;
   expectation += integration->aInf(calcED_reIntegrand2, ex, &bound);
@@ -462,7 +462,7 @@ VectorXd MatrixTauParameters::approx(const double* const u) const {
     u2(i) = u[i+size_];
   }
   // btilde <- u[1:2] - wgt(.d(u[1:2],2)) * Lkk %*% u[1:2] - crossprod(Sk, u[3:4])
-  VectorXd approx(u1 - rho_->wgtFun(u1.norm()) * Lkk_ * u1 - crossprod(Sk_, u2));
+  VectorXd approx(u1 - rho_->wgtFun(u1.squaredNorm()) * Lkk_ * u1 - crossprod(Sk_, u2));
   return approx;
 }
 

@@ -318,13 +318,6 @@ VectorXd rlmerPredD::getMu() const {
 
 VectorXd rlmerPredD::getDist_b() const {
   VectorXd db = getD_k();
-  if (indexMapper_.isAnyBlockTypeNonDiagonal()) {
-    for (const auto &block : indexMapper_.getBlocks()) {
-      if (block->isNonDiagonalBlockType()) {
-        db[block->getIndex()] = std::sqrt(db[block->getIndex()]);
-      }
-    }
-  }
   return repDo(db, indexMapper_.getK());
 }
 

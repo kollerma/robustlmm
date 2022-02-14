@@ -22,10 +22,8 @@ u <- function(object, ...) UseMethod("u")
 ##'
 ##' @rdname compare
 ##' @param object object
-##' @return \code{getInfo} returns alist with estimated coefficients,
+##' @return \code{getInfo} returns a list with estimated coefficients,
 ##' estimated variance components, sigma, deviance and parameter
 ##' configuration used to fit.
-##' @examples
-##' str(getInfo(fm1))
 ##' @export
 getInfo <- function(object, ...) UseMethod("getInfo")

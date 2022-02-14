@@ -3,3 +3,4 @@
 .DS_Store
 .Rproj.user
 rcpp-package-skeleton
+src/symbols.rds

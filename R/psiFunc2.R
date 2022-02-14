@@ -127,13 +127,13 @@ psiFuncRcpp <- function(rcppClass, ...) {
 ##' the \code{rho} slot equals quadratic function. Accordingly,
 ##' the robustness weights will always be 1 when using \code{cPsi}.
 ##'
-## The \bold{Huber \eqn{\psi}{psi}-function \code{huberPsi}} is identical to
-## the one in the package \code{robustbase}. The \code{psi} slot equals
-## the identity function within \eqn{\pm k}{+-k} (where \eqn{k}{k} is
-## the tuning parameter). Outside this interval it is equal to
-## \eqn{\pm k}{+-k}. The \code{rho} slot equals the quadratic
-## function within \eqn{\pm k}{+-k} and a linear function outside.
-##
+##' The \bold{Huber \eqn{\psi}{psi}-function \code{huberPsi}} is identical to
+##' the one in the package \code{robustbase}. The \code{psi} slot equals
+##' the identity function within \eqn{\pm k}{+-k} (where \eqn{k}{k} is
+##' the tuning parameter). Outside this interval it is equal to
+##' \eqn{\pm k}{+-k}. The \code{rho} slot equals the quadratic
+##' function within \eqn{\pm k}{+-k} and a linear function outside.
+##'
 ##' The \bold{smoothed Huber \eqn{\psi}{psi}-function} is very similar to
 ##' the regular Huber \eqn{\psi}{psi}-function.
 ##' Instead of a sharp bend like the Huber function,
@@ -142,10 +142,10 @@ psiFuncRcpp <- function(rcppClass, ...) {
 ##' of the original Huber function. The second tuning
 ##' constant, s, determines the smoothness of the bend.
 ##'
-##' @title Classical, smoothed Huber psi- and rho-functions
+##' @title Classical, Huber and smoothed Huber psi- or rho-functions
 ##' @name psi-functions
 ##' @rdname psi-functions
-##' @aliases cPsi smoothPsi SmoothPsi PsiFunction
+##' @aliases cPsi smoothPsi SmoothPsi PsiFunction huberPsiRcpp
 ##' @usage ## see examples
 ##' @seealso \code{\link{chgDefaults}} and \code{\link{psi2propII}}
 ##' for changing tuning parameters;
@@ -156,15 +156,17 @@ psiFuncRcpp <- function(rcppClass, ...) {
 ##' plot(cPsi)
 ##' plot(huberPsiRcpp)
 ##' plot(smoothPsi)
-##' curve(cPsi@psi(x), -3, 3)
-##' curve(smoothPsi@psi(x, 1.345, 10), -3, 3, add=TRUE, col="red")
-##' curve(huberPsiRcpp@psi(x, 1.345), -3, 3, add=TRUE, col="blue")
+##' curve(cPsi@psi(x), 0, 3, col="blue")
+##' curve(smoothPsi@psi(x), 0, 3, add=TRUE)
+##' curve(huberPsiRcpp@psi(x), 0, 3, add=TRUE, col="green")
 ##' @export cPsi
 setLoadAction(function(ns) assign("cPsi", psiFuncRcpp("PsiFunction"), envir = ns))
 
+##' @rdname psi-functions
 ##' @export huberPsiRcpp
 setLoadAction(function(ns) assign("huberPsiRcpp", psiFuncRcpp("HuberPsi"), envir = ns))
 
+##' @rdname psi-functions
 ##' @export smoothPsi
 setLoadAction(function(ns) assign("smoothPsi", psiFuncRcpp("SmoothPsi"), envir = ns))
 
@@ -177,14 +179,20 @@ setLoadAction(function(ns) assign("smoothPsi", psiFuncRcpp("SmoothPsi"), envir =
   return(clone)
 }
 ##' Change the default arguments for a psi_func_rcpp object
-##'
+##' @note
+##' Note that names of named arguments are ignored. Only the order of the arguments
+##' considered when assigning new arguments.
 ##' @title Change default arguments
+##' @name chgDefaults
+##' @aliases chgDefaults,psi_func_rcpp-method
+##' @param object instance to convert
 ##' @param ... arguments to change
 ##' @keywords utilities
 ##' @examples
 ##' sPsi <- chgDefaults(smoothPsi, k=2)
-##' curve(smoothPsi@@psi(x), 0, 3)
-##' curve(smoothPsi@@psi(x), 0, 3, color="blue", add=TRUE)
+##' curve(sPsi@@psi(x), 0, 3)
+##' curve(smoothPsi@@psi(x), 0, 3, col="blue", add=TRUE)
+##' @rdname chgDefaults
 ##' @export
 setMethod("chgDefaults", signature("psi_func_rcpp"), .chgDefaults)
 

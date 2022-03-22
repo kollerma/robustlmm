@@ -82,7 +82,7 @@ testCalcTauVectorized <- function(i, nodes, tol = 1e-8) {
                                        rho@getInstanceWithOriginalDefaults()$.pointer,
                                        rhoSigma@getInstanceWithOriginalDefaults()$.pointer,
                                        nodes)
-  stopifnot(all.equal(expected, actual, tolerance = tol))
+  stopifnot(all.equal(unname(expected), actual, tolerance = tol))
   cat("ok\n")
 }
 

@@ -32,7 +32,7 @@ Loading required package: Matrix
 +              init = lmer(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2,
 +                          control=lmerControl(optimizer="bobyqa")),
 +              doFit=FALSE)
-boundary (singular) fit: see ?isSingular
+boundary (singular) fit: see help('isSingular')
 > 
 > (nmME <- eval(formals(robustlmm:::getME.rlmerMod)$name))
  [1] "X"                "Z"                "Zt"               "Ztlist"          
@@ -393,4 +393,4 @@ List of 34
 > 
 > proc.time()
    user  system elapsed 
-  1.371   0.076   1.442 
+  1.351   0.057   1.404 

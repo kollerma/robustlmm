@@ -218,6 +218,92 @@ correlated random effects count as just one group.
 }
 }
 }
+
+\item{Computation methods:}{
+Currently, there are two different methods available for fitting
+models. They only differ in how the consistency factors for the
+Design Adaptive Scale estimates are computed.
+Available fitting methods for theta and sigma.e:
+\itemize{
+\item \code{DAStau} (default): For this method, the consistency
+        factors are computed using numerical quadrature. This is
+        slower but yields more accurate results. This is the direct
+        analogue to the DAS-estimate in robust linear regression.
+\item \code{DASvar}:
+        This method computes the consistency factors using a
+        direct approximation which is faster but less accurate.
+        For complex models with correlated random effects with
+        more than one correlation term, this is the only
+        method available.
+}
+}
+
+\item{Weight functions:}{
+The tuning parameters of the weight functions \dQuote{rho} can be
+used to adjust robustness and efficiency of the resulting
+estimates (arguments \code{rho.e}, \code{rho.b},
+\code{rho.sigma.e} and \code{rho.sigma.b}). Better robustness will
+lead to a decrease of the efficiency. By default, the tuning
+parameters are set to yield estimates with approximately 95\%
+efficiency for the fixed effects. The variance components are
+estimated with a lower efficiency but better robustness properties.
+
+One has to use different weight functions and tuning parameters
+for simple variance components and for such including correlation
+parameters. By default, they are chosen appropriately to the model
+at hand. However, when using the \code{rho.sigma.e} and
+\code{rho.sigma.b} arguments, it is up to the user to specify
+the appropriate function.
+\itemize{
+\item For simple variance components and the residual error scale
+use the function \code{\link{psi2propII}} to change the tuning
+parameters. This is similar to Proposal II in the location-scale
+problem (i.e., using the squared robustness weights of the
+location estimate for the scale estimate; otherwise the scale
+estimate is not robust).
+
+\item For random effects modeled with correlation parameters
+(referred to as nondiagonal case below), use the
+\code{\link{chgDefaults}} function to change the tuning
+parameters. The parameter estimation problem is multivariate,
+unlike the case without correlation where the problem was
+univariate. For the employed estimator, this amounts to switching
+from simple scale estimates to estimating correlation
+matrices. Therefore different weight functions have to be
+used. Squaring of the weights (using the function
+\code{\link{psi2propII}}) is no longer necessary. To yield
+estimates with the same efficiency, the tuning parameters for the
+nondiagonal are generally larger than for the simple case. As a
+rule of thumb, one may use the squared tuning parameters of the
+simple case for the nondiagonal case.  }
+
+Tables of tuning factors are given in the vignette
+(\code{vignette("rlmer")}). For the smoothed Huber function the
+tuning parameters to get approximately 95\% efficiency are
+\eqn{k=2.28}{k=2.28} for simple variance components and
+\eqn{k=5.11}{k=5.11} for variance components including correlation
+parameters.
+}
+
+\item{Specifying (multiple) weight functions:}{
+If custom weight functions are specified using the argument
+\code{rho.b} (\code{rho.e}) but the argument \code{rho.sigma.b}
+(\code{rho.sigma.e}) is missing, then the squared weights are used
+for simple variance components and the regular weights are used for
+variance components including correlation parameters. The same
+tuning parameters will be used, to get higher efficiency one has
+to specify the tuning parameters by hand using the
+\code{\link{psi2propII}} and \code{\link{chgDefaults}} functions.
+
+To specify separate weight functions \code{rho.b} and
+\code{rho.sigma.b} for different variance components, it is
+possible to pass a list instead of a psi_func object. The list
+entries correspond to the groups as shown by \code{VarCorr(.)}
+when applied to the model fitted with \code{lmer}. A set of
+correlated random effects count as just one group.
+}
+}
+}
 \author{Manuel Koller, with thanks to Vanda \enc{Lourenço}{Lourenco} for improvements.}
 \examples{
 ## dropping of VC

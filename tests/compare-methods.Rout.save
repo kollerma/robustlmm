@@ -106,7 +106,7 @@ Loading required package: Matrix
 +     rho.e = smoothPsi, rho.b = smoothPsi)
 
 ######## DASvar ########
-Time elapsed: 0.07 0.002 0.072 0 0 
+Time elapsed: 0.066 0.002 0.068 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -144,7 +144,7 @@ Rho functions used for fitting:
 -19.822   1.081  33.966 -30.283  67.013 -51.900 
 
 ######## DAStau ########
-Time elapsed: 0.044 0 0.044 0 0 
+Time elapsed: 0.042 0 0.042 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -210,8 +210,8 @@ sigma               55.3
 +     rho.e = smoothPsi, rho.b = smoothPsi)
 
 ######## DASvar ########
-boundary (singular) fit: see ?isSingular
-Time elapsed: 0.041 0.001 0.041 0 0 
+boundary (singular) fit: see help('isSingular')
+Time elapsed: 0.041 0.001 0.042 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -249,8 +249,8 @@ A B C D E F
 0 0 0 0 0 0 
 
 ######## DAStau ########
-boundary (singular) fit: see ?isSingular
-Time elapsed: 0.045 0 0.045 0 0 
+boundary (singular) fit: see help('isSingular')
+Time elapsed: 0.044 0 0.045 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -316,7 +316,7 @@ sigma               4.06
 +     rho.e = smoothPsi, rho.b = smoothPsi)
 
 ######## DASvar ########
-Time elapsed: 0.247 0.046 0.075 0 0 
+Time elapsed: 0.109 0.053 0.054 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -368,7 +368,7 @@ Rho functions used for fitting:
 -2.667e-02 -7.956e-01 
 
 ######## DAStau ########
-Time elapsed: 0.126 0.063 0.055 0 0 
+Time elapsed: 0.174 0.101 0.058 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -476,8 +476,8 @@ sigma                0.558
 + }
 > 
 > cat('Time elapsed: ', proc.time(),'\n') # for ``statistical reasons''
-Time elapsed:  2.498 0.298 2.233 0.003 0.007 
+Time elapsed:  2.348 0.381 2.086 0.002 0.005 
 > 
 > proc.time()
    user  system elapsed 
-  2.501   0.305   2.233 
+  2.350   0.386   2.086 

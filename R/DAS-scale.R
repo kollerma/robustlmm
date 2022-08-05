@@ -41,11 +41,11 @@
 
 ## Calculate the two dimensional integral G
 ##
-## The \eqn{\rho}{rho}-functions can be chosen to be identical, but
-## then the scale estimate will not have bounded influence
-## (if the \eqn{\rho}{rho}-function is not redescending). As an
-## alternative, one can use \eqn{\rho_\sigma = \psi_e'^2/2}{rho_sigma = psi_e'^2}.
-## This corresponds to Huber's Proposal II.
+## The \eqn{\rho}{rho}-functions can be chosen to be identical, but then the
+## scale estimate will not have bounded influence (if the
+## \eqn{\rho}{rho}-function is not redescending). As an alternative, one can use
+## \eqn{\rho_\sigma = \psi_e'^2/2}{rho_sigma = psi_e'^2}. This corresponds to
+## Huber's Proposal 2.
 ##
 ## @title Function \eqn{G_\sigma(a, s)}{G_sigma(a, s)}
 ## @param tau denominator inside function \eqn{\rho_\sigma}{rho_sigma}
@@ -67,10 +67,9 @@ G <- function(tau = rep(1, length(a)), a, s, rho, rho.sigma, pp) {
     ret
 }
 
-## Calculate s = sqrt(v_{-i}), standard deviation of the
-## average term in the linear approximation of the residuals,
-## (in the case of diagonal Sigma_b / Lambda_\theta)
-## This scale is used in G
+## Calculate s = sqrt(v_{-i}), standard deviation of the average term in the
+## linear approximation of the residuals, (in the case of diagonal Sigma_b /
+## Lambda_\theta) This scale is used in G
 ##
 ## @title Calculate s
 ## @param object rlmerMod object
@@ -95,10 +94,9 @@ G <- function(tau = rep(1, length(a)), a, s, rho, rho.sigma, pp) {
     sqrt(ret)
 }
 
-## Calculate S_k (for all ks), Cholesky decomposition of the
-## covariance matrix of the average term in the linear approximation
-## of the spherical random effects (in the case of non-diagonal
-## Sigma_b / Lambda_\theta).
+## Calculate S_k (for all ks), Cholesky decomposition of the covariance matrix
+## of the average term in the linear approximation of the spherical random
+## effects (in the case of non-diagonal Sigma_b / Lambda_\theta).
 ##
 ## @title Calculate all S_k
 ## @param object rlmerMod object
@@ -444,9 +442,8 @@ updateSigma <- function(object, max.iter = 100, rel.tol = 1e-6, fit.effects = TR
            function(block) Reduce("+", kappas[object@ind == block]))
 }
 
-## Update theta: calculate DAS scale for random effects
-## from estimated random effects (diagonal covariance
-## matrices only). Tau variant.
+## Update theta: calculate DAS scale for random effects from estimated random
+## effects (diagonal covariance matrices only). Tau variant.
 ##
 ## @title Calculate variance components
 ## @param object rlmerMod-object

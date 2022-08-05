@@ -1,161 +1,179 @@
-##' Robust estimation of linear mixed effects models, for hierarchical
-##' nested and non-nested, e.g., crossed, datasets.
+##' Robust estimation of linear mixed effects models, for hierarchical nested
+##' and non-nested, e.g., crossed, datasets.
 ##'
-##' The \code{lmerNoFit} function can be used to get trivial
-##' starting values. This is mainly used to verify the algorithms to
-##' reproduce the fit by \code{\link{lmer}} when starting from trivial
-##' initial values.
+##' \describe{ \item{Overview:}{
 ##'
-##' \describe{
-##' \item{Overview:}{
-##' This function implements a robust approach of fitting linear mixed
-##' effect models. It can be used much like the function
-##' \code{\link[lme4]{lmer}} in the package \code{lme4}. The supported
-##' models are the same as for \code{\link[lme4]{lmer}} (gaussian
-##' family only). The robust approach used is based on the
-##' robustification of the scoring equations and an application of the
-##' Design Adaptive Scale approach.
+##' This function implements the Robust Scoring Equations estimator for linear
+##' mixed effect models. It can be used much like the function
+##' \code{\link[lme4]{lmer}} in the package \code{lme4}. The supported models
+##' are the same as for \code{\link[lme4]{lmer}} (gaussian family only). The
+##' robust approach used is based on the robustification of the scoring
+##' equations and an application of the Design Adaptive Scale approach.
 ##'
-##' Example analyses and theoretical details on the method
-##' are available in the vignette (see \code{vignette("rlmer")}).
+##' Example analyses and theoretical details on the method are available in the
+##' vignette (see \code{vignette("rlmer")}).
 ##'
-##' Models are specified using the \code{formula} argument, using the
-##' same syntax as for \code{\link[lme4]{lmer}}. Additionally, one
-##' also needs to specify what robust scoring or weight functions are
-##' to be used (arguments starting with \code{rho.}). By default a
-##' smoothed version of the Huber function is used. Furthermore, the
-##' \code{method} argument can be used to speed up computations at the
-##' expense of accuracy of the results.
-##' }
+##' Models are specified using the \code{formula} argument, using the same
+##' syntax as for \code{\link[lme4]{lmer}}. Additionally, one also needs to
+##' specify what robust scoring or weight functions are to be used (arguments
+##' starting with \code{rho.}). By default a smoothed version of the Huber
+##' function is used. Furthermore, the \code{method} argument can be used to
+##' speed up computations at the expense of accuracy of the results. }
 ##'
 ##' \item{Computation methods:}{
-##' Currently, there are two different methods available for fitting
-##' models. They only differ in how the consistency factors for the
-##' Design Adaptive Scale estimates are computed.
-##' Available fitting methods for theta and sigma.e:
-##' \itemize{
-##' \item \code{DAStau} (default): For this method, the consistency
-##'         factors are computed using numerical quadrature. This is
-##'         slower but yields more accurate results. This is the direct
-##'         analogue to the DAS-estimate in robust linear regression.
-##' \item \code{DASvar}:
-##'         This method computes the consistency factors using a
-##'         direct approximation which is faster but less accurate.
-##'         For complex models with correlated random effects with
-##'         more than one correlation term, this is the only
-##'         method available.
-##' }
-##' }
+##'
+##' Currently, there are two different methods available for fitting models.
+##' They only differ in how the consistency factors for the Design Adaptive
+##' Scale estimates are computed. Available fitting methods for theta and
+##' sigma.e: \itemize{
+##'
+##' \item \code{DAStau} (default): For this method, the consistency factors are
+##' computed using numerical quadrature. This is slower but yields more accurate
+##' results. This is the direct analogue to the DAS-estimate in robust linear
+##' regression.
+##'
+##' \item \code{DASvar}: This method computes the consistency factors using a
+##' direct approximation which is faster but less accurate. For complex models
+##' with correlated random effects with more than one correlation term, this is
+##' the only method available.
+##'
+##' } }
 ##'
 ##' \item{Weight functions:}{
-##' The tuning parameters of the weight functions \dQuote{rho} can be
-##' used to adjust robustness and efficiency of the resulting
-##' estimates (arguments \code{rho.e}, \code{rho.b},
-##' \code{rho.sigma.e} and \code{rho.sigma.b}). Better robustness will
-##' lead to a decrease of the efficiency. By default, the tuning
-##' parameters are set to yield estimates with approximately 95\%
-##' efficiency for the fixed effects. The variance components are
-##' estimated with a lower efficiency but better robustness properties.
 ##'
-##' One has to use different weight functions and tuning parameters
-##' for simple variance components and for such including correlation
-##' parameters. By default, they are chosen appropriately to the model
-##' at hand. However, when using the \code{rho.sigma.e} and
-##' \code{rho.sigma.b} arguments, it is up to the user to specify
-##' the appropriate function.
-##' \itemize{
-##' \item For simple variance components and the residual error scale
-##' use the function \code{\link{psi2propII}} to change the tuning
-##' parameters. This is similar to Proposal II in the location-scale
-##' problem (i.e., using the squared robustness weights of the
-##' location estimate for the scale estimate; otherwise the scale
-##' estimate is not robust).
+##' The tuning parameters of the weight functions \dQuote{rho} can be used to
+##' adjust robustness and efficiency of the resulting estimates (arguments
+##' \code{rho.e}, \code{rho.b}, \code{rho.sigma.e} and \code{rho.sigma.b}).
+##' Better robustness will lead to a decrease of the efficiency. With the default
+##' setting, \code{setting = "RSEn"}, the tuning parameters are set to yield
+##' estimates with approximately 95\% efficiency for the fixed effects. The
+##' variance components are estimated with a lower efficiency but better
+##' robustness properties.
 ##'
-##' \item For random effects modeled with correlation parameters
-##' (referred to as nondiagonal case below), use the
-##' \code{\link{chgDefaults}} function to change the tuning
-##' parameters. The parameter estimation problem is multivariate,
-##' unlike the case without correlation where the problem was
-##' univariate. For the employed estimator, this amounts to switching
-##' from simple scale estimates to estimating correlation
-##' matrices. Therefore different weight functions have to be
-##' used. Squaring of the weights (using the function
-##' \code{\link{psi2propII}}) is no longer necessary. To yield
+##' One has to use different weight functions and tuning parameters for simple
+##' variance components and for such including correlation parameters. By
+##' default, they are chosen appropriately to the model at hand. However, when
+##' using the \code{rho.sigma.e} and \code{rho.sigma.b} arguments, it is up to
+##' the user to specify the appropriate function. See
+##' \code{\link{asymptoticEfficiency}} for methods to find tuning parameters
+##' that yield a given asymptotic efficiency. \itemize{
+##'
+##' \item For simple variance components and the residual error scale use the
+##' function \code{\link{psi2propII}} to change the tuning parameters. This is
+##' similar to Proposal 2 in the location-scale problem (i.e., using the
+##' squared robustness weights of the location estimate for the scale estimate;
+##' otherwise the scale estimate is not robust).
+##'
+##' \item For multi-dimensional blocks of random effects modeled, e.g.,
+##' a model with correlated random intercept and slope, (referred to as
+##' block diagonal case below), use the \code{\link{chgDefaults}} function to
+##' change the tuning parameters. The parameter estimation problem is
+##' multivariate, unlike the case without correlation where the problem was
+##' univariate. For the employed estimator, this amounts to switching from
+##' simple scale estimates to estimating correlation matrices. Therefore
+##' different weight functions have to be used. Squaring of the weights (using
+##' the function \code{\link{psi2propII}}) is no longer necessary. To yield
 ##' estimates with the same efficiency, the tuning parameters for the
-##' nondiagonal are generally larger than for the simple case. As a
-##' rule of thumb, one may use the squared tuning parameters of the
-##' simple case for the nondiagonal case.  }
+##' block diagonal are larger than for the simple case. Tables of tuning parameters
+##' are given in Table 2 and 3 of the vignette (\code{vignette("rlmer")}).
 ##'
-##' Tables of tuning factors are given in the vignette
-##' (\code{vignette("rlmer")}). For the smoothed Huber function the
-##' tuning parameters to get approximately 95\% efficiency are
-##' \eqn{k=2.28}{k=2.28} for simple variance components and
-##' \eqn{k=5.11}{k=5.11} for variance components including correlation
-##' parameters.
-##' }
+##' } }
+##'
+##' \item{Recommended tuning parameters:}{
+##'
+##' For a more robust estimate, use \code{setting = "RSEn"} (the default). For
+##' higher efficiency, use \code{setting = "RSEa"}. The settings described in
+##' the following paragraph are used when \code{setting = "RSEa"} is specified.
+##'
+##' For the smoothed Huber function the tuning parameters to get approximately
+##' 95\% efficiency are \eqn{k=1.345}{k=1.345} for \code{rho.e} and
+##' \eqn{k=2.28}{k=2.28} for \code{rho.sigma.e} (using the squared version). For
+##' simple variance components, the same can be used for \code{rho.b} and
+##' \code{rho.sigma.b}. For variance components including correlation
+##' parameters, use \eqn{k=5.14}{k=5.14} for both \code{rho.b} and
+##' \code{rho.sigma.b}. Tables of tuning parameter are given in Table 2 and 3 of
+##' the vignette (\code{vignette("rlmer")}). }
 ##'
 ##' \item{Specifying (multiple) weight functions:}{
-##' If custom weight functions are specified using the argument
-##' \code{rho.b} (\code{rho.e}) but the argument \code{rho.sigma.b}
-##' (\code{rho.sigma.e}) is missing, then the squared weights are used
-##' for simple variance components and the regular weights are used for
-##' variance components including correlation parameters. The same
-##' tuning parameters will be used, to get higher efficiency one has
-##' to specify the tuning parameters by hand using the
-##' \code{\link{psi2propII}} and \code{\link{chgDefaults}} functions.
 ##'
-##' To specify separate weight functions \code{rho.b} and
-##' \code{rho.sigma.b} for different variance components, it is
-##' possible to pass a list instead of a psi_func object. The list
-##' entries correspond to the groups as shown by \code{VarCorr(.)}
-##' when applied to the model fitted with \code{lmer}. A set of
-##' correlated random effects count as just one group.
-##' }
-##' }
+##' If custom weight functions are specified using the argument \code{rho.b}
+##' (\code{rho.e}) but the argument \code{rho.sigma.b} (\code{rho.sigma.e}) is
+##' missing, then the squared weights are used for simple variance components
+##' and the regular weights are used for variance components including
+##' correlation parameters. The same tuning parameters will be used when
+##' \code{setting = "RSEn"} is used. To get
+##' higher efficiency either use \code{setting = "RSEa"} (and only set arguments
+##' \code{rho.e} and \code{rho.b}). Or specify the tuning parameters by hand
+##' using the \code{\link{psi2propII}} and \code{\link{chgDefaults}} functions.
 ##'
-##' @title Robust linear mixed models
+##' To specify separate weight functions \code{rho.b} and \code{rho.sigma.b} for
+##' different variance components, it is possible to pass a list instead of a
+##' psi_func object. The list entries correspond to the groups as shown by
+##' \code{VarCorr(.)} when applied to the model fitted with \code{lmer}. A set
+##' of correlated random effects count as just one group. }
+##'
+##' \item{\code{lmerNoFit}:}{
+##'
+##' The \code{lmerNoFit} function can be used to get trivial starting values.
+##' This is mainly used to verify the algorithms to reproduce the fit by
+##' \code{\link{lmer}} when starting from trivial initial values. } }
+##'
+##' @title Robust Scoring Equations Estimator for Linear Mixed Models
 ##' @param formula a two-sided linear formula object describing the
-##'   fixed-effects part of the model, with the response on the left of
-##'   a \code{~} operator and the terms, separated by \code{+}
-##'   operators, on the right.  The vertical bar character \code{"|"}
-##'   separates an expression for a model matrix and a grouping factor.
-##' @param data an optional data frame containing the variables named
-##'   in \code{formula}.  By default the variables are taken from the
-##'   environment from which \code{lmer} is called.
-##' @param ... Additional parameters passed to lmer to find the
-##'   initial estimates. See \code{\link[lme4]{lmer}}.
-##' @param method method to be used for estimation of theta and sigma,
-##'   see Details.
-##' @param rho.e object of class psi_func, specifying the functions to
-##'   use for the huberization of the residuals.
-##' @param rho.b object of class psi_func or list of such objects
-##'   (see Details), specifying the functions to use for the
-##'   huberization of the random effects.
-##' @param rho.sigma.e object of class psi_func, specifying the
-##'   weight functions to use for the huberization of the residuals when
-##'   estimating the variance components, use the
-##'   \code{\link{psi2propII}} function to specify squared weights
-##'   and custom tuning parameters.
-##' @param rho.sigma.b (optional) object of class psi_func or list of
-##'   such objects, specifying the weight functions to use for the
-##'   huberization of the random effects when estimating the variance
-##'   components (see Details). Use \code{\link{psi2propII}} to specify
-##'   squared weights and custom tuning parameters or
-##'   \code{\link{chgDefaults}} for regular weights for variance components
-##'   including correlation parameters.
-##' @param rel.tol relative tolerance used as criteria in the fitting
-##'   process.
+##'   fixed-effects part of the model, with the response on the left of a
+##'   \code{~} operator and the terms, separated by \code{+} operators, on the
+##'   right.  The vertical bar character \code{"|"} separates an expression for
+##'   a model matrix and a grouping factor.
+##' @param data an optional data frame containing the variables named in
+##'   \code{formula}.  By default the variables are taken from the environment
+##'   from which \code{lmer} is called.
+##' @param ... Additional parameters passed to lmer to find the initial
+##'   estimates. See \code{\link[lme4]{lmer}}.
+##' @param method method to be used for estimation of theta and sigma, see
+##'   Details.
+##' @param setting a string specifying suggested choices for the arguments
+##'   \code{rho.e}, \code{rho.sigma.e}, \code{rho.b} and \code{rho.sigma.b}.
+##'   Use \code{"RSEn"} (the default) or \code{"RSEa"}. Both use
+##'   \code{\link{smoothPsi}} for all the \dQuote{rho} arguments. For
+##'   \code{rho.sigma.e}, squared robustness weights are used (see
+##'   \code{\link{psi2propII}}). \code{"RSEn"} uses the same tuning parameter as
+##'   for \code{rho.e}, which leads to higher robustness but lower efficiency.
+##'   \code{"RSEa"} adjusts the tuning parameter for higher asymptotic efficiency
+##'   which results in lower robustness (\code{k = 2.28} for default \code{rho.e}).
+##'   For diagonal random effects covariance matrices, \code{rho.sigma.b} is
+##'   treated exactly as \code{rho.sigma.e}. For block diagonal random effects
+##'   covariance matrices (with correlation terms), regular robustness weights
+##'   are used for \code{rho.sigma.b}, not squared ones, as they're not needed.
+##'   But the tuning parameters are adjusted for both \code{rho.b} and
+##'   \code{rho.sigma.b} according to the dimensions of the blocks (for both
+##'   \code{"RSEn"} or \code{"RSEa"}). For a block of dimension 2 (e.g.,
+##'   correlated random intercept and slope) \code{k = 5.14} is used.
+##' @param rho.e object of class psi_func, specifying the functions to use for
+##'   the huberization of the residuals.
+##' @param rho.b object of class psi_func or list of such objects (see Details),
+##'   specifying the functions to use for the huberization of the random
+##'   effects.
+##' @param rho.sigma.e object of class psi_func, specifying the weight functions
+##'   to use for the huberization of the residuals when estimating the variance
+##'   components, use the \code{\link{psi2propII}} function to specify squared
+##'   weights and custom tuning parameters.
+##' @param rho.sigma.b (optional) object of class psi_func or list of such
+##'   objects, specifying the weight functions to use for the huberization of
+##'   the random effects when estimating the variance components (see Details).
+##'   Use \code{\link{psi2propII}} to specify squared weights and custom tuning
+##'   parameters or \code{\link{chgDefaults}} for regular weights for variance
+##'   components including correlation parameters.
+##' @param rel.tol relative tolerance used as criteria in the fitting process.
 ##' @param max.iter maximum number of iterations allowed.
-##' @param verbose verbosity of output. Ranges from 0 (none) to 3
-##'   (a lot of output)
-##' @param doFit logical scalar. When \code{doFit = FALSE} the model
-##'   is not fit but instead a structure with the model matrices for the
-##'   random-effects terms is returned (used to speed up tests). When
-##'   \code{doFit = TRUE}, the default, the model is fit immediately.
-##' @param init optional lmerMod- or rlmerMod-object to use for starting
-##'   values, a list with elements \sQuote{fixef}, \sQuote{u},
-##'   \sQuote{sigma}, \sQuote{theta}, or a function producing an lmerMod
-##'   object.
+##' @param verbose verbosity of output. Ranges from 0 (none) to 3 (a lot of
+##'   output)
+##' @param doFit logical scalar. When \code{doFit = FALSE} the model is not fit
+##'   but instead a structure with the model matrices for the random-effects
+##'   terms is returned (used to speed up tests). When \code{doFit = TRUE}, the
+##'   default, the model is fit immediately.
+##' @param init optional lmerMod- or rlmerMod-object to use for starting values,
+##'   a list with elements \sQuote{fixef}, \sQuote{u}, \sQuote{sigma},
+##'   \sQuote{theta}, or a function producing an lmerMod object.
 ##' @return object of class rlmerMod.
 ##' @seealso \code{\link[lme4]{lmer}}, \code{vignette("rlmer")}
 ##' @author Manuel Koller, with thanks to Vanda Lourenço for improvements.
@@ -179,32 +197,35 @@
 ##'
 ##'   ## Fit variance components with higher efficiency
 ##'   ## psi2propII yields squared weights to get robust estimates
+##'   ## this is the same as using rlmer's argument `setting = "RSEa"`
 ##'   rlmer(diameter ~ 1 + (1|plate) + (1|sample), Penicillin,
 ##'         rho.sigma.e = psi2propII(smoothPsi, k = 2.28),
 ##'         rho.sigma.b = psi2propII(smoothPsi, k = 2.28))
 ##'
 ##'   ## use chgDefaults for variance components including
 ##'   ## correlation terms (regular, non squared weights suffice)
+##'   ## this is the same as using rlmer's argument `setting = "RSEa"`
 ##'   rlmer(Reaction ~ Days + (Days|Subject), sleepstudy,
 ##'         rho.sigma.e = psi2propII(smoothPsi, k = 2.28),
-##'         rho.b = chgDefaults(smoothPsi, k = 5.11, s=10),
-##'         rho.sigma.b = chgDefaults(smoothPsi, k = 5.11, s=10))
+##'         rho.b = chgDefaults(smoothPsi, k = 5.14, s=10),
+##'         rho.sigma.b = chgDefaults(smoothPsi, k = 5.14, s=10))
 ##' }
 ##'
 ##' @importFrom lme4 lmer
 ##' @importFrom stats getCall
 ##' @rdname rlmer
+##' @name rlmer
 ##' @export
-rlmerRcpp <- function(formula, data, ..., method = "DAStau",
-                      rho.e = smoothPsi, rho.b = smoothPsi,
-                      rho.sigma.e, rho.sigma.b, rel.tol = 1e-8,
-                      max.iter = 40 * (r + 1)^2, verbose = 0,
+rlmerRcpp <- function(formula, data, ..., method = c("DAStau", "DASvar"),
+                      setting, rho.e, rho.b, rho.sigma.e, rho.sigma.b,
+                      rel.tol = 1e-8,  max.iter = 40 * (r + 1)^2, verbose = 0,
                       doFit = TRUE, init)
 {
     lcall <- match.call()
     pf <- parent.frame()
+    method <- match.arg(method)
     linit <- .rlmerInit(lcall, pf, formula, data, method, rho.e, rho.b, rho.sigma.e,
-                        rho.sigma.b, rel.tol, max.iter, verbose, init, ...)
+                        rho.sigma.b, rel.tol, max.iter, verbose, init, setting, ...)
     lobj <- linit$obj
     init <- linit$init
 
@@ -214,24 +235,24 @@ rlmerRcpp <- function(formula, data, ..., method = "DAStau",
     ## required for max.iter:
     r <- len(lobj, "theta")
 
-    return(.rlmer(lobj, method, rel.tol, max.iter, verbose, doFit))
+    return(.rlmer(lobj, rel.tol, max.iter, verbose, doFit))
 }
 
 ##' @export
 ##' @rdname rlmer
-rlmer <- function(formula, data, ..., method = "DAStau",
-                  rho.e = smoothPsi, rho.b = smoothPsi,
-                  rho.sigma.e, rho.sigma.b, rel.tol = 1e-8,
-                  max.iter = 40 * (r + 1)^2, verbose = 0,
+rlmer <- function(formula, data, ..., method = c("DAStau", "DASvar"),
+                  setting, rho.e, rho.b, rho.sigma.e, rho.sigma.b,
+                  rel.tol = 1e-8, max.iter = 40 * (r + 1)^2, verbose = 0,
                   doFit = TRUE, init)
 {
     lcall <- match.call()
     pf <- parent.frame()
+    method <- match.arg(method)
     lobj <- .rlmerInit(lcall, pf, formula, data, method, rho.e, rho.b, rho.sigma.e,
-                       rho.sigma.b, rel.tol, max.iter, verbose, init, ...)$obj
-    if (substr(method, 1, 3) == "DAS") {
+                       rho.sigma.b, rel.tol, max.iter, verbose, init, setting, ...)$obj
+    if (substr(lobj@method, 1, 3) == "DAS") {
         lobj@pp <- as(lobj@pp, "rlmerPredD_DAS")
-        lobj@pp$method <- method
+        lobj@pp$method <- lobj@method
     }
     lobj@pp$initRho(lobj)
     lobj@pp$initMatrices(lobj)
@@ -240,11 +261,12 @@ rlmer <- function(formula, data, ..., method = "DAStau",
     ## required for max.iter:
     r <- len(lobj, "theta")
 
-    return(.rlmer(lobj, method, rel.tol, max.iter, verbose, doFit))
+    return(.rlmer(lobj, rel.tol, max.iter, verbose, doFit))
 }
 
 .rlmerInit <- function(lcall, pf, formula, data, method, rho.e, rho.b, rho.sigma.e,
-                       rho.sigma.b, rel.tol, max.iter, verbose, init, ...) {
+                       rho.sigma.b, rel.tol, max.iter, verbose, init,
+                       setting = c("RSEn", "RSEa"), ...) {
     if (missing(init) || is.null(init) || is.list(init)) {
         lcall2 <- lcall
         lcall2[setdiff(names(formals(rlmer)), names(formals(lmer)))] <- NULL
@@ -289,30 +311,68 @@ rlmer <- function(formula, data, ..., method = "DAStau",
     if (any(lobj@resp$offset != 0))
         warning("Argument offset is untested.")
 
-    ## set arguments only relevant to rlmerMod
-    ## convert rho argument to list if necessary
-    convRho <- function(l)
-        if (!is.list(l)) rep.int(list(l), length(lobj@dim)) else l
-    lobj@rho.b <- rho.b <- convRho(rho.b)
-    if (missing("rho.sigma.b")) {
-        rho.sigma.b <- list()
-        ## set default wExp.b
-        wExp.b <- ifelse(lobj@dim == 1, 2, 1) ## if s==1 then 2 else 1
-        ## check length of c.sigma.b
-        for (bt in seq_along(lobj@blocks)) {
-            ## set higher tuning constants by default
-
-            rho.sigma.b[[bt]] <- switch(wExp.b[bt],
-                                        rho.b[[bt]],
-                                        psi2propII(rho.b[[bt]]),
-                                        stop("only wExp = 1 and 2 are supported"))
+    if (!missing(setting)) {
+        if (!missing(rho.e) || !missing(rho.sigma.e) ||
+            !missing(rho.b) || !missing(rho.sigma.b)) {
+            overridden <- c()
+            if (!missing(rho.e)) {
+                overridden <- c(overridden, "'rho.e'")
+            }
+            if (!missing(rho.sigma.e)) {
+                overridden <- c(overridden, "'rho.sigma.e'")
+            }
+            if (!missing(rho.b)) {
+                overridden <- c(overridden, "'rho.b'")
+            }
+            if (!missing(rho.sigma.b)) {
+                overridden <- c(overridden, "'rho.sigma.b'")
+            }
+            if (length(overridden) > 1) {
+                args <- "Arguments "
+            } else {
+                args <- "Argument "
+            }
+            overridden <- paste(overridden, collapse = ", ")
+            setting <- match.arg(setting)
+            warning("Argument 'setting' specified together with ",
+                    overridden, ". ", args, overridden,
+                    " will override defaults of \"", setting, "\".")
         }
+        setting <- match.arg(setting)
+    } else {
+        setting <- "RSEn"
     }
-    lobj@rho.sigma.b <- convRho(rho.sigma.b)
+    if (missing(rho.e)) {
+        rho.e <- smoothPsi
+    }
+    adjustForEfficiency <- setting == "RSEa"
+    if (missing(rho.sigma.e)) {
+        rho.sigma.e <- psi2propII(rho.e, adjust = adjustForEfficiency)
+    }
+    if (missing(rho.b)) {
+        rho.b <- lapply(lobj@dim, getDefaultRhoB, rho = rho.e)
+    } else if (!is.list(rho.b)) {
+        rho.b <- rep.int(list(rho.b), length(lobj@dim))
+        ## TODO warn if low asymptotic efficiency?
+    }
+    if (missing(rho.sigma.b)) {
+        rho.sigma.b <- list()
+        for (bt in seq_along(lobj@dim)) {
+            if (lobj@dim[bt] == 1) {
+                rho.sigma.b[[bt]] <- psi2propII(rho.b[[bt]], adjust = adjustForEfficiency)
+            } else {
+                rho.sigma.b[[bt]] <- rho.b[[bt]]
+            }
+        }
+    } else if (!is.list(rho.sigma.b)) {
+        rho.sigma.b <- rep.int(list(rho.sigma.b), length(lobj@dim))
+        ## TODO warn if low asymptotic efficiency?
+    }
+    ## set arguments only relevant to rlmerMod
+    lobj@rho.b <- rho.b
+    lobj@rho.sigma.b <- rho.sigma.b
     if (!isTRUE(chk <- validObject(lobj))) stop(chk)
     lobj@rho.e <- rho.e
-    if (missing("rho.sigma.e"))
-        rho.sigma.e <- psi2propII(rho.e) ## prop II is the default
     lobj@rho.sigma.e <- rho.sigma.e
     if (method == "DAStau" & any(sapply(lobj@idx, nrow) > 2)) {
         warning("Method 'DAStau' does not support blocks of size larger than 2. ",
@@ -323,7 +383,24 @@ rlmer <- function(formula, data, ..., method = "DAStau",
     return(list(obj = lobj, init = init))
 }
 
-.rlmer <- function(lobj, method, rel.tol, max.iter, verbose, doFit) {
+getDefaultRhoB <- function(dimension, rho) {
+    if (dimension == 1) {
+        return(rho)
+    }
+    if (isDefaultHuberOrSmoothPsi(rho) && dimension < 8) {
+        k <- switch(dimension - 1,
+                    5.14, 5.55, 5.91, 6.25, 6.55, 6.84)
+    } else {
+        k <-
+            findTuningParameter(asymptoticEfficiency(rho, "location"),
+                                rho,
+                                "tau",
+                                dimension)
+    }
+    return(chgDefaults(rho, k = k))
+}
+
+.rlmer <- function(lobj, rel.tol, max.iter, verbose, doFit) {
     if (!doFit) return(updateWeights(lobj))
 
     ## do not start with theta == 0
@@ -332,7 +409,7 @@ rlmer <- function(formula, data, ..., method = "DAStau",
             cat("Setting variance components from 0 to 1\n")
         theta0 <- theta(lobj)
         theta0[lobj@lower == 0 & theta0 == 0] <- 1
-        setTheta(lobj, theta0, fit.effects = TRUE, update.sigma = method != "Opt")
+        setTheta(lobj, theta0, fit.effects = TRUE, update.sigma = TRUE)
     } else {
         ## set theta at least once
         setTheta(lobj, theta(lobj), fit.effects = FALSE)
@@ -347,9 +424,10 @@ rlmer <- function(formula, data, ..., method = "DAStau",
     }
 
     curWarnings <- list()
-    lobj <- withCallingHandlers(.rlmer.fit(lobj, method, rel.tol, max.iter, verbose),
+    lobj <- withCallingHandlers(.rlmer.fit(lobj, rel.tol, max.iter, verbose),
                                 warning = function(w) {
-                                    curWarnings <<- append(curWarnings,list(w$message))
+                                    curWarnings <<- append(curWarnings,list(conditionMessage(w)))
+                                    invokeRestart("muffleWarning")
                                 })
     lobj@optinfo$warnings <- curWarnings
 
@@ -363,13 +441,11 @@ rlmer <- function(formula, data, ..., method = "DAStau",
     return(updateWeights(lobj))
 }
 
-.rlmer.fit <- function(lobj, method, rel.tol, max.iter, verbose) {
+.rlmer.fit <- function(lobj, rel.tol, max.iter, verbose) {
     ## do fit: non diagonal case differently
     if (!isDiagonal(.U_b(lobj))) {
-        if (method == "DASvar") {
+        if (lobj@method %in%  c("DASvar", "DAStau")) {
             lobj <- rlmer.fit.DAS.nondiag(lobj, verbose, max.iter, rel.tol)
-        } else if (method == "DAStau") {
-            lobj <- rlmer.fit.DAS.nondiag(lobj, verbose, max.iter, rel.tol, method="DAStau")
         } else
             stop("Non-diagonal case only supported by DAStau and DASvar")
     } else {

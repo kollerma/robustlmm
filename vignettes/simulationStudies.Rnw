@@ -1,0 +1,779 @@
+\documentclass[nojss]{jss}
+\usepackage{rlmer}
+%\VignetteIndexEntry{Replication Code For Simulation Studies}
+%\VignetteDepends{ggplot2, robustlmm, MASS, skewt, reshape2, lemon}
+
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\usepackage{amsmath}
+\usepackage{natbib}
+\usepackage[export]{adjustbox}[2011/08/13]
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% declarations for jss.cls %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\author{Manuel Koller}
+\title{Replication Code For Simulation Studies}
+\Plaintitle{Replication Code For Simulation Studies}
+
+\Abstract{Instructions how to replicate several simulation
+    studies made to study properties of the robust scoring equations
+    estimator (RSE). All the required code and the simulation results
+    are included. The code is written in a way that makes sure that
+    the stored simulation results are still reproduced by the current
+    code.}
+
+\Keywords{robust statistics, mixed-effects model, hierarchical model,
+  ANOVA, \proglang{R}, crossed, random effect, simulation study}
+\Plainkeywords{robust statistics, mixed-effects model, hierarchical model,
+  ANOVA, R, crossed, random effect, simulation study}
+
+%% The address of (at least) one author should be given
+%% in the following format:
+\Address{
+  Manuel Koller\\
+  E-mail: \email{kollerma@proton.me}
+}
+
+%% end of declarations %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%\usepackage{Sweave}
+
+\newcommand{\script}[1]{\href{https://github.com/kollerma/robustlmm/blob/master/inst/simulationStudy/#1}{\code{#1}}}
+
+\begin{document}
+\SweaveOpts{concordance=TRUE,echo=FALSE}
+\setkeys{Gin}{width=1.2\textwidth}
+
+<<basic-options,echo=FALSE>>=
+options(width=70,
+        str=strOptions(strict.width = "wrap", vec.len=2),
+        continue = "  ")
+require(ggplot2)
+theme <- theme_bw(base_size = 9)
+theme$legend.position = "top"
+theme_set(theme)
+@
+
+\baselineskip 15pt
+
+\section{Introduction}
+This is a technical document that should make it easy for others
+to replicate the results of the simulation studies presented in
+\citet{koller2013diss} and \citet{koller2022rse}. For the sake of
+brevity, the full descriptions of the studies are not duplicated
+here. Please refer to the cited document. The same goes for the
+code itself. Instead of printing long listings here that are not
+very useful, \pkg{robustlmm} provides a function that opens the
+the corresponding script in the user's editor. All code is implemented
+in \Rp \citep{R}.
+
+In the next section, we give an overview of the included simulation
+studies and how to access the code. In
+Section~\ref{sec:generalStructure} we will cover the general structure
+of the code that is used to run each simulation study.
+Section~\ref{sec:packages} shows a list of \Rp packages that were
+used in the simulation studies' code. The charts
+for each simulation study are then shown in turn. Simulation studies
+that have not been published elsewhere are described in detail while
+others are just referenced. Section~\ref{sec:sensitivityCurves} contains the
+results for the Sensitivity curves simulation study, consistency
+and efficiency for varying tuning parameters of the $\psi$-functions in
+Section~\ref{sec:consistencyAndEfficiency}, breakdown in
+Section~\ref{sec:breakdown}, convergence for increasing number
+of observations in Section~\ref{sec:convergence}, and,
+robustness and empirical test coverage in
+Section~\ref{sec:robustnessAndCoverage}. Finally,
+Section~\ref{sec:sessionInfo} shows the output of
+\code{sessionInfo()} that lists all versions of packages that
+were loaded when the simulation studies were run.
+
+\section{The code}
+The code for each simulation study is shipped as script file
+with \pkg{robustlmm}. To see it, run a variation of following
+command in \Rp or click the script name in this document to
+open the file on github.
+
+\begin{Schunk}
+\begin{Sinput}
+robustlmm::viewCopyOfSimulationStudy("sensitivityCurves.R")
+\end{Sinput}
+\end{Schunk}
+
+This will create a copy of the \code{sensitivityCurves.R} script
+in the local working directory and open the script for editing
+and running.
+
+The following simulation studies are provided:
+\begin{itemize}
+    \item Section~\ref{sec:sensitivityCurves}:
+        \script{sensitivityCurves.R}
+        reproduces Figure~4.1 in \citet{koller2013diss} and
+        Figure~1.1 in \citet{koller2022rse}.
+    \item Section~\ref{sec:consistencyAndEfficiency}:
+        \script{consistencyAndEfficiencyDiagonal.R}
+        reproduces Figure~4.2, Figure~4.3 and Figure~4.4
+        in \citet{koller2013diss}.
+    \item Section~\ref{sec:consistencyAndEfficiencyBlockDiagonal}:
+        \script{consistencyAndEfficiencyBlockDiagonal.R}
+        a previously unpublished simulation study, the analogue
+        of the previous script but for the block diagonal case.
+    \item Section~\ref{sec:convergence}: \script{convergence.R}
+        a previously unpublished simulation study, in which the
+        effect of increasing sample size is studied.
+    \item Section~\ref{sec:breakdown}:
+        \script{breakdown.R} reproduces Figure~4.5 in
+        \citet{koller2013diss}.
+    \item Section~\ref{sec:robustnessAndCoverage}:
+        \script{robustnessDiagonal.R} replicates the simulation
+        study in Section~4.2 in \citet{koller2022rse}
+        (Figure~2 and Figure~3)
+    \item Section~\ref{sec:robustnessBlockDiagonal}:
+        \script{robustnessBlockDiagonal.R} replicates the
+        simulation study in Section~4.4 in \citet{koller2022rse}
+        (Figure~4 and Figure~5).
+\end{itemize}
+
+\script{consistencyAndEfficiencyBlockDiagonal.R} and
+\script{convergence.R} have not been published elsewhere, so
+a description of the study and a discussion are included in
+this document.
+
+\section{General structure of code for each presented study}
+\label{sec:generalStructure}
+All the simulation studies presented here follow the same
+pattern, consisting, broadly speaking, of the following four steps:
+\begin{enumerate}
+    \item[\ref{sec:generationOfDatasets}] Generation of datasets which
+        will be fitted using various methods,
+    \item[\ref{sec:fittingEachDataset}] fitting each dataset using each
+        method and extracting all relevant information from the fitted
+        models,
+    \item[\ref{sec:prepareResultsForPlotting}] preparing one or more
+        datasets of results suitable for plotting and finally,
+    \item[\ref{sec:plottingTheResults}] plotting the results.
+\end{enumerate}
+
+The \pkg{robustlmm} \Rp package provides a set of methods that
+cover all of these steps and make it easy to run a simulation
+study. Full documentation is available in the help for each
+function. The simplest way to get started is probably by
+working through one of the scripts that are provided
+in \pkg{robustlmm}. Each of those scripts is discussed in
+Section~\ref{sec:sensitivityCurves} and later.
+
+We will now go though each of the four steps and provide a
+few pointers how to use the provided functions.
+
+\subsection{Generation of datasets}
+\label{sec:generationOfDatasets}
+The methods provided in \pkg{robustlmm} assume that the datasets
+come in a specific format. Besides the datasets themselves, one
+also has to provide all the information that needs to be passed
+to each of the fitting functions, e.g., the formula that specifies
+the model.
+
+There are four functions available in \pkg{robustlmm}:
+\begin{enumerate}
+\item \code{createDatasetsFromList} converts a list of generated
+    datasets into the required format.
+\item \code{generateAnovaDatasets} create a ANOVA type balanced
+    dataset with a variety of fixed and random grouping variables.
+\item \code{generateMixedEffectDatasets} creates datasets using
+    parameterized bootstrap off a base dataset that was prepared
+    using \code{prepareMixedEffectDataset}.
+\item \code{generateSensitivityCurveDatasets} creates datasets where
+    one or more observations are changed more and more away from the
+    original values in order to show how sensitive a method is to
+    changes in the data.
+\end{enumerate}
+
+All the functions produce a list that contains all the ingredients
+used later on. The resulting list contains functions that can
+produce a dataset for a given dataset index and other functions
+that are useful to combine multiple datasets together.
+
+\code{createDatasetsFromList} is the most flexible way of creating
+a dataset list, the only limitation is that one can specify only one
+formula per dataset list. The trade off for the flexibility is that
+\code{createDatasetsFromList} is not as memory efficient as the two
+\code{generateAnovaDatasets} and \code{generateMixedEffectDatasets}
+functions.
+
+Both \code{generateAnovaDatasets} and
+\code{generateMixedEffectDatasets} store as little redundant
+information as possible and only generate the full dataset on
+demand.
+
+\subsection{Fitting each dataset and extracting the relevant information}
+\label{sec:fittingEachDataset}
+After the datasets have been simulated / generated, the next step
+is to apply each of the methods to each of the datasets. Then
+results need to be extracted into a memory efficient form and
+stored on disk for later re-use.
+
+For each method that should be used for fitting the datasets,
+one has to provide a function that takes the dataset list
+produced in the previous step as the first argument. \pkg{robustlmm}
+comes with many pre-defined methods, see \code{?fitDatasets}.
+These functions are essentially wrappers that prepare some arguments
+needed for the fitting function and then call \code{lapplyDatasets}
+which does the actual work.
+
+The fitted objects are preferably not stored on disk as these
+are usually very large when saved. To reduce the amount of disk
+space required, the fitted objects are passed through
+\code{processFit}. \code{processFit} is a S3 generic function, so it
+should be easy to add additional implementations for packages that
+are not supported by \pkg{robustlmm} already.
+
+Except for debugging, it is usually not needed to call one of the
+\code{fitDatasets} and \code{processFit} functions directly. This is done
+either by \code{processDatasetsInParallel} or \code{processFile}.
+
+For smaller simulation studies that can be run on a single machine,
+as the ones presented in this vignette, the function
+\code{processDatasetsInParallel} does all the work. The datasets are
+split into chunks and then run in parallel using \code{parLapply} of
+the \pkg{parallel} package \citep{R}.
+
+Larger simulation studies or more computationally expensive methods
+may require to be run on a compute server. This is possible, but
+requires a bit more work from the user. First, one has to use
+\code{saveDatasets} to split the full list of datasets into chunks.
+For each of the chunks of datasets, a file is created. Second, these
+files need to be distributed to each of the computing machines.
+Third, there the files are processed using \code{processFile}.
+Fourth and finally, the collected results are merged using
+\code{loadAndMergePartialResults}.
+
+To ensure that the results stay valid over a long period of time
+(for example when \Rp or packages are updated), one can repeat this
+step with \code{checkProcessed} set to true. Then the first dataset
+is fit using all the methods and the newly produced results are
+compared with the stored results. This is also useful to weed out
+hidden dependencies on the random number generator seed.
+
+\subsection{Prepare results for plotting}
+\label{sec:prepareResultsForPlotting}
+The results are stored in a list with several matrices. Using
+\code{cbind} these can be converted into a data frame.
+
+\subsection{Plotting the results}
+\label{sec:plottingTheResults}
+This step is entirely up to the user. This vignette uses \pkg{ggplot2}
+\citep{ggplot2}, but this is just the author's preference.
+
+\section{List of Functions From Other Packages}
+\label{sec:packages}
+Several \Rp packages were used to run the simulation studies
+presented here. Many functions from \Rp{}'s base packages \citep{R}
+were used -- they are not listed here.
+
+Models were fit using code from
+\pkg{robustlmm} \citet{robustlmm},
+\pkg{lme4} \citep{lme4},
+\pkg{robustvarComp} (no longer on CRAN) \citep{robustvarComp},
+\pkg{heavy} (no longer on  CRAN) \citep{heavy},
+\pkg{lqmm} \citep{lqmm}.
+Support for \code{rlme} from \pkg{rlme}  \citep{rlme} is also
+available, but it was not included in any simulation studies
+as all studied datasets were balanced.
+
+The function \code{modelMatrix} from \pkg{MatrixModels}
+\citep{MatrixModels} is used to create the model matrix in
+\code{generateAnovaDatasets}. The function \code{hubers} from \pkg{MASS}
+\citep{MASS} is used to compute robust mean and scale estimates when
+aggregating simulation results. The function \code{geom_pointline} from
+\pkg{lemon} \citep{lemon} is used to draw lines of type \code{b}. Colors
+are taken from palettes provided by \pkg{RColorBrewer}
+\citep{RColorBrewer}. The skewed t-distribution is implemented in
+\pkg{skewt} \citep{skewt}. We ensure file names are file system
+compatible using \code{path_sanitize} from \pkg{fs} \citep{fs}.
+The function \code{arrange} from \pkg{dplyr} \citep{dplyr} is used to
+work around a bug in \pkg{robustvarComp}. The function \code{melt} from
+\pkg{reshape2} \citep{reshape2} is used to convert \code{data.frame}
+from long to wide format. The function \code{facet_grid2} from
+\pkg{ggh4x} \citep{ggh4x} is used to create faceted plots in
+grid format that all have different y axes.
+
+\section{Sensitivity Curves}
+\label{sec:sensitivityCurves}
+This section reproduces the Figure~4.1 in \citet{koller2013diss}
+and Figure~1 in \citet{koller2022rse}. The plots have been
+defined in \script{sensitivityCurves.R}. Method
+\emph{lme} corresponds to \code{fitDataset_lmer},
+\emph{RSEn} to \code{fitDatasets_rlmer_DAStau_noAdj} and
+\emph{RSEa} to \code{fitDatasets_rlmer_DAStau}.
+
+<<source-sensitivity-curves-code>>=
+source(system.file("simulationStudy/sensitivityCurves.R",
+                   package = "robustlmm"))
+@
+
+
+<<plot_scLegend,fig=TRUE,include=FALSE,height=1.5,echo=FALSE>>=
+print(plot_shiftFirstObservation)
+plot_shiftFirstObservation <- plot_shiftFirstObservation +
+    theme(legend.position = "none")
+plot_shiftFirstGroup <- plot_shiftFirstGroup +
+    theme(legend.position = "none")
+plot_scaleFirstGroup <- plot_scaleFirstGroup +
+    theme(legend.position = "none")
+@
+
+<<plot_shiftFirstObservation,fig=TRUE,include=FALSE,height=2>>=
+print(plot_shiftFirstObservation)
+<<plot_shiftFirstGroup,fig=TRUE,include=FALSE,height=2>>=
+print(plot_shiftFirstGroup)
+<<plot_scaleFirstGroup,fig=TRUE,include=FALSE,height=2>>=
+print(plot_scaleFirstGroup)
+@
+
+The plots are shown in Figure~\ref{fig:sensitivityCurvesMixed}.
+
+\begin{figure}[htb]
+  \centering
+  \caption{Sensitivity curves for a balanced one-way dataset with $10$
+    groups of $5$ observations. \emph{lme} is the classical estimator,
+    \emph{RSEn} is the RSE estimator for the smoothed Huber
+    $\psi$-function where the tuning parameter $k$ for
+    \code{rho.sigma.e} is the same as for \code{rho.e} ($k = 1.345$),
+    similar for \code{rho.sigma.b} and \code{rho.b}.
+    \emph{RSEa} is the same as RSEn, but the
+    tuning parameter for \code{rho.sigma.e} and \code{rho.sigma.b}
+    are both adjusted ($k = 2.28$).
+    Plots from top to bottom correspond to
+    \code{plot\_shiftFirstObservation},
+    \code{plot\_shiftFirstGroup}, and
+    \code{plot\_scaleFirstGroup}.}
+  \includegraphics[trim=0 55 0 20,clip,center]
+    {simulationStudies-plot_scLegend}
+  \includegraphics[center]{simulationStudies-plot_shiftFirstObservation}
+  \includegraphics[center]{simulationStudies-plot_shiftFirstGroup}
+  \includegraphics[center]{simulationStudies-plot_scaleFirstGroup}
+  \label{fig:sensitivityCurvesMixed}
+\end{figure}
+
+\section{Consistency and Efficiency}
+\label{sec:consistencyAndEfficiency}
+\subsection{Diagonal Case}
+This section reproduces Figure~4.2, Figure~4.3 and Figure~4.4
+in \citet{koller2013diss}. The plots have been
+defined in \script{consistencyAndEfficiencyDiagonal.R}.
+Method
+\emph{lme} corresponds to \code{fitDataset_lmer},
+\emph{RSEn} to \code{fitDatasets_rlmer_DAStau_noAdj} and
+\emph{RSEa} to \code{fitDatasets_rlmer_DAStau}.
+The tuning parameters are set as shown in
+Table~\ref{tab:tuningParametersDiagonal}.
+
+\begin{table}[ht]
+\centering
+\caption{Tuning parameters $k$ used for the smoothed $\psi$-function,
+    $s$ is always set to $10$, diagonal case.}
+\begingroup\normalsize
+\begin{tabular}{r|llll}
+    \code{rho.e}              & $0.5$  & $1.345$ & $2$    & $5$     \\
+    \hline
+    \code{rho.sigma.e} (RSEn) & $0.5$  & $1.345$ & $2$    & $5$     \\
+    \code{rho.sigma.e} (RSEa) & $1.47$ & $2.18$  & $2.9$  & $5.03$  \\
+    \code{rho.b}              & $0.5$  & $1.345$ & $2$    & $5$ \\
+    \code{rho.sigma.b}        & $1.47$ & $2.18$  & $2.9$  & $5.03$
+\end{tabular}
+\endgroup
+\label{tab:tuningParametersDiagonal}
+\end{table}
+
+<<source-consistency-and-efficiency-diagonal-code>>=
+source(system.file("simulationStudy/consistencyAndEfficiencyDiagonal.R",
+                   package = "robustlmm"))
+@
+
+<<plot_consistencyDiagonal,fig=TRUE,include=FALSE,height=3>>=
+print(plot_consistencyDiagonal)
+<<plot_efficiencyDiagonal,fig=TRUE,include=FALSE,height=2.5>>=
+print(plot_efficiencyDiagonal)
+@
+
+The plots are shown in Figure~\ref{fig:consistencyDiagonal} and
+Figure~\ref{fig:efficiencyDiagonal}.
+
+\begin{figure}[htb]
+  \centering
+  \caption{Mean values and quartiles of $1000$ fits of randomly
+    generated, balanced one-way designs with $20$ groups and $20$
+    observations per group.
+    The tuning parameters for \code{rho.e} are shown on the horizontal
+    axis, the corresponding tuning parameters for the other
+    functions are shown in Table~\ref{tab:tuningParametersDiagonal}.
+    The black line indicates the true values.
+    The yellow line shows the classical fit
+    (solid: mean, dashed: quartiles).
+    Plot corresponds to \code{plot\_consistencyDiagonal}.}
+  \includegraphics[center]{simulationStudies-plot_consistencyDiagonal}
+  \label{fig:consistencyDiagonal}
+  \bigskip
+  \caption{For the same setup as shown in
+    Figure~\ref{fig:consistencyDiagonal}, the empirical efficiencies
+    were computed. The efficiency was computed on the bias corrected
+    estimates. The parameters are shown in facet columns, while the rows
+    correspond to the same choice of $\psi$-functions, both are
+    indicated in the facet strip.
+    Plot corresponds to \code{plot\_efficiencyDiagonal}.}
+  \includegraphics[center]{simulationStudies-plot_efficiencyDiagonal}
+  \label{fig:efficiencyDiagonal}
+\end{figure}
+
+\subsection{Block Diagonal Case}
+\label{sec:consistencyAndEfficiencyBlockDiagonal}
+This section contains a previously unpublished simulation study.
+The study is the analogue of study presented in the previous
+section, but for a model with a block diagonal random effects
+covariance matrix. The study is based upon the Sleep Study dataset
+that is also used in Section~\ref{sec:robustnessBlockDiagonal}.
+The Sleep Study dataset is available in \pkg{lme4} \citep{lme4}
+and was originally published by \citet{belenky03sleepstudy}.
+
+The tuning parameters for the smoothed Huber $\psi$-function
+used in this study are as indicated in the charts for \code{rho.e}.
+For \code{rho.sigma.e}, the squared robustness weights are used
+(\code{psi2propII}). For \code{rho.sigma.b} the same function
+is used as for \code{rho.b}. The tuning parameters are set as
+shown in Table~\ref{tab:tuningParametersBlockDiagonal}.
+
+\begin{table}[ht]
+\centering
+\caption{Tuning parameters $k$ used for the smoothed $\psi$-function,
+    $s$ is always set to $10$, block diagonal case.}
+\begingroup\normalsize
+\begin{tabular}{r|llll}
+    \code{rho.e}              & $0.5$  & $1.345$ & $2$    & $5$     \\
+    \hline
+    \code{rho.sigma.e} (RSEn) & $0.5$  & $1.345$ & $2$    & $5$     \\
+    \code{rho.sigma.e} (RSEa) & $1.47$ & $2.18$  & $2.9$  & $5.03$  \\
+    \code{rho.b}              & $2.17$ & $5.14$  & $8.44$ & $34.21$ \\
+    \code{rho.sigma.b}        & $2.17$ & $5.14$  & $8.44$ & $34.21$
+\end{tabular}
+\endgroup
+\label{tab:tuningParametersBlockDiagonal}
+\end{table}
+
+<<source-consistency-and-efficiency-block-diagonal-code>>=
+source(system.file("simulationStudy/consistencyAndEfficiencyBlockDiagonal.R",
+                   package = "robustlmm"))
+@
+
+<<plot_consistencyBlockDiagonal,fig=TRUE,include=FALSE,height=3>>=
+print(plot_consistencyBlockDiagonal)
+<<plot_efficiencyBlockDiagonal,fig=TRUE,include=FALSE,height=2.5>>=
+print(plot_efficiencyBlockDiagonal)
+@
+
+The plots are shown in Figure~\ref{fig:consistencyBlockDiagonal} and
+Figure~\ref{fig:efficiencyBlockDiagonal}. The plots have been
+defined in\\ \script{consistencyAndEfficiencyBlockDiagonal.R}.
+
+\begin{figure}[htbp]
+  \centering
+  \caption{Mean values and quartiles of $1000$ fits of parametric
+    bootstrap samples of the Sleep Study dataset.
+    The tuning parameters for \code{rho.e} are shown on the horizontal
+    axis, the corresponding tuning parameters for the other
+    functions are shown in
+    Table~\ref{tab:tuningParametersBlockDiagonal}.
+    The black line indicates the true values.
+    The yellow line shows the classical fit
+    (solid: mean, dashed: quartiles).
+    Plot corresponds to \code{plot\_consistencyBlockDiagonal}.}
+  \includegraphics[center]{simulationStudies-plot_consistencyBlockDiagonal}
+  \label{fig:consistencyBlockDiagonal}
+  \bigskip
+  \caption{For the same setup as shown in
+    Figure~\ref{fig:consistencyBlockDiagonal}, the empirical
+    efficiencies were computed.
+    The efficiency was computed on the bias corrected
+    estimates. The parameters are shown in facet columns, while the rows
+    correspond to the same choice of $\psi$-functions, both are
+    indicated in the facet strip.
+    Plot corresponds to \code{plot\_efficiencyBlockDiagonal}.}
+  \includegraphics[center]{simulationStudies-plot_efficiencyBlockDiagonal}
+  \label{fig:efficiencyBlockDiagonal}
+\end{figure}
+
+\subsubsection{Discussion}
+The results are similar to the diagonal case presented in the previous
+section. It is crucial though that the tuning parameters for \code{rho.b}
+and \code{rho.sigma.b} are increased, otherwise the methods are not
+consistent (as for $k=0.5$ where even the larger tuning parameters are not
+sufficient). This is because squared Mahalanobis distances are used for
+blocks of dimension 2 and larger and not simple residuals or predicted
+random effects as in the one dimensional case. The expected values of the
+distances grows by the dimension of a block, so one has to adjust tuning
+parameters per block size.
+
+\section{Breakdown}
+\label{sec:breakdown}
+This section reproduces Figure~4.5 in \citet{koller2013diss}.
+The plots have been defined in \script{breakdown.R}.
+Method
+\emph{lme} corresponds to \code{fitDataset_lmer},
+\emph{RSEn} to\\ \code{fitDatasets_rlmer_DAStau_noAdj} and
+\emph{RSEa} to \code{fitDatasets_rlmer_DAStau}.
+
+<<source-breakdown-code>>=
+source(system.file("simulationStudy/breakdown.R",
+                   package = "robustlmm"))
+@
+
+<<plot_breakdown,fig=TRUE,include=FALSE,height=3>>=
+print(plot_breakdown)
+@
+
+The plot is shown in Figure~\ref{fig:breakdown}.
+
+\begin{figure}[htb]
+  \centering
+  \caption{Example of breakdown for a one-way random model with
+    $20$ groups and $5$ observations per group. Group after group,
+    one observation after another was replaced by its absolute
+    value multiplied by $10^6$.
+    \emph{lme} is the classical estimator,
+    \emph{RSEn} is the RSE estimator for the smoothed Huber
+    $\psi$-function where the tuning parameter $k$ for
+    \code{rho.sigma.e} is the same as for \code{rho.e} ($k = 1.345$),
+    similar for \code{rho.sigma.b} and \code{rho.b}.
+    \emph{RSEa} is the same as RSEn, but the
+    tuning parameter for \code{rho.sigma.e} and \code{rho.sigma.b}
+    are both adjusted ($k = 2.28$).
+    Plot corresponds to \code{plot\_breakdown}.}
+  \includegraphics[center]{simulationStudies-plot_breakdown}
+  \label{fig:breakdown}
+\end{figure}
+
+\section{Convergence}
+\label{sec:convergence}
+This section contains the details on a simulation study we ran to answer a referee's comment about the convergence of the estimator for increasing sample sizes. The plots have been defined in \script{convergence.R}.
+Method
+\emph{lme} corresponds to \code{fitDataset_lmer},
+\emph{RSEn} to \code{fitDatasets_rlmer_DAStau_noAdj} and
+\emph{RSEa} to \code{fitDatasets_rlmer_DAStau}.
+
+\subsection{Setup}
+We simulated a balanced dataset with varying number of subjects and replicates per subject. For both, we varied the numbers between 5, 10, 20 and 50. We simulated all 16 combinations. The model we used is
+\[
+	Y_{hi} = \beta_0 + \beta_{\text{continuous}} x_{\text{continuous}} +
+		\beta_{\text{binary}} x_{\text{binary}} + B_h + \varepsilon_{hi}
+\]
+where $x_{\text{continuous}}$ is a continuous variable generated by a uniform distribution between 0 and 1, $x_{\text{binary}}$ is a binary variable that takes 0 and 1 with equal probability, $\varepsilon_{hi} \sim \mathcal{N}(0, \sigma^2)$ and $B_h \sim \mathcal{N}(0, \sigma_b^2)$, $h = 1, \dots, \text{nSubject}$ and $i = 1, \dots, \text{nReplicates}$.
+
+The other simulation settings are chosen as described in sections 1.4 and 1.4.2 of the manuscript. We show summary statistics (location and scale) computed by using Huber's Proposal 2 using \texttt{hubers} as provided by the \texttt{MASS} \Rp package \citep{MASS}. We also compute the empirical efficiencies by dividing the scale of the classical estimator by the scale of the robust estimator.
+
+<<source-convergence-code>>=
+source(system.file("simulationStudy/convergence.R",
+                   package = "robustlmm"))
+@
+
+<<plot_convergence_N_N_bias,fig=TRUE,include=FALSE,height=6>>=
+print(plot_convergence_N_N_bias)
+<<plot_convergence_N_N_scale,fig=TRUE,include=FALSE,height=6>>=
+print(plot_convergence_N_N_scale)
+<<plot_convergence_N_N_efficiency,fig=TRUE,include=FALSE,height=6>>=
+print(plot_convergence_N_N_efficiency)
+@
+
+\begin{figure}[htb]
+  \centering
+  \caption{Convergence simulation study, N/N case, bias, estimated
+    as the robust mean computed using Huber’s Proposal 2 from
+    $1000$ fits.
+    \emph{lme} is the classical estimator,
+    \emph{RSEn} is the RSE estimator for the smoothed Huber
+    $\psi$-function where the tuning parameter $k$ for
+    \code{rho.sigma.e} is the same as for \code{rho.e} ($k = 1.345$),
+    similar for \code{rho.sigma.b} and \code{rho.b}.
+    \emph{RSEa} is the same as RSEn, but the
+    tuning parameter for \code{rho.sigma.e} and \code{rho.sigma.b}
+    are both adjusted ($k = 2.28$).
+    Plot corresponds to \code{plot\_convergence\_N\_N\_bias}.}
+  \includegraphics[center]{simulationStudies-plot_convergence_N_N_bias}
+  \label{fig:convergenceNnBias}
+\end{figure}
+
+\begin{figure}[htb]
+  \centering
+  \caption{For the same setup as shown in
+    Figure~\ref{fig:convergenceNnBias}, but showing the robust scale.
+    Plot corresponds to \code{plot\_convergence\_N\_N\_scale}.}
+  \includegraphics[center]{simulationStudies-plot_convergence_N_N_scale}
+  \label{fig:convergenceNnScale}
+\end{figure}
+
+\begin{figure}[htb]
+  \centering
+  \caption{For the same setup as shown in
+    Figure~\ref{fig:convergenceNnBias}, but showing the empirical
+    efficiency, computed by dividing the scale of the classical
+    estimator by the one of the robust estimator.
+    Plot corresponds to \code{plot\_convergence\_N\_N\_efficiency}.}
+  \includegraphics[center]{simulationStudies-plot_convergence_N_N_efficiency}
+  \label{fig:convergenceNnEfficiency}
+\end{figure}
+
+<<plot_convergence_t3_t3_bias,fig=TRUE,include=FALSE,height=6>>=
+print(plot_convergence_t3_t3_bias)
+<<plot_convergence_t3_t3_scale,fig=TRUE,include=FALSE,height=6>>=
+print(plot_convergence_t3_t3_scale)
+<<plot_convergence_t3_t3_efficiency,fig=TRUE,include=FALSE,height=6>>=
+print(plot_convergence_t3_t3_efficiency)
+@
+
+\begin{figure}[htb]
+  \centering
+  \caption{Convergence simulation study, t3/t3 case, bias, estimated
+    as the robust mean computed using Huber’s Proposal 2 from
+    $1000$ fits.
+    \emph{lme} is the classical estimator,
+    \emph{RSEn} is the RSE estimator for the smoothed Huber
+    $\psi$-function where the tuning parameter $k$ for
+    \code{rho.sigma.e} is the same as for \code{rho.e} ($k = 1.345$),
+    similar for \code{rho.sigma.b} and \code{rho.b}.
+    \emph{RSEa} is the same as RSEn, but the
+    tuning parameter for \code{rho.sigma.e} and \code{rho.sigma.b}
+    are both adjusted ($k = 2.28$).
+    Plot corresponds to \code{plot\_convergence\_t3\_t3\_bias}.}
+  \includegraphics[center]{simulationStudies-plot_convergence_t3_t3_bias}
+  \label{fig:convergencet3t3Bias}
+\end{figure}
+
+\begin{figure}[htb]
+  \centering
+  \caption{For the same setup as shown in
+    Figure~\ref{fig:convergencet3t3Bias}, but showing the robust scale.
+    Plot corresponds to \code{plot\_convergence\_t3\_t3\_scale}.}
+  \includegraphics[center]{simulationStudies-plot_convergence_t3_t3_scale}
+  \label{fig:convergencet3t3Scale}
+\end{figure}
+
+\begin{figure}[htb]
+  \centering
+  \caption{For the same setup as shown in
+    Figure~\ref{fig:convergencet3t3Bias}, but showing the empirical
+    efficiency, computed by dividing the scale of the classical
+    estimator by the one of the robust estimator.
+    Plot corresponds to \code{plot\_convergence\_t3\_t3\_efficiency}.}
+  \includegraphics[center]{simulationStudies-plot_convergence_t3_t3_efficiency}
+  \label{fig:convergencet3t3Efficiency}
+\end{figure}
+
+\subsection{Discussion}
+The simulation results are shown in Figure~\ref{fig:convergenceNnBias},
+Figure~\ref{fig:convergenceNnScale} and
+Figure~\ref{fig:convergenceNnEfficiency} for the N/N case and
+Figure~\ref{fig:convergencet3t3Bias},
+Figure~\ref{fig:convergencet3t3Scale}
+and Figure~\ref{fig:convergencet3t3Efficiency} for the t3/t3 case.
+
+Except for small differences in the case with just 5 subjects, both the classic estimator and our proposed method in the manuscript behave in the same way. Our method is tuned for $95\%$ asymptotic efficiency at the central (N/N) model. The tuning works as expected and is independent of the number of subjects or replicates within subjects, as can be seen in the Figure~\ref{fig:convergenceNnScale}. The empirical efficiency shown in Figure~\ref{fig:convergenceNnEfficiency} reiterates this point. The RSEa method has been tuned for $95\%$ asymptotic efficiency, and this efficiency is surpassed most of the time. Only in the 5 subjects / 5 replicates case the empirical efficiency drops to $80\%$. The empirical efficiency of RSEn is lower, as it is tuned for higher robustness for the scale estimates.
+
+The charts for the t3/t3 case shown in Figure~\ref{fig:convergencet3t3Bias}, Figure~\ref{fig:convergencet3t3Scale} and Figure~\ref{fig:convergencet3t3Efficiency} also show expected behavior. Neither method shows a large bias for the betas as the contamination is symmetric. Our method shows less bias for $\hat\sigma$ and $\hat\sigma_b$ as expected for a robust method. The empirical efficiency is higher for our method throughout, except for one the 5 subjects / 5 replicates case where the empirical efficiency for $\hat\sigma_b$ comes out slightly lower. The higher robustness for the scale estimates pays off with a higher empirical efficiency for RSEn than RSEa.
+
+\section{Robustness and Empirical Test Coverage}
+\label{sec:robustnessAndCoverage}
+\subsection{Diagonal Case}
+This section replicates the simulation study in Section~4.2 in
+\citet{koller2022rse} (Figure~2 and Figure~3). The plots have been
+defined in \script{robustnessDiagonal.R}. Method
+\emph{lme} corresponds to \code{fitDataset_lmer},
+\emph{RSEn} to \code{fitDatasets_rlmer_DAStau_noAdj} and
+\emph{RSEa} to \code{fitDatasets_rlmer_DAStau}.
+
+<<source-robustness-diagonal-code>>=
+source(system.file("simulationStudy/robustnessDiagonal.R",
+                   package = "robustlmm"))
+@
+
+<<plot_robustnessDiagonal,fig=TRUE,include=FALSE,height=7.5>>=
+print(plot_robustnessDiagonal)
+<<plot_coverageDiagonal,fig=TRUE,include=FALSE,height=2.5>>=
+print(plot_coverageDiagonal)
+@
+
+The plots are shown in Figure~\ref{fig:robustnessDiagonal},
+Figure~\ref{fig:coverageDiagonal}.
+
+\begin{figure}[htb]
+  \centering
+  \caption{Simulation results for the diagonal case. The left column
+    shows a robust location estimate of the simulated estimates for the
+    diverse methods and the five parameters
+    $\beta_0, \beta_1, \beta_2, \sigma, \sigma_b$. The true values are
+    indicated by gray horizontal lines.
+    Deviations from them thus represent biases.
+    The right column shows robust scale parameters---measures of
+    simulated standard errors---in an analogous way.
+    Plot corresponds to \code{plot\_robustnessDiagonal}.}
+  \includegraphics[center]{simulationStudies-plot_robustnessDiagonal}
+  \label{fig:robustnessDiagonal}
+\end{figure}
+
+\begin{figure}[htb]
+  \centering
+  \caption{Simulation results for the diagonal case showing empirical
+  	coverage probabilities for the intercept $\beta_0$ (left),
+	$\beta_1$ (middle) and $\beta_2$ (right).
+	The expected level of $0.95$ is shown by a gray line.
+    Plot corresponds to \code{plot\_coverageDiagonal}.}
+  \includegraphics[center]{simulationStudies-plot_coverageDiagonal}
+  \label{fig:coverageDiagonal}
+\end{figure}
+
+\subsection{Block Diagonal Case}
+\label{sec:robustnessBlockDiagonal}
+This section replicates the simulation study in Section~4.4 in
+\citet{koller2022rse} (Figure~4 and Figure~5). The plots have been
+defined in \script{robustnessBlockDiagonal.R}.
+
+<<source-robustness-block-diagonal-code>>=
+source(system.file("simulationStudy/robustnessBlockDiagonal.R",
+                   package = "robustlmm"))
+@
+
+<<plot_robustnessBlockDiagonal,fig=TRUE,include=FALSE,height=7.5>>=
+print(plot_robustnessBlockDiagonal)
+<<plot_violinBlockDiagonal,fig=TRUE,include=FALSE,height=7.5>>=
+print(plot_violinBlockDiagonal)
+@
+
+The plots are shown in Figure~\ref{fig:robustnessBlockDiagonal},
+Figure~\ref{fig:violinBlockDiagonal}.
+
+\begin{figure}[htb]
+  \centering
+  \caption{Simulation results for the block-diagonal case, shown as in
+    Figure~\ref{fig:robustnessDiagonal}.
+    Plot corresponds to \code{plot\_robustnessBlockDiagonal}.}
+  \includegraphics[center]{simulationStudies-plot_robustnessBlockDiagonal}
+  \label{fig:robustnessBlockDiagonal}
+\end{figure}
+
+\begin{figure}[htb]
+  \centering
+  \caption{Simulated distribution of estimates in the block-diagonal
+    case. The green horizontal line marks the true value.
+    Plot corresponds to \code{plot\_violinBlockDiagonal}.}
+  \includegraphics[center]{simulationStudies-plot_violinBlockDiagonal}
+  \label{fig:violinBlockDiagonal}
+\end{figure}
+
+\clearpage
+\section{Session Info}
+\label{sec:sessionInfo}
+<<sessionInfo,results=tex,echo=FALSE>>=
+sub("robustlmm~03.0", "robustlmm~3.0", sub("/Resources", "/|\n\\\\verb|Resources", attr(results, "sessionInfo")))
+@
+
+\bibliography{simulationStudies}
+
+\end{document}

@@ -4,3 +4,11 @@
 .Rproj.user
 rcpp-package-skeleton
 src/symbols.rds
+vignettes/simulationStudies-*
+vignettes/simulationStudies.log
+vignettes/simulationStudies.pdf
+vignettes/simulationStudies.synctex.gz
+vignettes/simulationStudies.tex
+vignettes/Sweave.sty
+vignettes/jss.bst
+vignettes/jss.cls

@@ -165,7 +165,7 @@ PsiFunctionPropII::~PsiFunctionPropII() {
 }
 
 const std::string PsiFunctionPropII::name() const {
-  return base_->name() + ", Proposal II";
+  return base_->name() + ", Proposal 2";
 }
 
 bool PsiFunctionPropII::needToChgDefaults(NumericVector x) {

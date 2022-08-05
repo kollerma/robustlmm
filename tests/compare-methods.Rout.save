@@ -1,6 +1,6 @@
 
-R version 4.1.2 (2021-11-01) -- "Bird Hippie"
-Copyright (C) 2021 The R Foundation for Statistical Computing
+R version 4.2.1 (2022-06-23) -- "Funny-Looking Kid"
+Copyright (C) 2022 The R Foundation for Statistical Computing
 Platform: aarch64-apple-darwin20 (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
@@ -89,7 +89,7 @@ Loading required package: Matrix
 +         rho.e = smoothPsi, rho.b = smoothPsi,
 +         rho.sigma.b = smoothPsi, rho.sigma.e = smoothPsi)
 + 
-+     ## smoothPsi Proposal II for estimating sigma only
++     ## smoothPsi Proposal 2 for estimating sigma only
 +     fit(Yield ~ (1 | Batch), Dyestuff,
 +         rho.e = smoothPsi, rho.b = smoothPsi,
 +         rho.sigma.b = smoothPsi)
@@ -101,12 +101,12 @@ Loading required package: Matrix
 +         rho.sigma.b = smoothPsi)
 + }
 > 
-> ## smoothPsi Proposal II (default)
+> ## smoothPsi Proposal 2 (default)
 > fit(Yield ~ (1 | Batch), Dyestuff,
 +     rho.e = smoothPsi, rho.b = smoothPsi)
 
 ######## DASvar ########
-Time elapsed: 0.066 0.002 0.068 0 0 
+Time elapsed: 0.071 0.003 0.073 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -136,15 +136,15 @@ Robustness weights for the random effects:
 Rho functions used for fitting:
   Residuals:
     eff: smoothed Huber (k = 1.345, s = 10) 
-    sig: smoothed Huber, Proposal II (k = 1.345, s = 10) 
+    sig: smoothed Huber, Proposal 2 (k = 1.345, s = 10) 
   Random Effects, variance component 1 (Batch):
     eff: smoothed Huber (k = 1.345, s = 10) 
-    vcp: smoothed Huber, Proposal II (k = 1.345, s = 10) 
+    vcp: smoothed Huber, Proposal 2 (k = 1.345, s = 10) 
       A       B       C       D       E       F 
 -19.822   1.081  33.966 -30.283  67.013 -51.900 
 
 ######## DAStau ########
-Time elapsed: 0.042 0 0.042 0 0 
+Time elapsed: 0.044 0 0.044 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -174,10 +174,10 @@ Robustness weights for the random effects:
 Rho functions used for fitting:
   Residuals:
     eff: smoothed Huber (k = 1.345, s = 10) 
-    sig: smoothed Huber, Proposal II (k = 1.345, s = 10) 
+    sig: smoothed Huber, Proposal 2 (k = 1.345, s = 10) 
   Random Effects, variance component 1 (Batch):
     eff: smoothed Huber (k = 1.345, s = 10) 
-    vcp: smoothed Huber, Proposal II (k = 1.345, s = 10) 
+    vcp: smoothed Huber, Proposal 2 (k = 1.345, s = 10) 
       A       B       C       D       E       F 
 -19.761   1.048  33.601 -29.717  66.229 -51.399 
 
@@ -211,7 +211,7 @@ sigma               55.3
 
 ######## DASvar ########
 boundary (singular) fit: see help('isSingular')
-Time elapsed: 0.041 0.001 0.042 0 0 
+Time elapsed: 0.043 0.001 0.044 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -235,22 +235,22 @@ Robustness weights for the residuals:
     8     9    10    11    13    21 
 0.997 0.863 0.824 0.951 0.687 0.971 
 
-Robustness weights for the random effects:
-[1] 1.000 1.000 1.000 1.000 0.999 1.000
+Robustness weights for the random effects: 
+[1] 1 1 1 1 1 1
 
 Rho functions used for fitting:
   Residuals:
     eff: smoothed Huber (k = 1.345, s = 10) 
-    sig: smoothed Huber, Proposal II (k = 1.345, s = 10) 
+    sig: smoothed Huber, Proposal 2 (k = 1.345, s = 10) 
   Random Effects, variance component 1 (Batch):
     eff: smoothed Huber (k = 1.345, s = 10) 
-    vcp: smoothed Huber, Proposal II (k = 1.345, s = 10) 
+    vcp: smoothed Huber, Proposal 2 (k = 1.345, s = 10) 
 A B C D E F 
 0 0 0 0 0 0 
 
 ######## DAStau ########
 boundary (singular) fit: see help('isSingular')
-Time elapsed: 0.044 0 0.045 0 0 
+Time elapsed: 0.047 0.001 0.047 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -274,16 +274,16 @@ Robustness weights for the residuals:
     9    10    11    13    21 
 0.874 0.835 0.960 0.697 0.979 
 
-Robustness weights for the random effects:
+Robustness weights for the random effects: 
 [1] 1 1 1 1 1 1
 
 Rho functions used for fitting:
   Residuals:
     eff: smoothed Huber (k = 1.345, s = 10) 
-    sig: smoothed Huber, Proposal II (k = 1.345, s = 10) 
+    sig: smoothed Huber, Proposal 2 (k = 1.345, s = 10) 
   Random Effects, variance component 1 (Batch):
     eff: smoothed Huber (k = 1.345, s = 10) 
-    vcp: smoothed Huber, Proposal II (k = 1.345, s = 10) 
+    vcp: smoothed Huber, Proposal 2 (k = 1.345, s = 10) 
 A B C D E F 
 0 0 0 0 0 0 
 
@@ -316,7 +316,7 @@ sigma               4.06
 +     rho.e = smoothPsi, rho.b = smoothPsi)
 
 ######## DASvar ########
-Time elapsed: 0.109 0.053 0.054 0 0 
+Time elapsed: 0.211 0.043 0.07 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -349,13 +349,13 @@ Robustness weights for the random effects:
 Rho functions used for fitting:
   Residuals:
     eff: smoothed Huber (k = 1.345, s = 10) 
-    sig: smoothed Huber, Proposal II (k = 1.345, s = 10) 
+    sig: smoothed Huber, Proposal 2 (k = 1.345, s = 10) 
   Random Effects, variance component 1 (plate):
     eff: smoothed Huber (k = 1.345, s = 10) 
-    vcp: smoothed Huber, Proposal II (k = 1.345, s = 10) 
+    vcp: smoothed Huber, Proposal 2 (k = 1.345, s = 10) 
   Random Effects, variance component 2 (sample):
     eff: smoothed Huber (k = 1.345, s = 10) 
-    vcp: smoothed Huber, Proposal II (k = 1.345, s = 10) 
+    vcp: smoothed Huber, Proposal 2 (k = 1.345, s = 10) 
          a          b          c          d          e          f          g 
  4.436e-01  4.436e-01  1.241e-01  2.030e-01 -1.046e-06 -2.536e-01 -8.075e-01 
          h          i          j          k          l          m          n 
@@ -368,7 +368,7 @@ Rho functions used for fitting:
 -2.667e-02 -7.956e-01 
 
 ######## DAStau ########
-Time elapsed: 0.174 0.101 0.058 0 0 
+Time elapsed: 0.193 0.125 0.061 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -401,13 +401,13 @@ Robustness weights for the random effects:
 Rho functions used for fitting:
   Residuals:
     eff: smoothed Huber (k = 1.345, s = 10) 
-    sig: smoothed Huber, Proposal II (k = 1.345, s = 10) 
+    sig: smoothed Huber, Proposal 2 (k = 1.345, s = 10) 
   Random Effects, variance component 1 (plate):
     eff: smoothed Huber (k = 1.345, s = 10) 
-    vcp: smoothed Huber, Proposal II (k = 1.345, s = 10) 
+    vcp: smoothed Huber, Proposal 2 (k = 1.345, s = 10) 
   Random Effects, variance component 2 (sample):
     eff: smoothed Huber (k = 1.345, s = 10) 
-    vcp: smoothed Huber, Proposal II (k = 1.345, s = 10) 
+    vcp: smoothed Huber, Proposal 2 (k = 1.345, s = 10) 
         a         b         c         d         e         f         g         h 
  0.450838  0.450838  0.128410  0.205545  0.000502 -0.256535 -0.815539  0.490628 
         i         j         k         l         m         n         o         p 
@@ -417,8 +417,9 @@ Rho functions used for fitting:
         A         B         C         D         E         F 
  0.559397 -0.265494  0.499107 -0.034026 -0.023533 -0.794299 
 
-VarComp
-(Intercept) | Batch 48.6
+################################################
+################################################
+################################################
 
 ################ results for DASvar  ##############
                      IRWLS     
@@ -476,8 +477,8 @@ sigma                0.558
 + }
 > 
 > cat('Time elapsed: ', proc.time(),'\n') # for ``statistical reasons''
-Time elapsed:  2.348 0.381 2.086 0.002 0.005 
+Time elapsed:  2.597 0.399 2.257 0.002 0.006 
 > 
 > proc.time()
    user  system elapsed 
-  2.350   0.386   2.086 
+  2.599   0.406   2.257 

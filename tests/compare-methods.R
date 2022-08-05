@@ -69,7 +69,7 @@ if (FALSE) {
         rho.e = smoothPsi, rho.b = smoothPsi,
         rho.sigma.b = smoothPsi, rho.sigma.e = smoothPsi)
 
-    ## smoothPsi Proposal II for estimating sigma only
+    ## smoothPsi Proposal 2 for estimating sigma only
     fit(Yield ~ (1 | Batch), Dyestuff,
         rho.e = smoothPsi, rho.b = smoothPsi,
         rho.sigma.b = smoothPsi)
@@ -81,7 +81,7 @@ if (FALSE) {
         rho.sigma.b = smoothPsi)
 }
 
-## smoothPsi Proposal II (default)
+## smoothPsi Proposal 2 (default)
 fit(Yield ~ (1 | Batch), Dyestuff,
     rho.e = smoothPsi, rho.b = smoothPsi)
 fit(Yield ~ (1 | Batch), Dyestuff2,

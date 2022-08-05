@@ -46,17 +46,15 @@ A robust mixed-effects model as returned by \code{\link{rlmer}}.
 }
 \section{Objects from the Class}{
  Objects are created by calls to
-\code{\link{rlmer}}.
+  \code{\link{rlmer}}.
 }
 
 \section{Methods}{
- Almost all methods available from objects
-returned from \code{\link{lmer}} are also available for objects
-returned by \code{\link{rlmer}}. They usage is the
-same.
+ Almost all methods available from objects returned from
+  \code{\link{lmer}} are also available for objects returned by
+  \code{\link{rlmer}}. They usage is the same.
 
-It follows a list of some the methods that are exported by this
-package:
+  It follows a list of some the methods that are exported by this package:
 
 \itemize{
 \item \code{\link{coef}}
@@ -90,12 +88,11 @@ package:
 }
 
 \section{Disabled methods}{
- A log likelihood or even a pseudo log
-likelihood is not defined for the robust estimates returned by
-\code{\link{rlmer}}. Methods that depend on the log likelihood are
-therefore not available. For this reason the methods
-\code{deviance}, \code{extractAIC} and \code{logLik} stop with an
-error if they are called.
+ A log likelihood or even a pseudo log likelihood
+  is not defined for the robust estimates returned by \code{\link{rlmer}}.
+  Methods that depend on the log likelihood are therefore not available. For
+  this reason the methods \code{deviance}, \code{extractAIC} and
+  \code{logLik} stop with an error if they are called.
 }
 
 \examples{
@@ -110,7 +107,7 @@ compare(fm, rfm)
 
 }
 \seealso{
-\code{\link{rlmer}}; corresponding class in package
-\code{lme4}: \code{\link{merMod}}
+\code{\link{rlmer}}; corresponding class in package \code{lme4}:
+  \code{\link{merMod}}
 }
 \keyword{classes}

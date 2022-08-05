@@ -6,7 +6,8 @@ loadModule("fitEffects_module", TRUE)
 ##' @importFrom methods new setAs setClass setRefClass setMethod
 ##' @importFrom robustbase summarizeRobWeights
 ##' @importMethodsFrom robustbase chgDefaults plot
-##' @importMethodsFrom Matrix diag solve determinant t crossprod tcrossprod as.vector drop rowSums rowMeans colSums colMeans chol which
+##' @importMethodsFrom Matrix diag solve determinant t crossprod tcrossprod
+##'   as.vector drop rowSums rowMeans colSums colMeans chol which
 
 
 ## This is basically a copy of the merPredD-class
@@ -731,27 +732,24 @@ rlmerResp_Rcpp$lock("mu", "offset", ## "sqrtXwt",
 ##' A robust mixed-effects model as returned by \code{\link{rlmer}}.
 ##' @title rlmerMod Class
 ##' @name rlmerMod-class
-##' @aliases rlmerMod-class coef.rlmerMod deviance.rlmerMod
-##' extractAIC.rlmerMod family.rlmerMod fitted.rlmerMod fixef.rlmerMod
-##' formula.rlmerMod isGLMM.rlmerMod isLMM.rlmerMod isNLMM.rlmerMod
-##' isREML.rlmerMod logLik.rlmerMod model.frame.rlmerMod
-##' model.matrix.rlmerMod nobs.rlmerMod predict.rlmerMod
-##' print.rlmerMod print.summary.rlmer print.VarCorr.rlmerMod
-##' ranef.rlmerMod resid.rlmerMod rlmerMod-class sigma.rlmerMod
-##' show.rlmerMod show,rlmerMod-method show.summary.rlmerMod
-##' summary.rlmerMod summary.summary.rlmerMod terms.rlmerMod
-##' update.rlmerMod VarCorr.rlmerMod VarCorr.summary.rlmerMod
-##' vcov.rlmerMod vcov.summary.rlmerMod weights.rlmerMod
+##' @aliases rlmerMod-class coef.rlmerMod deviance.rlmerMod extractAIC.rlmerMod
+##'   family.rlmerMod fitted.rlmerMod fixef.rlmerMod formula.rlmerMod
+##'   isGLMM.rlmerMod isLMM.rlmerMod isNLMM.rlmerMod isREML.rlmerMod
+##'   logLik.rlmerMod model.frame.rlmerMod model.matrix.rlmerMod nobs.rlmerMod
+##'   predict.rlmerMod print.rlmerMod print.summary.rlmer print.VarCorr.rlmerMod
+##'   ranef.rlmerMod resid.rlmerMod rlmerMod-class sigma.rlmerMod show.rlmerMod
+##'   show,rlmerMod-method show.summary.rlmerMod summary.rlmerMod
+##'   summary.summary.rlmerMod terms.rlmerMod update.rlmerMod VarCorr.rlmerMod
+##'   VarCorr.summary.rlmerMod vcov.rlmerMod vcov.summary.rlmerMod
+##'   weights.rlmerMod
 ##' @docType class
 ##' @section Objects from the Class: Objects are created by calls to
-##' \code{\link{rlmer}}.
-##' @section Methods: Almost all methods available from objects
-##' returned from \code{\link{lmer}} are also available for objects
-##' returned by \code{\link{rlmer}}. They usage is the
-##' same.
+##'   \code{\link{rlmer}}.
+##' @section Methods: Almost all methods available from objects returned from
+##'   \code{\link{lmer}} are also available for objects returned by
+##'   \code{\link{rlmer}}. They usage is the same.
 ##'
-##' It follows a list of some the methods that are exported by this
-##' package:
+##'   It follows a list of some the methods that are exported by this package:
 ##'
 ##' \itemize{
 ##' \item \code{\link{coef}}
@@ -782,14 +780,13 @@ rlmerResp_Rcpp$lock("mu", "offset", ## "sqrtXwt",
 ##' \item \code{\link{vcov}}
 ##' \item \code{\link{weights}}
 ##' }
-##' @section Disabled methods: A log likelihood or even a pseudo log
-##' likelihood is not defined for the robust estimates returned by
-##' \code{\link{rlmer}}. Methods that depend on the log likelihood are
-##' therefore not available. For this reason the methods
-##' \code{deviance}, \code{extractAIC} and \code{logLik} stop with an
-##' error if they are called.
-##' @seealso \code{\link{rlmer}}; corresponding class in package
-##' \code{lme4}: \code{\link{merMod}}
+##' @section Disabled methods: A log likelihood or even a pseudo log likelihood
+##'   is not defined for the robust estimates returned by \code{\link{rlmer}}.
+##'   Methods that depend on the log likelihood are therefore not available. For
+##'   this reason the methods \code{deviance}, \code{extractAIC} and
+##'   \code{logLik} stop with an error if they are called.
+##' @seealso \code{\link{rlmer}}; corresponding class in package \code{lme4}:
+##'   \code{\link{merMod}}
 ##' @keywords classes
 ##' @examples
 ##'

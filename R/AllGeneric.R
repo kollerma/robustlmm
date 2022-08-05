@@ -16,14 +16,13 @@ u <- function(object, ...) UseMethod("u")
 ## Summary / printing methods                      ##
 #####################################################
 
-##' The function \code{getInfo} is internally used to
-##' prepare object for producing a comparison chart in
-##' \code{compare}.
+##' The function \code{getInfo} is internally used to prepare object for
+##' producing a comparison chart in \code{compare}.
 ##'
 ##' @rdname compare
 ##' @param object object
-##' @return \code{getInfo} returns a list with estimated coefficients,
-##' estimated variance components, sigma, deviance and parameter
-##' configuration used to fit.
+##' @return \code{getInfo} returns a list with estimated coefficients, estimated
+##'   variance components, sigma, deviance and parameter configuration used to
+##'   fit.
 ##' @export
 getInfo <- function(object, ...) UseMethod("getInfo")

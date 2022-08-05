@@ -1,5 +1,5 @@
 ## load Penicillin data and create contaminated data
-data(Penicillin, package="lme4")
+data("Penicillin", package="lme4")
 Penicillin <- within(Penicillin, plate <- reorder(plate, diameter))
 attr(Penicillin$plate, "scores") <- NULL
 PenicillinC <- within(Penicillin, {

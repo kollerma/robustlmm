@@ -36,8 +36,8 @@ compare(..., digits = 3, dnames = NULL, show.rho.functions = TRUE)
 getInfo(object, ...)
 }
 \arguments{
-\item{...}{objects to compare, or, for the \code{\link{xtable}}
-functions: passed to the respective \code{\link{xtable}} function.}
+\item{...}{objects to compare, or, for the \code{\link{xtable}} functions:
+passed to the respective \code{\link{xtable}} function.}
 
 \item{digits}{number of digits to show in output}
 
@@ -60,30 +60,28 @@ functions: passed to the respective \code{\link{xtable}} function.}
 \item{add.hlines}{replace empty lines in comparison table by hlines.
 Supersedes \code{hline.after} argument of \code{print.xtable}.}
 
-\item{latexify.namescol}{replace \dQuote{sigma} and \dQuote{x} in
-the first column by latex equivalents.}
+\item{latexify.namescol}{replace \dQuote{sigma} and \dQuote{x} in the first
+column by latex equivalents.}
 
 \item{include.rownames}{include row numbers (the object returned by
 \code{xtable.comparison.table} includes names in the first column)}
 }
 \value{
-\code{getInfo} returns a list with estimated coefficients,
-estimated variance components, sigma, deviance and parameter
-configuration used to fit.
+\code{getInfo} returns a list with estimated coefficients, estimated
+  variance components, sigma, deviance and parameter configuration used to
+  fit.
 }
 \description{
-Use \code{compare} to quickly compare the estimated parameters of
-the fits of multiple lmerMod or rlmerMod objects.
+Use \code{compare} to quickly compare the estimated parameters of the fits
+of multiple lmerMod or rlmerMod objects.
 }
 \details{
 The functions \code{xtable.comparison.table} and
-\code{print.xtable.comparison.table} are wrapper
-functions for the respective \code{\link{xtable}} and
-\code{\link{print.xtable}} functions.
+\code{print.xtable.comparison.table} are wrapper functions for the
+respective \code{\link{xtable}} and \code{\link{print.xtable}} functions.
 
-The function \code{getInfo} is internally used to prepare
-object for producing a comparison chart in
-\code{compare}.
+The function \code{getInfo} is internally used to prepare object for
+producing a comparison chart in \code{compare}.
 }
 \examples{
 \dontrun{

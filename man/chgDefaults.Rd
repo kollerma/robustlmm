@@ -16,8 +16,8 @@
 Change the default arguments for a psi_func_rcpp object
 }
 \note{
-Note that names of named arguments are ignored. Only the order of the arguments
-considered when assigning new arguments.
+Note that names of named arguments are ignored. Only the order of the
+arguments considered when assigning new arguments.
 }
 \examples{
 sPsi <- chgDefaults(smoothPsi, k=2)

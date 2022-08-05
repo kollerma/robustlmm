@@ -1,7 +1,7 @@
 Robust linear mixed effects models
 ==================================
 
-[![Build Status](https://travis-ci.org/kollerma/robustlmm.svg?branch=master)](https://travis-ci.org/kollerma/robustlmm)
+[![R-CMD-check](https://github.com/kollerma/robustlmm/actions/workflows/check-standard.yaml/badge.svg?branch=master)](https://github.com/kollerma/robustlmm/actions/workflows/check-standard.yaml)
 [![cran version](https://www.r-pkg.org/badges/version/robustlmm)](https://CRAN.R-project.org/package=robustlmm)
 [![downloads](https://cranlogs.r-pkg.org/badges/robustlmm)](https://cranlogs.r-pkg.org/badges/robustlmm)
 [![total downloads](https://cranlogs.r-pkg.org/badges/grand-total/robustlmm)](https://cranlogs.r-pkg.org/badges/grand-total/robustlmm)

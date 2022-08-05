@@ -64,8 +64,8 @@ convToRlmerPredD <- function(init, object, ...) {
 ## Functions to generate commonly required objects   ##
 #######################################################
 
-## std.b: Return the spherical random effects or
-##   "Standardize" the Matrix matrix: \eqn{\Lambda^{-1} matrix / \sigma}{Lambda^-1 matrix / sigma}
+## std.b: Return the spherical random effects or "Standardize" the Matrix
+## matrix: \eqn{\Lambda^{-1} matrix / \sigma}{Lambda^-1 matrix / sigma}
 ##
 ## @title Standardized values
 ## @param object rlmerMod object
@@ -77,8 +77,8 @@ convToRlmerPredD <- function(init, object, ...) {
 std.b <- function(object, sigma = .sigma(object), matrix, drop=TRUE, t=FALSE)
     object@pp$stdB(sigma, matrix, drop, t)
 
-## std.e: Calculate the standardized residuals or
-##   "Standardize" the Matrix sigma: \eqn{R^{-1} matrix / \sigma}{R^-1 matrix / sigma}
+## std.e: Calculate the standardized residuals or "Standardize" the Matrix
+## sigma: \eqn{R^{-1} matrix / \sigma}{R^-1 matrix / sigma}
 ##
 ## @rdname std
 std.e <- function(object, sigma = .sigma(object), matrix, drop=TRUE) {
@@ -108,9 +108,9 @@ std.e <- function(object, sigma = .sigma(object), matrix, drop=TRUE) {
         ret
         }))
 }
-## these helper functions are for the non-centered case, i.e.,
-## for estimating the random effects themselves.
-## modularize distance function: compute sum(bs^2) - s
+## these helper functions are for the non-centered case, i.e., for estimating
+## the random effects themselves. modularize distance function: compute
+## sum(bs^2) - s
 .d <- function(bs, s=length(bs)) {
     if (s == 1) return(bs)
     if (is.matrix(bs)) rowSums(bs*bs) else sum(bs*bs)
@@ -127,13 +127,12 @@ std.e <- function(object, sigma = .sigma(object), matrix, drop=TRUE) {
 }
 
 
-## dist.b: Calculate the distance from 0 standardized by sigma.
-##   This is just value divided by sigma for uncorrelated
-##   observations. For correlated items, this is the Mahalanobis
-##   distance from 0. If \code{shifted=TRUE} and correlated items,
-##   the squared distances are centered by -kappa_b*s. This is
-##   required to compute the weights used for the size of the
-##   covariance matrix of the random effects.
+## dist.b: Calculate the distance from 0 standardized by sigma. This is just
+## value divided by sigma for uncorrelated observations. For correlated items,
+## this is the Mahalanobis distance from 0. If \code{shifted=TRUE} and
+## correlated items, the squared distances are centered by -kappa_b*s. This is
+## required to compute the weights used for the size of the covariance matrix of
+## the random effects.
 ##
 ## @title Calculate distance
 ## @param object object to use
@@ -146,25 +145,21 @@ dist.b <- function(object, sigma = .sigma(object), center=FALSE, ...) {
     db[object@k]
 }
 
-## dist.e: Calculate dist for residuals
-##   always assume they are uncorrelated
+## dist.e: Calculate dist for residuals always assume they are uncorrelated
 ##
 ## @rdname dist
 dist.e <- function(object, sigma = .sigma(object)) {
     std.e(object, sigma) ## just the usual rescaled residuals
 }
 
-## wgt.b: Calculate the robustness weights psi(d) / d,
-##   standardized by sigma. The robustness weights are calculated
-##   with d the Mahalanobis distance. Each group of correlated items
-##   then gets a constant weight.
-##   The robustness weights for the random effects themselves are
-##   different than the ones used for estimating the size of the
-##   covariance matrix of the random effects. Those are additionally
-##   centered. That way, inlier can also be downweighted.
-##   If \code{center=TRUE}, then the centered distances are used to
-##   compute the robustness weights and the weight function given
-##   by rho.sigma.b is used.
+## wgt.b: Calculate the robustness weights psi(d) / d, standardized by sigma.
+## The robustness weights are calculated with d the Mahalanobis distance. Each
+## group of correlated items then gets a constant weight. The robustness weights
+## for the random effects themselves are different than the ones used for
+## estimating the size of the covariance matrix of the random effects. Those are
+## additionally centered. That way, inlier can also be downweighted. If
+## \code{center=TRUE}, then the centered distances are used to compute the
+## robustness weights and the weight function given by rho.sigma.b is used.
 ##
 ## @title Calculate robustness weights
 ## @param object object to use
@@ -398,21 +393,19 @@ summary.rlmerMod <- function(object, ...) {
                    ), class = "summary.rlmerMod")
 }
 
-##' Use \code{compare} to quickly compare the estimated parameters of
-##' the fits of multiple lmerMod or rlmerMod objects.
+##' Use \code{compare} to quickly compare the estimated parameters of the fits
+##' of multiple lmerMod or rlmerMod objects.
 ##'
 ##' The functions \code{xtable.comparison.table} and
-##' \code{print.xtable.comparison.table} are wrapper
-##' functions for the respective \code{\link{xtable}} and
-##' \code{\link{print.xtable}} functions.
+##' \code{print.xtable.comparison.table} are wrapper functions for the
+##' respective \code{\link{xtable}} and \code{\link{print.xtable}} functions.
 ##'
-##' The function \code{getInfo} is internally used to prepare
-##' object for producing a comparison chart in
-##' \code{compare}.
+##' The function \code{getInfo} is internally used to prepare object for
+##' producing a comparison chart in \code{compare}.
 ##'
 ##' @title Create comparison charts for multiple fits
-##' @param ... objects to compare, or, for the \code{\link{xtable}}
-##' functions: passed to the respective \code{\link{xtable}} function.
+##' @param ... objects to compare, or, for the \code{\link{xtable}} functions:
+##'   passed to the respective \code{\link{xtable}} function.
 ##' @param digits number of digits to show in output
 ##' @param dnames names of objects given as arguments (optional)
 ##' @param show.rho.functions whether to show rho functions in output.
@@ -585,8 +578,7 @@ getInfo.rlmerMod <- function(object, ...) {
 
 ##' The functions \code{xtable.comparison.table} and
 ##' \code{print.xtable.comparison.table} are wrapper functions for the
-##' respective \code{\link{xtable}} and \code{\link{print.xtable}}
-##' functions.
+##' respective \code{\link{xtable}} and \code{\link{print.xtable}} functions.
 ##'
 ##' @rdname compare
 ##' @param x object of class "comparison.table" or "xtable.comparison.table"
@@ -619,10 +611,10 @@ xtable.comparison.table <- function(x, caption=NULL, label=NULL, align=NULL,
 ##' @rdname compare
 ##' @param add.hlines replace empty lines in comparison table by hlines.
 ##'   Supersedes \code{hline.after} argument of \code{print.xtable}.
-##' @param latexify.namescol replace \dQuote{sigma} and \dQuote{x} in
-##'   the first column by latex equivalents.
+##' @param latexify.namescol replace \dQuote{sigma} and \dQuote{x} in the first
+##'   column by latex equivalents.
 ##' @param include.rownames include row numbers (the object returned by
-##'  \code{xtable.comparison.table} includes names in the first column)
+##'   \code{xtable.comparison.table} includes names in the first column)
 ##' @importFrom xtable print.xtable
 ##' @seealso \code{\link{print.xtable}}
 ##' @method print xtable.comparison.table

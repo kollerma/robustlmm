@@ -88,8 +88,7 @@ lower <- function(object) {
     object@lower
 }
 
-## Get indices of the random effects corresponding
-## to zero variance components
+## Get indices of the random effects corresponding to zero variance components
 ##
 ## @title Get indices of r.e. corresp. to zero v.c.
 ## @param object merMod object
@@ -128,15 +127,15 @@ nobs.rlmerMod <- .nobsLmerMod
     as.logical(x@devcomp$dims["REML"])
 }
 
-##' The per-observation residuals are returned, i.e.,
-##' the difference of the observation and the fitted value
-##' including random effects. With type one can specify whether
-##' the weights should be used or not.
+##' The per-observation residuals are returned, i.e., the difference of the
+##' observation and the fitted value including random effects. With type one can
+##' specify whether the weights should be used or not.
 ##'
 ##' @title Get residuals
 ##' @param object rlmerMod object
 ##' @param type type of residuals
-##' @param scaled scale residuals by residual standard deviation (=scale parameter)?
+##' @param scaled scale residuals by residual standard deviation (=scale
+##'   parameter)?
 ##' @param ... ignored
 ##' @examples
 ##' \dontrun{
@@ -228,8 +227,7 @@ ranef.rlmerMod <- function(object, ...) {
     ret
 }
 
-## return u as list arranged like ranef
-## group ranefs with the same subject
+## return u as list arranged like ranef group ranefs with the same subject
 uArrangedNames <- function(object, b.s = b.s(object)) {
     ret <- list()
     for (id in unique(names(object@cnms))) {
@@ -247,8 +245,7 @@ uArrangedNames <- function(object, b.s = b.s(object)) {
     }
     ret
 }
-## same as uArrangedNames, but do not set names
-## and do not group by id name
+## same as uArrangedNames, but do not set names and do not group by id name
 uArranged <- function(object, b.s = b.s(object), idx = object@idx) {
     ret <- lapply(idx, function(bidx) {
         lret <- b.s[bidx]
@@ -263,9 +260,9 @@ uArranged <- function(object, b.s = b.s(object), idx = object@idx) {
 ## @param object a fixed model
 ## @param diag.only include only diagonal elements?
 ## @param old (logical) give backward-compatible results?
-## @param prefix a character vector with two elements giving the prefix
-## for diagonal (e.g. \dQuote{sd}) and off-diagonal (e.g. \dQuote{cor}) elements
-## ## @export
+## @param prefix a character vector with two elements giving the prefix for
+##   diagonal (e.g. \dQuote{sd}) and off-diagonal (e.g. \dQuote{cor}) elements
+##   ## @export
 tnames <- function(object,diag.only=FALSE,old=TRUE,prefix=NULL) {
     if (old) {
         nc <- c(unlist(mapply(function(g,e) {

@@ -2,7 +2,7 @@
 \usepackage{rlmer}
 
 %\VignetteIndexEntry{robustlmm: An R Package for Robust Estimation of Linear Mixed-Effects Models}
-%\VignetteDepends{ggplot2, reshape2, xtable, robustlmm, digest, robustbase, lme4}
+%\VignetteDepends{ggplot2, reshape2, xtable, robustlmm, robustbase, lme4}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% declarations for jss.cls %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -24,7 +24,8 @@
   influence and to detect and flag contamination.
 
   We introduce an \Rp package, \pkg{robustlmm}, to robustly fit linear
-  mixed-effects models. The package's functions and methods are designed to
+  mixed-effects models using the Robust Scoring Equations estimator.
+  The package's functions and methods are designed to
   closely equal those offered by \pkg{lme4}, the \Rp package that
   implements classic linear mixed-effects model estimation in \Rpns. The
   robust estimation method in \pkg{robustlmm} is based on the random
@@ -65,7 +66,7 @@
   Institute for Social and Preventive Medicine\\
   Universit\"at Bern\\
   3012 Bern, Switzerland\\
-  E-mail: \email{koller.manuel@gmail.com}\\
+  E-mail: \email{kollermal@proton.me}\\
   URL: \url{http://www.ispm.unibe.ch/}
 }
 
@@ -75,7 +76,7 @@
 
 \Abstract{As any real-life data, data modeled by linear mixed-effects models often contain outliers or other contamination. Even little contamination can drive the classic estimates far away from what they would be without the contamination. At the same time, datasets that require mixed-effects modeling are often complex and large. This makes it difficult to spot contamination. Robust estimation methods aim to solve both problems: to provide estimates where contamination has only little influence and to detect and flag contamination.
 
-We introduce an \Rp package, \pkg{robustlmm}, to robustly fit linear mixed-effects models. The package's functions and methods are designed to closely equal those offered by \pkg{lme4}, the \Rp package that implements classic linear mixed-effects model estimation in \Rpns. The robust estimation method in \pkg{robustlmm} is based on the random effects contamination model and the central contamination model. Contamination can be detected at all levels of the data. The estimation method does not make any assumption on the data's grouping structure except that the model parameters are estimable. \pkg{robustlmm} supports hierarchical and non-hierarchical (e.g., crossed) grouping structures. The robustness of the estimates and their asymptotic efficiency is fully controlled through the function interface. Individual parts (e.g., fixed effects and variance components) can be tuned independently.
+We introduce an \Rp package, \pkg{robustlmm}, to robustly fit linear mixed-effects models using the Robust Scoring Equations estimator. The package's functions and methods are designed to closely equal those offered by \pkg{lme4}, the \Rp package that implements classic linear mixed-effects model estimation in \Rpns. The robust estimation method in \pkg{robustlmm} is based on the random effects contamination model and the central contamination model. Contamination can be detected at all levels of the data. The estimation method does not make any assumption on the data's grouping structure except that the model parameters are estimable. \pkg{robustlmm} supports hierarchical and non-hierarchical (e.g., crossed) grouping structures. The robustness of the estimates and their asymptotic efficiency is fully controlled through the function interface. Individual parts (e.g., fixed effects and variance components) can be tuned independently.
 
 In this tutorial, we show how to fit robust linear mixed-effects models using \pkg{robustlmm}, how to assess the model fit, how to detect outliers, and how to compare different fits. If you use the software, please cite this article as published in the Journal of Statistic Software \citep{vignette}.}
 
@@ -90,7 +91,7 @@ In this tutorial, we show how to fit robust linear mixed-effects models using \p
 
 \label{introduction}
 
-Linear mixed-effects models are powerful tools to model data with multiple levels of random variation, sometimes called variance components. Data with multiple levels of random variation may have contamination or outliers on any of these levels. To detect and deal with contamination, we developed a method that fits linear mixed-effects models robustly \citep{koller2014roblmm, koller2013diss}. We have implemented the methods in the \Rpns-package \pkg{robustlmm} \citep{robustlmm} that we introduce here.
+Linear mixed-effects models are powerful tools to model data with multiple levels of random variation, sometimes called variance components. Data with multiple levels of random variation may have contamination or outliers on any of these levels. To detect and deal with contamination, we developed a method that fits linear mixed-effects models robustly, using the Robust Scoring Equations estimator \citep{koller2014roblmm, koller2013diss}. We have implemented the methods in the \Rpns-package \pkg{robustlmm} \citep{robustlmm} that we introduce here.
 
 The variability introduced at the random effects level generally affects multiple observations simultaneously. In a one-way anova dataset, for example, a group level random effect influences the observed value of all the observations that belong to the corresponding group. If this group level random effect were an outlier with respect to the other group levels, this would lead to a whole group of outliers on the level of observations (see, e.g., plate~g in Figure~\ref{fig:penicillinContaminated}). When using classic estimation methods, even one such outlier might inflate the between-group variability estimate and distort the results (see example discussed in Section~\ref{usage}). In such a case it would be natural to assume that the group's random effect (or mean) is an outlier rather than all observations are outliers in the same direction. This concept of allowing potential contamination on different sources of variability leads to the ``random effects contamination model''. With this model, we make the assumption of long-tailed or ``gross error'' distributions for the random effects as well and not just for the random errors. The effect of the contamination is then propagated via the design matrices to the actual observations.
 
@@ -136,7 +137,7 @@ Classic estimation of linear mixed-effects models is mainly provided by two func
 
 For robust estimation of linear mixed-effects models, there exists a variety of specialized implementations in \Rpns, all using different approaches to the robustness problem. Most of them are available on the Comprehensive R Archive Network (CRAN) as \Rp packages. Except the method presented in this paper, all other methods are applicable only for certain grouping structures, see Table~\ref{tab:functions} for an overview. The function \code{heavyLme} in the \pkg{heavy} package \citep{heavy} implements mixed-effects models using t distributions. However, it allows for a single grouping factor only, which limits the method to two-level data. As both, the residual errors and the random effects are modeled with a t distribution, the method can capture outliers on both the subject and the observational level. The degrees of freedom for the two t distributions are fixed to be the same. Hence, it is not possible to have a differing treatment of outliers on the two levels. Multiple random effects are fitted with a correlation parameter, uncorrelated random effects are not supported. The function \code{lmeRob} implements the method by \citet{copt2006high}. It is not available on CRAN but from the authors upon request. They reformulate the mixed-effects problem as multivariate problem and apply multivariate MM-estimation. This approach requires the grouping structure to be nested and the data to be balanced. Observations are down-weighted at the highest group level, so the high breakdown point of $50\%$ applies to the number of groups that can be contaminated, not to the number of observations. The implementation only supports uncorrelated random effects within levels. The function \code{rlme} in the \pkg{rlme} \Rp package implements nested hierarchical mixed-effects models using a rank-based approach \citep{rlme}. The function supports only simple random intercepts, and solutions might not be unique.
 
-This article is a tutorial for \pkg{robustlmm}, an implementation of a robust method to fit mixed-effects models for the statistical computing environment \Rp  \citep{R}. The \Rp package \pkg{robustlmm} is available on CRAN at \url{http://cran.r-project.org/package=robustlmm} under the GPL-v2 license.
+This article is a tutorial for \pkg{robustlmm}, an implementation of the Robust Scoring Equations estimator to fit mixed-effects models for the statistical computing environment \Rp  \citep{R}. The \Rp package \pkg{robustlmm} is available on CRAN at \url{http://cran.r-project.org/package=robustlmm} under the GPL-v2 license.
 
 In the next section we provide background on \pkg{robustlmm}'s underlying estimating equations and algorithms. In Section~\ref{implementation}, we describe how \pkg{robustlmm} is implemented. In Section~\ref{usage}, we work an example and demonstrate how to do a full statistical analysis. Pointers to further information are given in Section~\ref{furtherInformation}. Details, tables of tuning parameters and formulas are contained in the Appendix.
 
@@ -242,7 +243,13 @@ We start by loading the \Rp package and the modified \code{Penicillin} dataset.
 options(width = 60, str = strOptions(vec.len = 1.4), prompt = 'R> ', continue = '+  ')
 <<init>>=
 require("robustlmm")
-source(system.file("doc/Penicillin.R", package = "robustlmm"))
+warning("Current dir: ", system.file("", package = "robustlmm"), " has contents: ",
+        paste(list.files(system.file("", package = "robustlmm")), collapse = ", "))
+warning("doc dir: ", system.file("doc", package = "robustlmm"), " has contents: ",
+        paste(list.files(system.file("doc", package = "robustlmm")), collapse = ", "))
+filename <- system.file("doc/Penicillin.R", package = "robustlmm", mustWork = TRUE)
+warning("Filename: ", filename)
+source(filename)
 <<plot-figure1, echo=FALSE, eval=FALSE>>=
 require(ggplot2)
 require(reshape2)
@@ -278,7 +285,7 @@ summary(rfm)
 
 The output is close to the output from \code{lmer}. The first part of the summary provides information about the model fit; the estimates of $\Vbth$ and $\sigma$; followed by the estimated fixed effects and derived statistics and (if applicable) the correlation of the fixed effects.  The second part gives information about the robustness weights and a list of the $\rho$-functions employed.
 
-As we can read off the summary, the default $\rho$-function is the smoothed Huber $\rho$-function, which is a smoothed variant of the regular Huber function (the exact definition is given in the Appendix).  The functions for estimating $\sigma$ and $\vec\theta$ are suffixed by ``Proposal II'', indicating that squared robustness weights, with a high robustness but a low efficiency, are used by default (diagonal blocks only, for unstructured blocks the regular $\rho$-function is used by default).
+As we can read off the summary, the default $\rho$-function is the smoothed Huber $\rho$-function, which is a smoothed variant of the regular Huber function (the exact definition is given in the Appendix).  The functions for estimating $\sigma$ and $\vec\theta$ are suffixed by ``Proposal 2'', indicating that squared robustness weights, with a high robustness but a low efficiency, are used by default (diagonal blocks only, for unstructured blocks the regular $\rho$-function is used by default).
 
 The summary also tells us that the lowest robustness weights for both the observations and the groups are about $0.2$. We can get a full named list of the robustness weights by using the calls \code{getME(rfm, "w\_e")} and \code{getME(rfm, "w\_b")} for the observations and the groups, respectively.
 
@@ -690,7 +697,7 @@ print(ggplot(test.1, aes(theta, value, color = variable)) +
 
 The methods described here work for convex $\rho$-functions as well as for redescender $\rho$-functions. If redescender $\rho$-functions are used, the algorithm as defined here converges to a local solution. It is up to the initial estimator to provide starting values that ensure the algorithm converges to the right local solution, whatever the right solution is. In case of MM-estimates for the fixed effects model, the initial S-estimate makes sure that the final estimate has the desired high breakdown point. The same would certainly also be desirable in case of mixed-effects models. However, to the best of our knowledge, there exists currently no such estimator. The S-estimators by \citet{copt2006high} and \citet{chervoneva2011constrained} do not seem suitable, since they are based on a different contamination model and are not as general as the method proposed here.
 
-If convex $\rho$-functions are used, this difficulty does not exist. Apart from the artificial solution $\tildev\theta$ close to zero (see Figure~\ref{fig:multipleSolutions}) which is easily distinguishable from the true solution, we conjecture that the solutions are unique as they are for the Proposal II case in the location-scale problem \citep{koller2013diss}. We therefore consider it safe to use the classic solutions as initial estimates when convex $\rho$-functions are used.
+If convex $\rho$-functions are used, this difficulty does not exist. Apart from the artificial solution $\tildev\theta$ close to zero (see Figure~\ref{fig:multipleSolutions}) which is easily distinguishable from the true solution, we conjecture that the solutions are unique as they are for the Proposal 2 case in the location-scale problem \citep{koller2013diss}. We therefore consider it safe to use the classic solutions as initial estimates when convex $\rho$-functions are used.
 
 Redescender $\rho$-functions have the advantage that they can assign a weight of zero to some observations or random effects levels. This makes it possible that such observations have no influence on the estimates. When convex $\rho$-functions are used, an observation practically always has an influence on the estimates, since a weight of zero is only reached in the limit, when the residual or the random effect level approaches plus or minus infinity.  If one is interested in eliminating the influence of observations, then one might consider the following. First, compute the fit using a convex $\rho$-function. Then use the results as starting value for fitting using a redescender $\rho$-function in a second step. In the absence of good initial estimators for redescender $\rho$-functions, this approach might be used to get at least some of the desirable properties of redescender $\rho$-functions.
 

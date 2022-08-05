@@ -12,33 +12,30 @@
 ## see examples
 }
 \description{
-\eqn{\psi}{Psi}-functions are used by \code{\link{rlmer}}
-in the estimating equations and to compute robustness
-weights. Change tuning parameters using \code{\link{chgDefaults}}
-and convert to squared robustness weights using the
-\code{\link{psi2propII}} function.
+\eqn{\psi}{Psi}-functions are used by \code{\link{rlmer}} in the estimating
+equations and to compute robustness weights. Change tuning parameters using
+\code{\link{chgDefaults}} and convert to squared robustness weights using
+the \code{\link{psi2propII}} function.
 }
 \details{
-The \bold{\dQuote{classical} \eqn{\psi}{psi}-function \code{cPsi}}
-can be used to get a non-robust, i.e., classical, fit.
-The \code{psi} slot equals the identity function, and
-the \code{rho} slot equals quadratic function. Accordingly,
-the robustness weights will always be 1 when using \code{cPsi}.
+The \bold{\dQuote{classical} \eqn{\psi}{psi}-function \code{cPsi}} can be
+used to get a non-robust, i.e., classical, fit. The \code{psi} slot equals
+the identity function, and the \code{rho} slot equals quadratic function.
+Accordingly, the robustness weights will always be 1 when using \code{cPsi}.
 
 The \bold{Huber \eqn{\psi}{psi}-function \code{huberPsi}} is identical to
-the one in the package \code{robustbase}. The \code{psi} slot equals
-the identity function within \eqn{\pm k}{+-k} (where \eqn{k}{k} is
-the tuning parameter). Outside this interval it is equal to
-\eqn{\pm k}{+-k}. The \code{rho} slot equals the quadratic
-function within \eqn{\pm k}{+-k} and a linear function outside.
+the one in the package \code{robustbase}. The \code{psi} slot equals the
+identity function within \eqn{\pm k}{+-k} (where \eqn{k}{k} is the tuning
+parameter). Outside this interval it is equal to \eqn{\pm k}{+-k}. The
+\code{rho} slot equals the quadratic function within \eqn{\pm k}{+-k} and a
+linear function outside.
 
-The \bold{smoothed Huber \eqn{\psi}{psi}-function} is very similar to
-the regular Huber \eqn{\psi}{psi}-function.
-Instead of a sharp bend like the Huber function,
-the smoothed Huber function bends smoothly. The first tuning
-contant, k, can be compared to the tuning constant
-of the original Huber function. The second tuning
-constant, s, determines the smoothness of the bend.
+The \bold{smoothed Huber \eqn{\psi}{psi}-function} is very similar to the
+regular Huber \eqn{\psi}{psi}-function. Instead of a sharp bend like the
+Huber function, the smoothed Huber function bends smoothly. The first tuning
+contant, k, can be compared to the tuning constant of the original Huber
+function. The second tuning constant, s, determines the smoothness of the
+bend.
 }
 \examples{
 plot(cPsi)
@@ -49,9 +46,7 @@ curve(smoothPsi@psi(x), 0, 3, add=TRUE)
 curve(huberPsiRcpp@psi(x), 0, 3, add=TRUE, col="green")
 }
 \seealso{
-\code{\link{chgDefaults}} and \code{\link{psi2propII}}
-for changing tuning parameters;
-\code{\link{PsiFunction}} and
-\code{\link{SmoothPsi}} for a more detailed description of the
-slots;
+\code{\link{chgDefaults}} and \code{\link{psi2propII}} for changing
+  tuning parameters; \code{\link[robustbase]{psi_func-class}} for a more detailed
+  description of the slots;
 }

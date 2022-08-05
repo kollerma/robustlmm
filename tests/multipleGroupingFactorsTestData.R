@@ -41,6 +41,10 @@ testFormula <- function(formula, data) {
 }
 
 ms1 <- testFormula(resp ~ (1 + treat1|group1) + (1 + treat1|group2), data)
+
+## currently fails with segmentation fault. When running in github-actions, it says:
+## corrupted double-linked list
+
 ms2 <- testFormula(resp ~ (1 + treat1|group1) + (1 + treat2|group2), data)
 ms3 <- testFormula(resp ~ (1 + treat1 + treat2|group1) + (1 + treat1 + treat2|group2), data)
 ms4 <- testFormula(resp ~ (1 + treat1:treat2|group1) + (1 + treat1:treat2|group2), data)

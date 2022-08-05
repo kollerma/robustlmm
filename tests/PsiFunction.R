@@ -174,7 +174,7 @@ stopifnot(all.equal(huberPsiRcpp@wgt(x), robustbase::huberPsi@wgt(x)),
   ## do not do anything for cPsi
   if (identical(object, cPsi)) return(object)
 
-  ## Convert a regular psi-function into a proposal II psi function
+  ## Convert a regular psi-function into a Proposal 2 psi function
   ## (with squared weights)
   f <- formals(object@psi)
   nf <- names(f)
@@ -212,7 +212,7 @@ stopifnot(all.equal(huberPsiRcpp@wgt(x), robustbase::huberPsi@wgt(x)),
   formals(rho) <- f
 
   ret <- do.call(psiFuncCached, c(list(wgt=wgt, Dwgt=Dwgt, psi=psi, Dpsi=Dpsi, rho=rho),
-                                  f[-1], name=paste(object@name, ", Proposal II", sep="")))
+                                  f[-1], name=paste(object@name, ", Proposal 2", sep="")))
   ## if ... is given: pass it to chgDefaults
   chgArgs <- list(...)
   if (length(chgArgs) > 0) {

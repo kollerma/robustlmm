@@ -115,43 +115,38 @@ psiFuncRcpp <- function(rcppClass, ...) {
   return(funcRcpp)
 }
 
-##' \eqn{\psi}{Psi}-functions are used by \code{\link{rlmer}}
-##' in the estimating equations and to compute robustness
-##' weights. Change tuning parameters using \code{\link{chgDefaults}}
-##' and convert to squared robustness weights using the
-##' \code{\link{psi2propII}} function.
+##' \eqn{\psi}{Psi}-functions are used by \code{\link{rlmer}} in the estimating
+##' equations and to compute robustness weights. Change tuning parameters using
+##' \code{\link{chgDefaults}} and convert to squared robustness weights using
+##' the \code{\link{psi2propII}} function.
 ##'
-##' The \bold{\dQuote{classical} \eqn{\psi}{psi}-function \code{cPsi}}
-##' can be used to get a non-robust, i.e., classical, fit.
-##' The \code{psi} slot equals the identity function, and
-##' the \code{rho} slot equals quadratic function. Accordingly,
-##' the robustness weights will always be 1 when using \code{cPsi}.
+##' The \bold{\dQuote{classical} \eqn{\psi}{psi}-function \code{cPsi}} can be
+##' used to get a non-robust, i.e., classical, fit. The \code{psi} slot equals
+##' the identity function, and the \code{rho} slot equals quadratic function.
+##' Accordingly, the robustness weights will always be 1 when using \code{cPsi}.
 ##'
 ##' The \bold{Huber \eqn{\psi}{psi}-function \code{huberPsi}} is identical to
-##' the one in the package \code{robustbase}. The \code{psi} slot equals
-##' the identity function within \eqn{\pm k}{+-k} (where \eqn{k}{k} is
-##' the tuning parameter). Outside this interval it is equal to
-##' \eqn{\pm k}{+-k}. The \code{rho} slot equals the quadratic
-##' function within \eqn{\pm k}{+-k} and a linear function outside.
+##' the one in the package \code{robustbase}. The \code{psi} slot equals the
+##' identity function within \eqn{\pm k}{+-k} (where \eqn{k}{k} is the tuning
+##' parameter). Outside this interval it is equal to \eqn{\pm k}{+-k}. The
+##' \code{rho} slot equals the quadratic function within \eqn{\pm k}{+-k} and a
+##' linear function outside.
 ##'
-##' The \bold{smoothed Huber \eqn{\psi}{psi}-function} is very similar to
-##' the regular Huber \eqn{\psi}{psi}-function.
-##' Instead of a sharp bend like the Huber function,
-##' the smoothed Huber function bends smoothly. The first tuning
-##' contant, k, can be compared to the tuning constant
-##' of the original Huber function. The second tuning
-##' constant, s, determines the smoothness of the bend.
+##' The \bold{smoothed Huber \eqn{\psi}{psi}-function} is very similar to the
+##' regular Huber \eqn{\psi}{psi}-function. Instead of a sharp bend like the
+##' Huber function, the smoothed Huber function bends smoothly. The first tuning
+##' contant, k, can be compared to the tuning constant of the original Huber
+##' function. The second tuning constant, s, determines the smoothness of the
+##' bend.
 ##'
 ##' @title Classical, Huber and smoothed Huber psi- or rho-functions
 ##' @name psi-functions
 ##' @rdname psi-functions
 ##' @aliases cPsi smoothPsi SmoothPsi PsiFunction huberPsiRcpp
 ##' @usage ## see examples
-##' @seealso \code{\link{chgDefaults}} and \code{\link{psi2propII}}
-##' for changing tuning parameters;
-##' \code{\link{PsiFunction}} and
-##' \code{\link{SmoothPsi}} for a more detailed description of the
-##' slots;
+##' @seealso \code{\link{chgDefaults}} and \code{\link{psi2propII}} for changing
+##'   tuning parameters; \code{\link[robustbase]{psi_func-class}} for a more detailed
+##'   description of the slots;
 ##' @examples
 ##' plot(cPsi)
 ##' plot(huberPsiRcpp)
@@ -162,11 +157,9 @@ psiFuncRcpp <- function(rcppClass, ...) {
 ##' @export cPsi
 setLoadAction(function(ns) assign("cPsi", psiFuncRcpp("PsiFunction"), envir = ns))
 
-##' @rdname psi-functions
 ##' @export huberPsiRcpp
 setLoadAction(function(ns) assign("huberPsiRcpp", psiFuncRcpp("HuberPsi"), envir = ns))
 
-##' @rdname psi-functions
 ##' @export smoothPsi
 setLoadAction(function(ns) assign("smoothPsi", psiFuncRcpp("SmoothPsi"), envir = ns))
 
@@ -179,9 +172,8 @@ setLoadAction(function(ns) assign("smoothPsi", psiFuncRcpp("SmoothPsi"), envir =
   return(clone)
 }
 ##' Change the default arguments for a psi_func_rcpp object
-##' @note
-##' Note that names of named arguments are ignored. Only the order of the arguments
-##' considered when assigning new arguments.
+##' @note Note that names of named arguments are ignored. Only the order of the
+##' arguments considered when assigning new arguments.
 ##' @title Change default arguments
 ##' @name chgDefaults
 ##' @aliases chgDefaults,psi_func_rcpp-method
@@ -213,13 +205,16 @@ setMethod("chgDefaults", signature("psi_func_rcpp"), .chgDefaults)
   } else name
 }
 
-##' Converts the psi_func object into a function that corresponds
-##' to Proposal II, i.e., a function of the squared weights.
-##' The other elements of the psi_func object are adapted accordingly.
+##' Converts the psi_func object into a function that corresponds to Proposal
+##' 2, i.e., a function of the squared weights. The other elements of the
+##' psi_func object are adapted accordingly.
 ##'
-##' @title Convert to Propsal II weight function
+##' @title Convert to Proposal 2 weight function
 ##' @param object instance of Rcpp_PsiFunction class to convert
 ##' @param ... optional, new default arguments passed to chgDefaults.
+##' @param adjust logical, whether tuning parameters should be adjusted
+##'   automatically, such that the scale estimate has the same asymptotic
+##'   efficiency as the location estimate.
 ##' @aliases psi2propII,Rcpp_SmoothPsi
 ##' @keywords utilities
 ##' @examples
@@ -227,10 +222,10 @@ setMethod("chgDefaults", signature("psi_func_rcpp"), .chgDefaults)
 ##' plot(smoothPsi)
 ##' plot(psi2propII(smoothPsi))
 ##' @export
-setGeneric("psi2propII", function(object, ...) standardGeneric("psi2propII"))
+setGeneric("psi2propII", function(object, ..., adjust = FALSE) standardGeneric("psi2propII"))
 ##' @exportMethod psi2propII psi_func_rcpp
 
-.psi2propII <- function(object, ...) {
+.psi2propII <- function(object, ..., adjust = FALSE) {
   if (identical(object, cPsi))
     return(cPsi)
   if (object@getRcppClass()[1] == "PsiFunctionToPropIIPsiFunctionWrapper") {
@@ -240,7 +235,21 @@ setGeneric("psi2propII", function(object, ...) standardGeneric("psi2propII"))
                   c(list(c("PsiFunctionToPropIIPsiFunctionWrapper",
                            object@getRcppClass()),
                          fixTDefs(..., defaultTDefs = object@tDefs))))
+  if (adjust) {
+      if (isDefaultHuberOrSmoothPsi(object)) {
+          ## skip computation and use value as recommended in docs
+          adjustedTuningParameter <- 2.28
+      } else {
+        targetEfficiency <- asymptoticEfficiency(object, "location")
+        adjustedTuningParameter <- findTuningParameter(targetEfficiency, func, "scale")
+      }
+    func <- chgDefaults(func, k = adjustedTuningParameter)
+  }
   return(func)
+}
+
+isDefaultHuberOrSmoothPsi <- function(object) {
+    return(identical(object, smoothPsi) || identical(object, huberPsiRcpp))
 }
 
 ##' @rdname psi2propII

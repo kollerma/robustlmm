@@ -79,29 +79,26 @@ rsc <- function(obj, title="") {
     plots
 }
 
-##' Diagnostic plots for objects of class \code{rlmerMod} and
-##' \code{lmerMod}.
+##' Diagnostic plots for objects of class \code{rlmerMod} and \code{lmerMod}.
 ##'
-##' The robustness weights for estimating the fixed and random effects
-##' are used in the plots, e.g., the ones returned by
-##' \code{getME(object, "w_e")} and \code{getME(object, "w_b")}.
+##' The robustness weights for estimating the fixed and random effects are used
+##' in the plots, e.g., the ones returned by \code{getME(object, "w_e")} and
+##' \code{getME(object, "w_b")}.
 ##'
 ##' @title Plot Method for "rlmerMod" objects.
-##' @param x an object as created by \code{rlmer} or \code{rlmer}; or
-##'   an object as created by \code{plot.rlmerMod}
+##' @param x an object as created by \code{rlmer} or \code{rlmer}; or an object
+##'   as created by \code{plot.rlmerMod}
 ##' @param y currently ignored.
-##' @param which integer number between 1 and 4 to specify which plot
-##'    is desired.
-##' @param title Titles for the different plots. The fourth item
-##'   can be a format string passed to \code{sprintf} to add the name
-##'   of the current group.
-##' @param multiply.weights multiply the residuals / random effects
-##'   with the robustness weights when producing the Q-Q plots.
+##' @param which integer number between 1 and 4 to specify which plot is
+##'   desired.
+##' @param title Titles for the different plots. The fourth item can be a format
+##'   string passed to \code{sprintf} to add the name of the current group.
+##' @param multiply.weights multiply the residuals / random effects with the
+##'   robustness weights when producing the Q-Q plots.
 ##' @param ask waits for user input before displaying each plot.
 ##' @param ... currently ignored.
-##' @return a list of plots of class \code{\link{ggplot}} that can
-##'   be used for further modification before plotting (using
-##'    \code{print}).
+##' @return a list of plots of class \code{\link{ggplot}} that can be used for
+##'   further modification before plotting (using \code{print}).
 ##' @seealso \code{\link{getME}}, \code{\link[ggplot2]{ggplot}}
 ##' @examples
 ##' \dontrun{

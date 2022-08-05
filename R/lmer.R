@@ -1,12 +1,12 @@
-##' The \code{lmerNoFit} function can be used to get trivial
-##' starting values. This is mainly used to verify the algorithms to
-##' reproduce the fit by \code{\link{lmer}} when starting from trivial
-##' initial values.
+##' The \code{lmerNoFit} function can be used to get trivial starting values.
+##' This is mainly used to verify the algorithms to reproduce the fit by
+##' \code{\link{lmer}} when starting from trivial initial values.
 ##'
 ##' @rdname rlmer
 ##' @param initTheta parameter to initialize theta with (optional)
 ##' @examples
 ##' \dontrun{
+##'   ## start from lmer's initial estimate, not its fit
 ##'   rlmer(Yield ~ (1|Batch), Dyestuff, init = lmerNoFit)
 ##' }
 ##' @importFrom lme4 mkMerMod

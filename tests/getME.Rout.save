@@ -1,6 +1,6 @@
 
-R version 4.1.2 (2021-11-01) -- "Bird Hippie"
-Copyright (C) 2021 The R Foundation for Statistical Computing
+R version 4.2.1 (2022-06-23) -- "Funny-Looking Kid"
+Copyright (C) 2022 The R Foundation for Statistical Computing
 Platform: aarch64-apple-darwin20 (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
@@ -239,14 +239,14 @@ smoothed Huber psi function (k = 1.345, s = 10)
 
 
 Name: rho_sigma_e 
-smoothed Huber, Proposal II psi function (k = 2.28, s = 10) 
+smoothed Huber, Proposal 2 psi function (k = 2.28, s = 10) 
 
 Name: rho_sigma_b 
 $Subject
-smoothed Huber, Proposal II psi function (k = 2.28, s = 10) 
+smoothed Huber, Proposal 2 psi function (k = 2.28, s = 10) 
 
 $Group
-smoothed Huber, Proposal II psi function (k = 2.28, s = 10) 
+smoothed Huber, Proposal 2 psi function (k = 2.28, s = 10) 
 
 
 Name: M 
@@ -393,4 +393,4 @@ List of 34
 > 
 > proc.time()
    user  system elapsed 
-  1.351   0.057   1.404 
+  1.479   0.075   1.550 

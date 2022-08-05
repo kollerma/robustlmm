@@ -4,21 +4,25 @@
 \alias{psi2propII}
 \alias{psi2propII,Rcpp_SmoothPsi}
 \alias{psi2propII,psi_func_rcpp-method}
-\title{Convert to Propsal II weight function}
+\title{Convert to Proposal 2 weight function}
 \usage{
-psi2propII(object, ...)
+psi2propII(object, ..., adjust = FALSE)
 
-\S4method{psi2propII}{psi_func_rcpp}(object, ...)
+\S4method{psi2propII}{psi_func_rcpp}(object, ..., adjust = FALSE)
 }
 \arguments{
 \item{object}{instance of Rcpp_PsiFunction class to convert}
 
 \item{...}{optional, new default arguments passed to chgDefaults.}
+
+\item{adjust}{logical, whether tuning parameters should be adjusted
+automatically, such that the scale estimate has the same asymptotic
+efficiency as the location estimate.}
 }
 \description{
-Converts the psi_func object into a function that corresponds
-to Proposal II, i.e., a function of the squared weights.
-The other elements of the psi_func object are adapted accordingly.
+Converts the psi_func object into a function that corresponds to Proposal
+2, i.e., a function of the squared weights. The other elements of the
+psi_func object are adapted accordingly.
 }
 \examples{
 par(mfrow=c(2,1))

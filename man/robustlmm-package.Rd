@@ -26,18 +26,23 @@
   they are applicable for this type of models (see
   \code{\link{rlmerMod-class}} for a full list). The functions are designed
   to be as similar as possible to the ones in the \code{\link{lme4}}
-  package to make switching between the two packages easy. 
-  
+  package to make switching between the two packages easy.
+
   Details on the implementation and example analyses are provided in the
   package vignette available via \code{vignette("rlmer")} (Koller 2016).
  }
 \references{
   Manuel Koller (2016).
-  robustlmm: An R Package for Robust Estimation of Linear Mixed-Effects Models. 
+  robustlmm: An R Package for Robust Estimation of Linear Mixed-Effects Models.
   Journal of Statistical Software, 75(6), 1-24. doi:10.18637/jss.v075.i06
-  
+
+  Koller M, Stahel WA (2022).
+  "Robust Estimation of General Linear Mixed Effects Models.”
+  In PM Yi, PK Nordhausen (eds.), Robust and Multivariate Statistical Methods,
+  Springer Nature Switzerland AG.
+
   Manuel Koller (2013).
   Robust estimation of linear mixed models.
   (Doctoral dissertation, Diss., Eidgenössische Technische Hochschule ETH Zürich, Nr. 20997, 2013).
 }
- 
+

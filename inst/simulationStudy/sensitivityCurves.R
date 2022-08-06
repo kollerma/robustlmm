@@ -94,11 +94,13 @@ basePlot <- ggplot(plotData_shiftFirstObservation,
         color = "gray"
     ) +
     geom_line(aes(color = Method, linetype = Method)) +
-    facet_wrap(~ variable, scales = "free_y", nrow = 1) +
-    scale_colour_manual("Method",
-                        values = colors[c(1, 3, 2)],
-                        breaks = levels(plotData_shiftFirstObservation$Method),
-                        labels = levels(plotData_shiftFirstObservation$Method)) +
+    facet_wrap( ~ variable, scales = "free_y", nrow = 1) +
+    scale_colour_manual(
+        "Method",
+        values = colors[c(1, 3, 2)],
+        breaks = levels(plotData_shiftFirstObservation$Method),
+        labels = levels(plotData_shiftFirstObservation$Method)
+    ) +
     theme(legend.position = "top")
 
 plot_shiftFirstObservation <-

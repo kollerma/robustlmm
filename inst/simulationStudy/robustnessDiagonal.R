@@ -72,9 +72,11 @@ fitDatasets_varComprob_compositeTau_OGK_with_init_scale <-
     function(datasets, postFit) {
         if (require(robustvarComp)) {
             lcontrol <-
-                robustvarComp::varComprob.control(lower = datasets[["lower"]],
-                                                  cov.init = "covOGK",
-                                                  init = list(scale = 15))
+                robustvarComp::varComprob.control(
+                    lower = datasets[["lower"]],
+                    cov.init = "covOGK",
+                    init = list(scale = 15)
+                )
         } else {
             lcontrol <- NULL
         }
@@ -126,6 +128,8 @@ fittingFunctions <-
 ########################################################
 
 baseFilename <- "datasets_robustnessDiagonal"
+createMinimalSaveFile <-
+    path != system.file("simulationStudy", package = "robustlmm")
 results <- processDatasetsInParallel(
     datasets,
     path,
@@ -133,6 +137,7 @@ results <- processDatasetsInParallel(
     fittingFunctions,
     chunkSize = 50,
     checkProcessed = TRUE,
+    createMinimalSaveFile = createMinimalSaveFile,
     ncores = ncores,
     stdErrors = TRUE
 )
@@ -168,7 +173,8 @@ plotData <- cbind(
     results$coefficients,
     results$sigma,
     results$sigma * results$thetas,
-    computeSignificance(results, datasets)
+    computeSignificance(results, datasets),
+    results$datasetIndex
 )
 levels(plotData$Method) <-
     shortenLabelsKS2022(levels(plotData$Method))
@@ -181,7 +187,8 @@ names(plotData)[-(1:2)] <-
         "B.sigma",
         "beta0.significance",
         "beta1.significance",
-        "beta2.significance"
+        "beta2.significance",
+        "datasetIndex"
     )
 
 plotDataRobustnessTmp <- reshape2::melt(plotData[1:7], 1:2)
@@ -208,13 +215,38 @@ plotDataTruth <-
         )
     )
 
-plotDataCoverageTmp <- reshape2::melt(plotData[-(3:7)], 1:2)
+plotDataCoverageTmp <-
+    reshape2::melt(plotData[-c(3:7, ncol(plotData))], 1:2)
 plotDataCoverage <-
     aggregate(plotDataCoverageTmp[["value"]], plotDataCoverageTmp[1:3], function(x)
         1 - mean(x))
 names(plotDataCoverage)[4] <- "coverage probability"
 levels(plotDataCoverage$variable) <-
     sub(".significance", "", levels(plotDataCoverage$variable))
+
+########################################################
+## load and verify aggregated data from full results  ##
+########################################################
+
+aggregatedFile <-
+    file.path(path, paste0(baseFilename, "-aggregated.Rdata"))
+runningOnMinimalProcessedResults <- max(plotData$datasetIndex) == 3
+if (runningOnMinimalProcessedResults) {
+    if (file.exists(aggregatedFile)) {
+        load(aggregatedFile)
+        stopifnot(all.equal(plotData, partialPlotData, check.attributes = FALSE))
+    } else {
+        warning("Running on minimal processed results, ",
+                "but aggregated plot data is missing.")
+    }
+} else if (!file.exists(aggregatedFile) && createMinimalSaveFile) {
+    partialPlotData <- subset(plotData, datasetIndex <= 3)
+    save(partialPlotData,
+         plotDataRobustness,
+         plotDataTruth,
+         plotDataCoverage,
+         file = aggregatedFile)
+}
 
 ########################################################
 ## plot results                                       ##
@@ -234,10 +266,12 @@ if (interactive()) {
 plot_coverageDiagonal <-
     ggplot(plotDataCoverage,
            aes(Generator, `coverage probability`, color = Method)) +
-    geom_hline(yintercept = 0.95, color="gray", size = 0.5) +
+    geom_hline(yintercept = 0.95,
+               color = "gray",
+               size = 0.5) +
     lemon::geom_pointline(aes(group = Method)) +
     xlab("") +
-    facet_wrap(~ variable)
+    facet_wrap( ~ variable)
 
 if (interactive()) {
     print(plot_coverageDiagonal)

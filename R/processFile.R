@@ -209,6 +209,10 @@ getValuesOrNa <-
 ##'   the processed output is reproduced for the first dataset. This is useful
 ##'   to ensure that everything is still working as expected without having to
 ##'   re-run the whole simulation study.
+##' @param createMinimalSaveFile logical, if true, will create a file with the
+##'   processed results of the first three datasets. This is helpful if one
+##'   wants to store only the final aggregated results but still wants to make
+##'   sure that the full code works as expected.
 ##' @param datasets optional, datasets as stored in \code{file}, to avoid doing
 ##'   a detour of saving and loading the file.
 ##' @param ... passed on to \code{\link{processFit}}. Use this to control what
@@ -224,20 +228,32 @@ processFile <-
              fittingFunctions,
              saveFitted = FALSE,
              checkProcessed = FALSE,
+             createMinimalSaveFile = FALSE,
              datasets,
              ...) {
-        processedFile <- sub(".Rdata", "-processed.Rdata", file)
-        if (file.exists(processedFile)) {
+        resultsFile <-
+            processedFile <- sub(".Rdata", "-processed.Rdata", file)
+        minimalFile <- sub(".Rdata", "-minimal.Rdata", file)
+        processedResultsExist <- file.exists(processedFile)
+        if (!processedResultsExist && file.exists(minimalFile)) {
+            resultsFile <- minimalFile
+            processedResultsExist <- TRUE
+        }
+        if (processedResultsExist) {
             if (checkProcessed) {
                 results <-
                     checkProcessed(file,
-                                   processedFile,
+                                   resultsFile,
                                    fittingFunctions,
                                    datasets,
                                    ...)
             } else {
-                contents <- load(processedFile)
-                checkContents(contents, processedFile, "results")
+                contents <- load(resultsFile)
+                checkContents(contents, resultsFile, "results")
+            }
+            if (createMinimalSaveFile &&
+                !file.exists(minimalFile)) {
+                doCreateMinimalSaveFile(results, minimalFile)
             }
             return(results)
         }
@@ -247,8 +263,28 @@ processFile <-
         results <- mergeProcessedFits(processedFitList)
         attr(results, "sessionInfo") <- attr(fits, "sessionInfo")
         save(results, file = processedFile)
+        if (createMinimalSaveFile) {
+            doCreateMinimalSaveFile(results, minimalFile)
+        }
         return(results)
     }
+
+doCreateMinimalSaveFile <- function(fullResults, minimalFile) {
+    index <- fullResults$datasetIndex <= 3
+    results <- list()
+    for (name in names(fullResults)) {
+        storedItem <- fullResults[[name]]
+        if (length(dim(storedItem)) == 2) {
+            extractedItem <- storedItem[index, , drop = FALSE]
+        } else {
+            extractedItem <- storedItem[index, drop = FALSE]
+        }
+        extractedItemList <- list(extractedItem)
+        names(extractedItemList) <- name
+        results <- c(results, extractedItemList)
+    }
+    save(results, file = minimalFile)
+}
 
 globalVariables(c("datasets", "results"))
 
@@ -296,7 +332,11 @@ checkEqualsStoredResult <- function(fit, storedResults, ...) {
         tolerance <- 0.01 ## summary.lqmm uses bootstrap.
         ## The result are sometimes different even though we specify the rng seed.
     }
-    check <- all.equal(expected, actual, check.attributes = FALSE, tolerance = tolerance)
+    check <-
+        all.equal(expected,
+                  actual,
+                  check.attributes = FALSE,
+                  tolerance = tolerance)
     if (isTRUE(check)) {
         return(check)
     } else {
@@ -399,6 +439,10 @@ createSessionInfoString <- function() {
 ##'   the processed output is reproduced for the first dataset. This is useful
 ##'   to ensure that everything is still working as expected without having to
 ##'   re-run the whole simulation study.
+##' @param createMinimalSaveFile logical, if true, will create a file with the
+##'   processed results of the first three datasets. This is helpful if one
+##'   wants to store only the final aggregated results but still wants to make
+##'   sure that the full code works as expected.
 ##' @param ncores number of cores to use in processing, if set to 1, datasets
 ##'   are processed in the current R session. Use
 ##'   \code{\link[parallel]{detectCores}} to find out how many cores are
@@ -421,18 +465,21 @@ processDatasetsInParallel <- function(datasets,
                                       chunkSize,
                                       saveFitted = FALSE,
                                       checkProcessed = FALSE,
+                                      createMinimalSaveFile = FALSE,
                                       ncores = 1,
                                       clusterType = "PSOCK",
                                       ...) {
     file <- paste0(file.path(path, baseFilename), ".Rdata")
     processedFile <- sub(".Rdata", "-processed.Rdata", file)
+    minimalFile <- sub(".Rdata", "-minimal.Rdata", file)
 
-    if (file.exists(processedFile)) {
+    if (file.exists(processedFile) || file.exists(minimalFile)) {
         results <-
             processFile(
                 file,
                 fittingFunctions,
                 checkProcessed = checkProcessed,
+                createMinimalSaveFile = createMinimalSaveFile,
                 datasets = datasets,
                 ...
             )
@@ -462,20 +509,27 @@ processDatasetsInParallel <- function(datasets,
             fittingFunctions,
             saveFitted = saveFitted,
             checkProcessed = checkProcessed,
+            createMinimalSaveFile = FALSE,
             ...
         )
     } else {
         sapply(files, function(x) {
-            processFile(x,
-                        fittingFunctions,
-                        saveFitted = saveFitted,
-                        checkProcessed = checkProcessed,
-                        ...)
+            processFile(
+                x,
+                fittingFunctions,
+                saveFitted = saveFitted,
+                checkProcessed = checkProcessed,
+                createMinimalSaveFile = FALSE,
+                ...
+            )
         })
     }
     done <- listIntermediateResults(path, baseFilename)
     results <- loadAndMergePartialResults(done)
     save(results, file = processedFile)
+    if (createMinimalSaveFile) {
+        doCreateMinimalSaveFile(results, minimalFile)
+    }
     return(results)
 }
 

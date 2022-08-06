@@ -39,6 +39,8 @@ fittingFunctions <- list(
 ########################################################
 
 baseFilename <- "datasets_consistencyAndEfficiencyDiagonal"
+createMinimalSaveFile <-
+    path != system.file("simulationStudy", package = "robustlmm")
 results <- processDatasetsInParallel(
     datasets,
     path,
@@ -46,6 +48,7 @@ results <- processDatasetsInParallel(
     fittingFunctions,
     chunkSize = 10,
     checkProcessed = TRUE,
+    createMinimalSaveFile = createMinimalSaveFile,
     ncores = ncores,
     meanB = TRUE,
     meanAbsB = TRUE
@@ -61,7 +64,8 @@ plotData <- cbind(
     log(results$sigma),
     results$thetas,
     results$meanB,
-    results$meanAbsB
+    results$meanAbsB,
+    results$datasetIndex
 )
 names(plotData)[-1] <-
     c("beta0",
@@ -70,10 +74,11 @@ names(plotData)[-1] <-
       "log(sigma)",
       "theta",
       "meanB",
-      "meanAbsB")
-plotData <- reshape2::melt(plotData, 1)
+      "meanAbsB",
+      "datasetIndex")
+plotDataTmp <- reshape2::melt(plotData[-ncol(plotData)], 1)
 plotDataAggr <-
-    aggregate(plotData[["value"]], plotData[1:2], function(x)
+    aggregate(plotDataTmp[["value"]], plotDataTmp[1:2], function(x)
         c(
             mean = mean(x),
             quantile(x, c(0.25, 0.75)),
@@ -130,6 +135,31 @@ plotDataMerged <-
         suffixes = c(".RSE", ".lme")
     )
 plotDataMerged <- droplevels(plotDataMerged)
+
+########################################################
+## load and verify aggregated data from full results  ##
+########################################################
+
+aggregatedFile <-
+    file.path(path, paste0(baseFilename, "-aggregated.Rdata"))
+runningOnMinimalProcessedResults <- max(plotData$datasetIndex) == 3
+if (runningOnMinimalProcessedResults) {
+    if (file.exists(aggregatedFile)) {
+        load(aggregatedFile)
+        stopifnot(all.equal(plotData, partialPlotData, check.attributes = FALSE))
+    } else {
+        warning("Running on minimal processed results, ",
+                "but aggregated plot data is missing.")
+    }
+} else if (!file.exists(aggregatedFile) && createMinimalSaveFile) {
+    partialPlotData <- subset(plotData, datasetIndex <= 3)
+    save(partialPlotData,
+         plotDataRse,
+         plotDataTruth,
+         plotDataLme,
+         plotDataMerged,
+         file = aggregatedFile)
+}
 
 ########################################################
 ## Compute expected asymptotic efficiencies           ##

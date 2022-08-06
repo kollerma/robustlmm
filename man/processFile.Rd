@@ -9,6 +9,7 @@ processFile(
   fittingFunctions,
   saveFitted = FALSE,
   checkProcessed = FALSE,
+  createMinimalSaveFile = FALSE,
   datasets,
   ...
 )
@@ -25,6 +26,11 @@ should be applied to each dataset.}
 the processed output is reproduced for the first dataset. This is useful
 to ensure that everything is still working as expected without having to
 re-run the whole simulation study.}
+
+\item{createMinimalSaveFile}{logical, if true, will create a file with the
+processed results of the first three datasets. This is helpful if one
+wants to store only the final aggregated results but still wants to make
+sure that the full code works as expected.}
 
 \item{datasets}{optional, datasets as stored in \code{file}, to avoid doing
 a detour of saving and loading the file.}

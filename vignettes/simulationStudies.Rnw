@@ -95,15 +95,23 @@ with \pkg{robustlmm}. To see it, run a variation of following
 command in \Rp or click the script name in this document to
 open the file on github.
 
-\begin{Schunk}
-\begin{Sinput}
+<<eval=FALSE, echo=TRUE>>=
 robustlmm::viewCopyOfSimulationStudy("sensitivityCurves.R")
-\end{Sinput}
-\end{Schunk}
+@
 
 This will create a copy of the \code{sensitivityCurves.R} script
 in the local working directory and open the script for editing
 and running.
+
+As CRAN does not allow built package archives to be more than 5 MB in
+size, the version of the package on CRAN does not contain the full
+simulation results. Instead, only aggregated simulation results are
+included. A version of the package with the full results is available
+on github. You can install said version using the following command.
+
+<<eval=FALSE, echo=TRUE>>=
+remotes::install_github("kollerma/robustlmm", "full-results")
+@
 
 The following simulation studies are provided:
 \begin{itemize}
@@ -255,10 +263,24 @@ is fit using all the methods and the newly produced results are
 compared with the stored results. This is also useful to weed out
 hidden dependencies on the random number generator seed.
 
+To satisfy even stricter hard disk space limits (such as when submitting
+a package to CRAN), the argument \code{createMinimalSaveFile} can be used.
+This creates a file with the processed results of only the first three
+generated datasets. This subset of results can be used to run the code
+for the next step.
+
 \subsection{Prepare results for plotting}
 \label{sec:prepareResultsForPlotting}
 The results are stored in a list with several matrices. Using
 \code{cbind} these can be converted into a data frame.
+
+If the full results are not permanently stored and only the minimal
+results are kept (see last paragraph in previous section), this step will
+have to include some code to load the aggreated data from disk and verify
+that the data before aggreation hasn't changed. It is good practice to
+keep running the aggregation code on the partial results anyway. While
+this does not protect against all possible problems, this at least will
+make sure that the aggregation code is valid code and can be run.
 
 \subsection{Plotting the results}
 \label{sec:plottingTheResults}

@@ -39,12 +39,14 @@ prepareDataset <- function(numberOfSubjects, numberOfReplicates) {
         data[, c("y", "continuousVariable", "binaryVariable", "Subject")]
 
     preparedDataset <-
-        prepareMixedEffectDataset(y ~ continuousVariable + binaryVariable +
-                                      (1 | Subject),
-                                  data,
-                                  overrideBeta = c(1, 1, 1),
-                                  overrideSigma = 1,
-                                  overrideTheta = 1)
+        prepareMixedEffectDataset(
+            y ~ continuousVariable + binaryVariable +
+                (1 | Subject),
+            data,
+            overrideBeta = c(1, 1, 1),
+            overrideSigma = 1,
+            overrideTheta = 1
+        )
     return(preparedDataset)
 }
 
@@ -82,6 +84,9 @@ generateDatasets <- function(numberOfSubjects,
     return(datasets)
 }
 
+createMinimalSaveFile <-
+    path != system.file("simulationStudy", package = "robustlmm")
+
 generateAndProcessDatasets <-
     Vectorize(
         function(numberOfSubjects,
@@ -104,6 +109,7 @@ generateAndProcessDatasets <-
                     chunkSize = 50,
                     checkProcessed = numberOfSubjects == 5 &&
                         numberOfReplicates == 5,
+                    createMinimalSaveFile = createMinimalSaveFile,
                     ncores = ncores
                 )
             results$datasetIndex
@@ -154,19 +160,26 @@ convertToPlotData <- function(results) {
         numberOfReplicates = factor(results$numberOfReplicates),
         results$coefficients,
         results$sigma,
-        results$sigma * results$thetas
+        results$sigma * results$thetas,
+        results$datasetIndex
     )
     levels(plotData$Method) <-
         shortenLabelsKS2022(levels(plotData$Method))
-    plotData$Method <- factor(plotData$Method, c("lme", "RSEn", "RSEa"))
+    plotData$Method <-
+        factor(plotData$Method, c("lme", "RSEn", "RSEa"))
     names(plotData)[-(1:3)] <- c("Intercept",
                                  "beta.continuous",
                                  "beta.binary",
                                  "sigma",
-                                 "B.sigma")
-    plotData <- reshape2::melt(plotData, 1:3)
+                                 "B.sigma",
+                                 "datasetIndex")
+    return(plotData)
+}
+
+aggregatePlotData <- function(plotData) {
+    plotDataTmp <- reshape2::melt(plotData[-ncol(plotData)], 1:3)
     plotDataAggr <-
-        aggregate(plotData[["value"]], plotData[1:4], function(x)
+        aggregate(plotDataTmp[["value"]], plotDataTmp[1:4], function(x)
             unlist(MASS::hubers(x, k = 1.345)))
     plotDataAggr <- cbind(plotDataAggr[1:4],
                           plotDataAggr[[5]])
@@ -187,8 +200,33 @@ convertToPlotData <- function(results) {
     return(plotDataAggr)
 }
 
-plotDataAggr_N_N <- convertToPlotData(results_N_N)
-plotDataAggr_t3_t3 <- convertToPlotData(results_t3_t3)
+plotData_N_N <- convertToPlotData(results_N_N)
+plotDataAggr_N_N <- aggregatePlotData(plotData_N_N)
+plotData_t3_t3 <- convertToPlotData(results_t3_t3)
+plotDataAggr_t3_t3 <- aggregatePlotData(plotData_t3_t3)
+
+########################################################
+## load and verify aggregated data from full results  ##
+########################################################
+
+aggregatedFile <-
+    file.path(path, "datasets_convergence-aggregated.Rdata")
+runningOnMinimalProcessedResults <- max(plotData_N_N$datasetIndex) == 3
+if (runningOnMinimalProcessedResults) {
+    if (file.exists(aggregatedFile)) {
+        load(aggregatedFile)
+        stopifnot(all.equal(plotData_N_N, partialPlotData_N_N, check.attributes = FALSE))
+    } else {
+        warning("Running on minimal processed results, ",
+                "but aggregated plot data is missing.")
+    }
+} else if (!file.exists(aggregatedFile) && createMinimalSaveFile) {
+    partialPlotData_N_N <- subset(plotData_N_N, datasetIndex <= 3)
+    save(partialPlotData_N_N,
+         plotDataAggr_N_N,
+         plotDataAggr_t3_t3,
+         file = aggregatedFile)
+}
 
 ########################################################
 ## plot results                                       ##
@@ -225,7 +263,7 @@ plot_convergence_N_N_scale <-
         )
     ) +
     lemon::geom_pointline(aes(group = interaction(Method, numberOfReplicates))) +
-    facet_wrap(~ variable) + ylab("Scale")
+    facet_wrap( ~ variable) + ylab("Scale")
 
 if (interactive()) {
     print(plot_convergence_N_N_scale)
@@ -243,7 +281,7 @@ plot_convergence_N_N_efficiency <-
         )
     ) +
     lemon::geom_pointline(aes(group = interaction(Method, numberOfReplicates))) +
-    facet_wrap(~ variable) + ylab("Empirical efficiency")
+    facet_wrap( ~ variable) + ylab("Empirical efficiency")
 
 if (interactive()) {
     print(plot_convergence_N_N_efficiency)

@@ -45,7 +45,7 @@ preparedDataset <-
         lqmmCovariance = "pdSymm",
         groups = groups,
         varcov = K,
-        lower = c(0, -Inf, 0)
+        lower = c(0,-Inf, 0)
     )
 
 generateDatasets <-
@@ -89,6 +89,8 @@ fittingFunctions <-
 ########################################################
 
 baseFilename <- "datasets_robustnessBlockDiagonal"
+createMinimalSaveFile <-
+    path != system.file("simulationStudy", package = "robustlmm")
 results <- processDatasetsInParallel(
     datasets,
     path,
@@ -96,6 +98,7 @@ results <- processDatasetsInParallel(
     fittingFunctions,
     chunkSize = 50,
     checkProcessed = TRUE,
+    createMinimalSaveFile = createMinimalSaveFile,
     ncores = ncores,
     stdErrors = TRUE
 )
@@ -124,17 +127,19 @@ plotData <- cbind(
                Generator = datasetIndexToGeneratorMap[results$datasetIndex]),
     results$coefficients,
     results$sigma,
-    convertTheta(results$thetas, results$sigma[, 1])
+    convertTheta(results$thetas, results$sigma[, 1]),
+    results$datasetIndex
 )
 plotData <-
     subset(plotData,
-           Method != "fitDatasets_heavyLme" & Method != "fitDatasets_lqmm")
+           Method != "fitDatasets_heavyLme" &
+               Method != "fitDatasets_lqmm")
 levels(plotData$Method) <-
     shortenLabelsKS2022(levels(plotData$Method))
 names(plotData)[3:4] <- c("beta0", "beta1")
-plotData <- reshape2::melt(plotData, 1:2)
+plotDataLong <- reshape2::melt(plotData[-ncol(plotData)], 1:2)
 plotDataTmp <-
-    aggregate(plotData[["value"]], plotData[1:3], function(x)
+    aggregate(plotDataLong[["value"]], plotDataLong[1:3], function(x)
         unlist(MASS::hubers(x, k = 1.345)))
 plotDataTmp <- cbind(plotDataTmp[1:3],
                      plotDataTmp[[4]])
@@ -161,7 +166,7 @@ plotDataTruth <-
 ########################################################
 
 correlationData <-
-    subset(plotData, variable == "B.corr", select = -3)
+    subset(plotDataLong, variable == "B.corr", select = -3)
 correlationTmp <-
     aggregate(value ~ Method + Generator, correlationData,
               function(x)
@@ -173,7 +178,33 @@ correlationTable <-
         idvar = "Method",
         timevar = "Generator"
     )
-names(correlationTable) <- sub("value.", "", names(correlationTable))
+names(correlationTable) <-
+    sub("value.", "", names(correlationTable))
+
+########################################################
+## load and verify aggregated data from full results  ##
+########################################################
+
+aggregatedFile <-
+    file.path(path, paste0(baseFilename, "-aggregated.Rdata"))
+runningOnMinimalProcessedResults <- max(plotData$datasetIndex) == 3
+if (runningOnMinimalProcessedResults) {
+    if (file.exists(aggregatedFile)) {
+        load(aggregatedFile)
+        stopifnot(all.equal(plotData, partialPlotData, check.attributes = FALSE))
+    } else {
+        warning("Running on minimal processed results, ",
+                "but aggregated plot data is missing.")
+    }
+} else if (!file.exists(aggregatedFile) && createMinimalSaveFile) {
+    partialPlotData <- subset(plotData, datasetIndex <= 3)
+    save(partialPlotData,
+         plotDataLong,
+         plotDataAggr,
+         plotDataTruth,
+         correlationTable,
+         file = aggregatedFile)
+}
 
 ########################################################
 ## plot results                                       ##
@@ -191,30 +222,15 @@ if (interactive()) {
 }
 
 plot_violinBlockDiagonal <-
-    ggplot(plotData, aes(Method, value)) +
+    ggplot(plotDataLong, aes(Method, value)) +
     geom_violin() + xlab("") +
     facet_grid(variable ~ Generator, scales = "free_y") +
-    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+    theme(axis.text.x = element_text(
+        angle = 90,
+        vjust = 0.5,
+        hjust = 1
+    ))
 
 if (interactive()) {
     print(plot_violinBlockDiagonal)
 }
-
-
-########################################################
-## debug heavyLme results                             ##
-########################################################
-
-plotData0 <- cbind(
-    data.frame(Method = as.factor(results$label),
-               results$datasetIndex,
-               Generator = datasetIndexToGeneratorMap[results$datasetIndex]),
-    results$coefficients,
-    results$sigma,
-    convertTheta(results$thetas, results$sigma[, 1])
-)
-
-head(subset(plotData0, Method == "fitDatasets_heavyLme" & Generator == "t3/t3"))
-
-fitDatasets_heavyLme(datasets, datasetIndices = 4001)
-

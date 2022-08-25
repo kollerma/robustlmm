@@ -150,9 +150,9 @@ if (!exists("unitTestBaseWasRun")) {
                     if (isDiagonal(value)) {
                       U_b <<- Diagonal(x=diag(value))
                     } else if (isTriangular(value))  {
-                      U_b <<- as(t(value), "dtCMatrix")
+                      U_b <<- as(t(value), "triangularMatrix")
                     } else {
-                      U_b <<- as(t(value), "dgCMatrix")
+                      U_b <<- as(t(value), "triangularMatrix")
                     }
                   },
                   setTheta = function(value) {

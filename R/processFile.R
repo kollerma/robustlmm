@@ -283,6 +283,7 @@ doCreateMinimalSaveFile <- function(fullResults, minimalFile) {
         names(extractedItemList) <- name
         results <- c(results, extractedItemList)
     }
+    attributes(results) <- attributes(fullResults)
     save(results, file = minimalFile)
 }
 

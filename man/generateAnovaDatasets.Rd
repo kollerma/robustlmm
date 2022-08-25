@@ -114,9 +114,6 @@ datasets easily. When starting from the same seed, the first generated
 datasets will be the same as for the a previous call of
 \code{generateAnovaDatasets} with a smaller number of datasets to generate,
 see examples.
-
-The package \code{MatrixModels} needs to be installed for
-\code{generateAnovaDatasets} to work.
 }
 \examples{
   oneWay <- generateAnovaDatasets(2, 1, 5, 4)

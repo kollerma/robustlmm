@@ -303,9 +303,7 @@ Support for \code{rlme} from \pkg{rlme}  \citep{rlme} is also
 available, but it was not included in any simulation studies
 as all studied datasets were balanced.
 
-The function \code{modelMatrix} from \pkg{MatrixModels}
-\citep{MatrixModels} is used to create the model matrix in
-\code{generateAnovaDatasets}. The function \code{hubers} from \pkg{MASS}
+The function \code{hubers} from \pkg{MASS}
 \citep{MASS} is used to compute robust mean and scale estimates when
 aggregating simulation results. The function \code{geom_pointline} from
 \pkg{lemon} \citep{lemon} is used to draw lines of type \code{b}. Colors

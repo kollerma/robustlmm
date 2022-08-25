@@ -252,11 +252,11 @@ smoothed Huber, Proposal 2 psi function (k = 2.28, s = 10)
 Name: M 
 List of 5
  $ M_bb.:Formal class 'dgeMatrix' [package "Matrix"] with 4 slots
-  .. ..@ x       : num [1:1600] 9.105 8.529 -0.487 -0.502 -0.487 ...
   .. ..@ Dim     : int [1:2] 40 40
   .. ..@ Dimnames:List of 2
   .. .. ..$ : NULL
   .. .. ..$ : NULL
+  .. ..@ x       : num [1:1600] 9.105 8.529 -0.487 -0.502 -0.487 ...
   .. ..@ factors :List of 1
   .. .. ..$ LU:Formal class 'denseLU' [package "Matrix"] with 4 slots
   .. .. .. .. ..@ x       : num [1:1600] 9.105 0.9367 -0.0535 -0.0551 -0.0535 ...
@@ -266,32 +266,32 @@ List of 5
   .. .. .. .. .. ..$ : NULL
   .. .. .. .. ..@ Dim     : int [1:2] 40 40
  $ M_XZ :Formal class 'dgeMatrix' [package "Matrix"] with 4 slots
-  .. ..@ x       : num [1:80] 8.46 39.11 8.5 53.81 8.46 ...
   .. ..@ Dim     : int [1:2] 2 40
   .. ..@ Dimnames:List of 2
   .. .. ..$ : chr [1:2] "(Intercept)" "Days"
   .. .. ..$ : NULL
+  .. ..@ x       : num [1:80] 8.46 39.11 8.5 53.81 8.46 ...
   .. ..@ factors : list()
  $ M_bB :Formal class 'dgeMatrix' [package "Matrix"] with 4 slots
-  .. ..@ x       : num [1:80] -0.0657 0 -0.0657 0 -0.0657 ...
   .. ..@ Dim     : int [1:2] 40 2
   .. ..@ Dimnames:List of 2
   .. .. ..$ : NULL
-  .. .. ..$ : NULL
+  .. .. ..$ : chr [1:2] "(Intercept)" "Days"
+  .. ..@ x       : num [1:80] -0.0657 0 -0.0657 0 -0.0657 ...
   .. ..@ factors : list()
  $ M_BB :Formal class 'dgeMatrix' [package "Matrix"] with 4 slots
-  .. ..@ x       : num [1:4] 0.08697 -0.00271 -0.00271 0.00446
   .. ..@ Dim     : int [1:2] 2 2
   .. ..@ Dimnames:List of 2
   .. .. ..$ : NULL
   .. .. ..$ : NULL
+  .. ..@ x       : num [1:4] 0.08697 -0.00271 -0.00271 0.00446
   .. ..@ factors : list()
  $ M_bb :Formal class 'dgeMatrix' [package "Matrix"] with 4 slots
-  .. ..@ x       : num [1:1600] 0.3429 -0.1875 0.0518 0.011 0.0518 ...
   .. ..@ Dim     : int [1:2] 40 40
   .. ..@ Dimnames:List of 2
   .. .. ..$ : NULL
   .. .. ..$ : NULL
+  .. ..@ x       : num [1:1600] 0.3429 -0.1875 0.0518 0.011 0.0518 ...
   .. ..@ factors : list()
 
 Name: w_e 

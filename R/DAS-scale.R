@@ -86,8 +86,12 @@ G <- function(tau = rep(1, length(a)), a, s, rho, rho.sigma, pp) {
         M2 <- pp$B()
     }
     ## setting NA to 0 (they come from 0 variance components)
-    M1[is.na(M1)] <- 0
-    M2[is.na(M2)] <- 0
+    if (any(naIdx <- is.na(M1))) {
+        M1[naIdx] <- 0
+    }
+    if (any(naIdx <- is.na(M2))) {
+        M2[naIdx] <- 0
+    }
     ## calculate s:
     ret <- pp$rho_e@Epsi2() * rowSums(M1^2)
     if (any(!.zeroB(pp=pp))) ret <- ret + drop(M2^2 %*% diag(pp$Epsi_bpsi_bt))

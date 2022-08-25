@@ -27,8 +27,6 @@
 ##' \code{generateAnovaDatasets} with a smaller number of datasets to generate,
 ##' see examples.
 ##'
-##' The package \code{MatrixModels} needs to be installed for
-##' \code{generateAnovaDatasets} to work.
 ##' @title Generate ANOVA type datasets
 ##' @param numberOfDatasetsToGenerate number of datasets to generate.
 ##' @param numberOfLevelsInFixedFactor scalar or vector with the number of
@@ -413,7 +411,7 @@ createXMatrix <-
             X <- matrix(1, numberOfRows, 1)
         } else {
             X <-
-                MatrixModels::model.Matrix(~ ., data[, seq_along(numberOfLevelsInFixedFactor), drop = FALSE])
+                model.matrix(~ ., data[, seq_along(numberOfLevelsInFixedFactor), drop = FALSE])
         }
         return(X)
     }
@@ -425,7 +423,7 @@ createZMatrix <-
         Ztmp <-
             apply(data[, length(numberOfLevelsInFixedFactor) + seq_along(numberOfSubjects), drop = FALSE],
                   2, function(componentData)
-                      MatrixModels::model.Matrix(~ . - 1, data.frame(componentData)),
+                      model.matrix(~ . - 1, data.frame(componentData)),
                   simplify = FALSE)
         Z <- Ztmp[[1]]
         if (length(numberOfSubjects) > 1) {

@@ -82,7 +82,7 @@ setRefClass("rlmerPredD",
                          initGH(...)
                          if (!nargs()) return()
                          X <<- as(X, "matrix")
-                         Zt <<- as(Zt, "dgCMatrix")
+                         Zt <<- as(Zt, "CsparseMatrix")
                          setLambdat(Lambdat, Lind)
                          theta <<- as.numeric(theta)
                          n <<- nrow(X)
@@ -151,9 +151,9 @@ setRefClass("rlmerPredD",
                          if (isDiagonal(value)) {
                              U_b <<- Diagonal(x=diag(value))
                          } else if (isTriangular(value))  {
-                             U_b <<- as(t(value), "dtCMatrix")
+                             U_b <<- as(t(value), "triangularMatrix")
                          } else {
-                             U_b <<- as(t(value), "dgCMatrix")
+                             U_b <<- as(t(value), "triangularMatrix")
                          }
                      },
                      setTheta = function(value) {
@@ -452,7 +452,7 @@ rlmerPredD_Rcpp <-
                     args <- list(...)
                     input <<- args$input
                     X <<- as(args$X, "matrix")
-                    Zt <<- as(args$Zt, "dgCMatrix")
+                    Zt <<- as(args$Zt, "CsparseMatrix")
                     n <<- nrow(X)
                     p <<- ncol(X)
                     q <<- nrow(Zt)

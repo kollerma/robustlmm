@@ -584,8 +584,8 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
                 convBlks[type] <- TRUE
                 next
             }
-            deltaT <- as(backsolve(lchol(rhs), lchol(lhs)), "sparseMatrix")
-            if (verbose > 1) cat("deltaT:", deltaT@x, "\n")
+            deltaT <- backsolve(lchol(rhs), lchol(lhs))
+            if (verbose > 1) cat("deltaT:", c(deltaT), "\n")
             ## get old parameter estimates for this block
             Ubtilde <- lobj@blocks[[type]]
             pat <- Ubtilde != 0

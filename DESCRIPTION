@@ -1,8 +1,8 @@
 Package: robustlmm
 Type: Package
 Title: Robust Linear Mixed Effects Models
-Version: 3.0-2
-Date: 2022-08-09
+Version: 3.0-3
+Date: 2022-08-26
 Author: Manuel Koller
 Maintainer: Manuel Koller <kollerma@proton.me>
 Description: Implements the Robust Scoring Equations estimator to fit linear

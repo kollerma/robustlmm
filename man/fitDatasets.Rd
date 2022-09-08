@@ -247,7 +247,7 @@ Existing fitting functions are:
   asymptotic efficiency for theta as for the fixed effects.
 
 \code{fitDatasets_heavyLme}: Fits datasets using
-  \code{\link[heavy]{heavyLme}} from package \code{heavy}. Additional
+  \code{heavyLme} from package \code{heavy}. Additional
   required arguments are: \code{lmeFormula}, \code{heavyLmeRandom} and
   \code{heavyLmeGroups}. They are passed to the \code{formula},
   \code{random} and \code{groups} arguments of \code{heavyLme}.
@@ -264,7 +264,7 @@ Existing fitting functions are:
   \code{\link[rlme]{rlme}} from package \code{rlme}.
 
 \code{fitDatasets_varComprob}: Prototype method to fit datasets
-  using \code{\link[robustvarComp]{varComprob}} from package
+  using \code{varComprob} from package
   \code{robustvarComp}. Additional required items in \code{datasets} are:
   \code{lmeFormula}, \code{groups}, \code{varcov} and \code{lower}. They are
   passed to the \code{fixed}, \code{groups}, \code{varcov} and \code{lower}
@@ -273,7 +273,7 @@ Existing fitting functions are:
   which are suppressed.
 
 \code{fitDatasets_varComprob_compositeTau}: Fits datasets with the
-  composite Tau method using \code{\link[robustvarComp]{varComprob}} from
+  composite Tau method using \code{varComprob} from
   package \code{robustvarComp}. See \code{fitDatasets_varComprob} for
   additional details.
 

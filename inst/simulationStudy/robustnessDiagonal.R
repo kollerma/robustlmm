@@ -72,7 +72,7 @@ fitDatasets_varComprob_compositeTau_OGK_with_init_scale <-
     function(datasets, postFit) {
         if (require(robustvarComp)) {
             lcontrol <-
-                robustvarComp::varComprob.control(
+                varComprob.control(
                     lower = datasets[["lower"]],
                     cov.init = "covOGK",
                     init = list(scale = 15)
@@ -94,7 +94,7 @@ fitDatasets_varComprob_S_OGK_with_init_scale <-
     function(datasets, postFit) {
         if (require(robustvarComp)) {
             lcontrol <-
-                robustvarComp::varComprob.control(
+                varComprob.control(
                     lower = datasets[["lower"]],
                     method = "S",
                     psi = "optimal",

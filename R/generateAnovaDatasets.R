@@ -48,7 +48,7 @@
 ##' @param ... all additional arguments are added to the returned list.
 ##' @param arrange If \code{TRUE}, the observations in the dataset are arranged
 ##'   such that the call to \code{\link[dplyr]{arrange}} in
-##'   \code{\link[robustvarComp]{varComprob}} does not break the observation-
+##'   \code{varComprob} does not break the observation-
 ##'   group relationship. This requires package dplyr to be installed.
 ##' @author Manuel Koller
 ##' @return list with generators and the original arguments

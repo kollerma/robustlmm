@@ -1,19 +1,14 @@
 Package: robustlmm
 Type: Package
 Title: Robust Linear Mixed Effects Models
-Version: 3.0-3
-Date: 2022-08-26
+Version: 3.0-4
+Date: 2022-09-08
 Author: Manuel Koller
 Maintainer: Manuel Koller <kollerma@proton.me>
 Description: Implements the Robust Scoring Equations estimator to fit linear
     mixed effects models robustly.
     Robustness is achieved by modification of the scoring equations
     combined with the Design Adaptive Scale approach.
-    Includes some references to the archived packages 'robustvarComp' and 'heavy'.
-    Both packages are only needed to reproduce a simulation
-    study and are not required for the running of the regular package
-    functions. You can install both packages by downloading the latest
-    version from the CRAN archive.
 License: GPL-2
 URL: https://github.com/kollerma/robustlmm
 LazyLoad: yes
@@ -26,10 +21,8 @@ Suggests:
     microbenchmark,
     emmeans (>= 1.4),
     estimability,
-    heavy,
     lqmm,
     rlme,
-    robustvarComp,
     MASS,
     lemon,
     RColorBrewer,

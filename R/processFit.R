@@ -193,7 +193,7 @@ processFit.lmerMod <- function(obj,
 processFit.rlmerMod <- processFit.lmerMod
 
 ##' @examples
-##'   if (require(heavy)) {
+##'   \dontrun{
 ##'     processFit(fitDatasets_heavyLme(oneWay)[[1]], all = TRUE)
 ##'   }
 ##' @rdname processFit
@@ -450,7 +450,7 @@ processFit.rlme <- function(obj,
 ##'   variance components are independent. Exports \code{b} and \code{residuals}
 ##'   are not supported.
 ##' @examples
-##'   if (require(robustvarComp)) {
+##'   \dontrun{
 ##'     processFit(fitDatasets_varComprob_compositeTau(oneWay)[[1]], all = TRUE)
 ##'   }
 ##' @rdname processFit

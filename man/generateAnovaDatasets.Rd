@@ -49,7 +49,7 @@ case it will be replicated to the required length if needed.}
 
 \item{arrange}{If \code{TRUE}, the observations in the dataset are arranged
 such that the call to \code{\link[dplyr]{arrange}} in
-\code{\link[robustvarComp]{varComprob}} does not break the observation-
+\code{varComprob} does not break the observation-
 group relationship. This requires package dplyr to be installed.}
 }
 \value{

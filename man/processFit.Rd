@@ -231,13 +231,13 @@ Warning. \code{processFit.varComprob} uses simplistic logic to
                                   lower = 0)
   processFit(fitDatasets_lmer(oneWay)[[1]], all = TRUE)
   processFit(fitDatasets_rlmer_DASvar(oneWay)[[1]], all = TRUE)
-  if (require(heavy)) {
+  \dontrun{
     processFit(fitDatasets_heavyLme(oneWay)[[1]], all = TRUE)
   }
   if (require(lqmm)) {
     processFit(fitDatasets_lqmm(oneWay)[[1]], all = TRUE)
   }
-  if (require(robustvarComp)) {
+  \dontrun{
     processFit(fitDatasets_varComprob_compositeTau(oneWay)[[1]], all = TRUE)
   }
 }

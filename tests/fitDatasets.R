@@ -1,5 +1,10 @@
 require(robustlmm)
 
+isPackageInstalled <- function(package) {
+    return(length(find.package(package, quiet = TRUE)) > 0)
+}
+
+
 set.seed(1)
 oneWay <- generateAnovaDatasets(1, 1, 10, 4,
                                 lmeFormula = y ~ 1,
@@ -35,19 +40,18 @@ test(fitDatasets_rlmer_DAStau_k_2(oneWay))
 test(fitDatasets_rlmer_DAStau_k_2_noAdj(oneWay))
 test(fitDatasets_rlmer_DAStau_k_5(oneWay))
 test(fitDatasets_rlmer_DAStau_k_5_noAdj(oneWay))
-if (require(heavy)) {
+if (isPackageInstalled("heavy")) {
     test(fitDatasets_heavyLme(oneWay))
 }
-if (require(lqmm)) {
+if (isPackageInstalled("lqmm")) {
     test(fitDatasets_lqmm(oneWay))
 }
-## if (require(rlme)) {
+## if (isPackageInstalled("rlme")) {
 ##     test(fitDatasets_rlme(oneWay)) # won't work as dataset is balanced
 ## }
-if (require(robustvarComp)) {
+if (isPackageInstalled("robustvarComp")) {
     fitDatasets_varComprob_custom <- function(datasets, postFit) {
-        lcontrol <-
-            robustvarComp::varComprob.control(lower = datasets[["lower"]])
+        lcontrol <- eval(parse(text="robustvarComp::varComprob.control"))(lower = datasets[["lower"]])
         return(
             fitDatasets_varComprob(
                 datasets,

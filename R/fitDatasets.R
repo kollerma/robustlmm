@@ -686,7 +686,7 @@ fitDatasets_rlmer_DAStau_k_5_noAdj <-
     }
 
 ##' @details \code{fitDatasets_heavyLme}: Fits datasets using
-##'   \code{\link[heavy]{heavyLme}} from package \code{heavy}. Additional
+##'   \code{heavyLme} from package \code{heavy}. Additional
 ##'   required arguments are: \code{lmeFormula}, \code{heavyLmeRandom} and
 ##'   \code{heavyLmeGroups}. They are passed to the \code{formula},
 ##'   \code{random} and \code{groups} arguments of \code{heavyLme}.
@@ -699,8 +699,9 @@ fitDatasets_heavyLme <-
             if (!packageInstalled) {
                 return(createPackageMissingReturnValue("heavy", "fitDatasets_heavyLme"))
             }
+            fun <- eval(parse(text="heavy::heavyLme"))
             eval(substitute(
-                heavy::heavyLme(
+                fun(
                     formula,
                     random = random,
                     groups = groups,
@@ -812,7 +813,7 @@ fitDatasets_rlme <-
     }
 
 ##' @details \code{fitDatasets_varComprob}: Prototype method to fit datasets
-##'   using \code{\link[robustvarComp]{varComprob}} from package
+##'   using \code{varComprob} from package
 ##'   \code{robustvarComp}. Additional required items in \code{datasets} are:
 ##'   \code{lmeFormula}, \code{groups}, \code{varcov} and \code{lower}. They are
 ##'   passed to the \code{fixed}, \code{groups}, \code{varcov} and \code{lower}
@@ -834,9 +835,10 @@ fitDatasets_varComprob <-
             }
             warnings <- NULL
             set.seed(attr(data, "datasetIndex"))
+            fun <- eval(parse(text="robustvarComp::varComprob"))
             result <- withCallingHandlers(
                 eval(substitute(
-                    robustvarComp::varComprob(
+                    fun(
                         fixed = formula,
                         groups = groups,
                         data = data,
@@ -881,7 +883,7 @@ fitDatasets_varComprob <-
     }
 
 ##' @details \code{fitDatasets_varComprob_compositeTau}: Fits datasets with the
-##'   composite Tau method using \code{\link[robustvarComp]{varComprob}} from
+##'   composite Tau method using \code{varComprob} from
 ##'   package \code{robustvarComp}. See \code{fitDatasets_varComprob} for
 ##'   additional details.
 ##' @rdname fitDatasets
@@ -903,7 +905,8 @@ fitDatasets_varComprob_compositeTau <-
 
 varComrob.control.or.null <- function(...) {
     if (isPackageInstalled("robustvarComp")) {
-        return(robustvarComp::varComprob.control(...))
+        fun <- eval(parse(text="robustvarComp::varComprob.control"))
+        return(fun(...))
     } else {
         return(NULL)
     }

@@ -94,7 +94,7 @@ for (i in seq_along(rPDAStaus)) testCalcTauVectorized(i, length(rPDASTests[[i]]$
 test.DAStau_e <- function(i, tol = 5e-6) {
   cat("test.DAStau_e for", names(rPDAStaus)[i], "...")
   ltest <- function() {
-    a <- diag(rPDASTests[[i]]$A)
+    a <- diag(rPDASTests[[i]]$A())
     s <- unname(.s(theta=FALSE, pp=rPDASTests[[i]]))
     kappa <- rPDASTests[[i]]$kappa_e
     rho <- attr(rPDASs[[i]], "input")$rho_e_src

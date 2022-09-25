@@ -81,19 +81,19 @@ G <- function(tau = rep(1, length(a)), a, s, rho, rho.sigma, pp) {
         M2 <- pp$L
         diag(M2) <- 0
     } else {
-        M1 <- pp$A
-        diag(M1) <- 0
         M2 <- pp$B()
     }
     ## setting NA to 0 (they come from 0 variance components)
-    if (any(naIdx <- is.na(M1))) {
-        M1[naIdx] <- 0
-    }
     if (any(naIdx <- is.na(M2))) {
         M2[naIdx] <- 0
     }
     ## calculate s:
-    ret <- pp$rho_e@Epsi2() * rowSums(M1^2)
+    if (theta) {
+        ret <- rowSums(M1^2, na.rm = TRUE)
+    } else {
+        ret <- pp$diagAAt - pp$diagA^2
+    }
+    ret <- pp$rho_e@Epsi2() * ret
     if (any(!.zeroB(pp=pp))) ret <- ret + drop(M2^2 %*% diag(pp$Epsi_bpsi_bt))
     sqrt(ret)
 }
@@ -182,9 +182,15 @@ calcTau <- function(a, s, rho.e, rho.sigma.e, pp,
     stopifnot(length(a) == length(s))
     if (method == "DASvar" || !is.numeric(tau) || length(tau) != length(a)) {
         ## FIXME: this always returns tau_e irrespective of a and s...
-        Tau <- with(pp, V_e - EDpsi_e * (t(A) + A) + Epsi2_e * tcrossprod(A) +
-                             B() %*% tcrossprod(Epsi_bpsi_bt, B()))
-        tau <- sqrt(diag(Tau))
+        ## Tau <- with(pp, V_e - EDpsi_e * (t(A) + A) + Epsi2_e * tcrossprod(A) +
+        ##                     B() %*% tcrossprod(Epsi_bpsi_bt, B()))
+        tau2 <- with(pp, diag(V_e) - EDpsi_e * 2 * diagA + Epsi2_e * diagAAt)
+        B <- pp$B()
+        tmp <- tcrossprod(pp$Epsi_bpsi_bt, B)
+        for (i in 1:pp$n) {
+            tau2[i] <- tau2[i] + B[i, ] %*% tmp[, i]
+        }
+        tau <- sqrt(tau2)
         if (method == "DASvar") return(tau)
     }
     psi <- rho.e@psi
@@ -490,7 +496,7 @@ updateThetaTau <- function(object, max.iter = 100, rel.tol = 1e-6, verbose = 0) 
                 converged <- FALSE
                 it <- 0
                 wgt <- object@rho.sigma.b[[block]]@wgt
-                while(!converged && (it <- it + 1) < max.iter) {
+                while(!converged && (it <- it + 1) <= max.iter) {
                     w <- wgt(lds/delta0)
                     delta <- sqrt(sum(w*us*us)/sum(w*tau2[lind])/kappas[block])
                     converged <- abs(delta - delta0) < rel.tol * max(rel.tol, delta0)

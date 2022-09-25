@@ -9,6 +9,7 @@ require(robustlmm)
 ## rlmer
 G <- robustlmm:::G
 updateSigma <- robustlmm:::updateSigma
+calcTau <- robustlmm:::calcTau
 `theta<-` <- robustlmm:::`theta<-`
 getX <- robustlmm:::getX
 .s <- robustlmm:::.s
@@ -36,6 +37,39 @@ rfm3 <- rlmer(Reaction ~ Days + (Days|Subject), sleepstudy, doFit=FALSE,
 sleepstudy2 <- within(sleepstudy, Group <- letters[1:4])
 rfm4 <- rlmer(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2, doFit=FALSE,
               rho.e = cPsi, rho.b = cPsi)
+
+####
+## Test row-wise computation of A
+####
+
+testA <- function(rfm) {
+    A <- rfm@pp$A()
+    stopifnot(all.equal(diag(A), rfm@pp$diagA, check.attributes = FALSE),
+              all.equal(rowSums(A^2), rfm@pp$diagAAt, check.attributes = FALSE))
+}
+testA(rfm1)
+testA(rfm2)
+testA(rfm3)
+testA(rfm4)
+
+####
+## Test row-wise computation of tau
+####
+
+testTau <- function(rfm) {
+    fullA <- rfm@pp$A()
+    B <- rfm@pp$B()
+    Tau <- rfm@pp$V_e - rfm@pp$EDpsi_e * (t(fullA) + fullA) +
+        rfm@pp$Epsi2_e * tcrossprod(fullA) +
+        B %*% tcrossprod(rfm@pp$Epsi_bpsi_bt, B)
+    target <- sqrt(diag(Tau))
+    current <- calcTau(a = NULL, s = NULL, method = "DASvar", pp = rfm@pp)
+    stopifnot(all.equal(target, current, check.attributes = FALSE))
+}
+testTau(rfm1)
+testTau(rfm2)
+testTau(rfm3)
+testTau(rfm4)
 
 ####
 ## Test function G

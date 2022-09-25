@@ -186,7 +186,7 @@ setRefClass("rlmerPredD",
                          if (isTRUE(calledInit)) return()
                          ## initialize often required matrices and other stuff
                          dim <<- object@dim
-                         .U_eX <<- solve(U_e, X)
+                         .U_eX <<- as(solve(U_e, X), "denseMatrix")
                          .U_eZ <<- solve(U_e, t(Zt))
                          U_btZt.U_et <<- t(.U_eZ %*% U_b)
                          initRho(object)
@@ -197,18 +197,18 @@ setRefClass("rlmerPredD",
                          cache.M <<- list()
                          if (any(!zeroB)) {
                              ## M_bb. := M_bb\inv
-                             cache.M$M_bb. <<- crossprod(U_b,(M_ZZ0 - M_ZX0M_XX.M_ZZ0)) %*% U_b +
-                                 Lambda_bD_b
-                             cache.M$M_XZ <<- M_XZ <- M_XZ0 %*% U_b
+                             cache.M$M_bb. <<- as(crossprod(U_b,(M_ZZ0 - M_ZX0M_XX.M_ZZ0)) %*% U_b +
+                                 Lambda_bD_b, "denseMatrix")
+                             cache.M$M_XZ <<- M_XZ <- as(M_XZ0 %*% U_b, "denseMatrix")
                              M_ZX.M_XX <- t(solve(M_XX, M_XZ))
-                             cache.M$M_bB <<- -1*solve(cache.M$M_bb., M_ZX.M_XX)
+                             cache.M$M_bB <<- as(-1*solve(cache.M$M_bb., M_ZX.M_XX), "denseMatrix")
                          } else { ## all random effects dropped
-                             cache.M$M_bb. <<- Lambda_bD_b
-                             cache.M$M_XZ <<- M_XZ <- Matrix(0, p, q)
-                             cache.M$M_bB <<- Matrix(0, q, p)
+                             cache.M$M_bb. <<- as(Lambda_bD_b, "denseMatrix")
+                             cache.M$M_XZ <<- M_XZ <- as(Matrix(0, p, q), "denseMatrix")
+                             cache.M$M_bB <<- matrix(0, q, p)
                          }
-                         cache.M$M_BB <<- solve(M_XX, Diagonal(p) - M_XZ %*% cache.M$M_bB)
-                         cache.M$M_bb <<- solve(cache.M$M_bb.)
+                         cache.M$M_BB <<- as(solve(M_XX, Diagonal(p) - M_XZ %*% cache.M$M_bB), "denseMatrix")
+                         cache.M$M_bb <<- as(solve(cache.M$M_bb.), "denseMatrix")
                          set.M <<- TRUE
                          return(cache.M)
                      },
@@ -329,7 +329,8 @@ setRefClass("rlmerPredD",
 
 setRefClass("rlmerPredD_DAS",
             fields =
-            list(A       = "Matrix",        ## Matrix A
+            list(diagA   = "numeric",       ## Digonal of matrix A
+                 diagAAt = "numeric",       ## Diagonal of matrix A %*% t(A)
                  Kt      = "Matrix",        ## Matrix B = lfrac * Kt, K = t(Kt)
                  L       = "Matrix",        ## Matrix L
                  kappa_e = "numeric",       ## kappa_e^(sigma) (only required for DASvar and DAStau)
@@ -397,28 +398,59 @@ setRefClass("rlmerPredD_DAS",
                  T = function() {
                      if (.setTbk) .Tbk else Tb() ## fallback to Tb()
                  },
+                 A = function() {
+                     if (!isTRUE(calledInit)) initMatrices()
+                     if (any(!zeroB)) {
+                         r <- M()
+                         tmp3 <- crossprod(U_btZt.U_et, r$M_bb) ## U_e\inv Z U_b M_bb
+                         A <- tcrossprod(.U_eX, ## X M_Bb U_b Z U_e\inv
+                                         as(crossprod(U_btZt.U_et, r$M_bB), "denseMatrix"))
+                         A <- A + t(A) + tcrossprod(.U_eX, .U_eX %*% r$M_BB) +
+                                 tmp3 %*% U_btZt.U_et
+                     } else {
+                         ## no random effects
+                         A <- .U_eX %*% solve(M_XX, t(.U_eX)) ## just the hat matrix
+                     }
+                     return(A)
+                 },
                  updateMatrices = function() {
                      if (!isTRUE(calledInit)) initMatrices()
                      if (any(!zeroB)) {
                          r <- M()
-                         tmp2 <- tcrossprod(.U_eX, ## X M_Bb U_b Z U_e\inv
-                                            crossprod(U_btZt.U_et, r$M_bB))
                          tmp3 <- crossprod(U_btZt.U_et, r$M_bb) ## U_e\inv Z U_b M_bb
-
-                         A <<- tcrossprod(.U_eX %*% r$M_BB, .U_eX) +
-                             tmp2 + t(tmp2) + tmp3 %*% U_btZt.U_et
+                         tmp4 <- crossprod(U_btZt.U_et, r$M_bB)
+                         # A <- tcrossprod(.U_eX, ## X M_Bb U_b Z U_e\inv
+                         #                 as(crossprod(U_btZt.U_et, r$M_bB), "denseMatrix"))
+                         # A <- A + t(A) + tcrossprod(.U_eX, .U_eX %*% r$M_BB) +
+                         #     tmp3 %*% U_btZt.U_et
+                         diagAAt <<- diagA <<- numeric(n)
+                         for (i in 1:n) {
+                             Arow <- tcrossprod(.U_eX[i, ], tmp4)
+                             Acol <- tcrossprod(tmp4[i, ], .U_eX)
+                             Arow <- drop(Arow + Acol + tcrossprod(.U_eX[i, ], .U_eX %*% r$M_BB) +
+                                              tmp3[i, ] %*% U_btZt.U_et)
+                             diagA[i] <<- Arow[i]
+                             diagAAt[i] <<- sum(Arow * Arow)
+                         }
                          Kt <<- -1*(tcrossprod(.U_eX, r$M_bB) + tmp3)
                          L <<- r$M_bb %*% Lambda_b
                      } else {
                          ## no random effects
-                         A <<- .U_eX %*% solve(M_XX, t(.U_eX)) ## just the hat matrix
+                         ## A <<- .U_eX %*% solve(M_XX, t(.U_eX)) ## just the hat matrix
+                         tmp <- solve(M_XX, t(.U_eX))
+                         diagAAt <<- diagA <<- numeric(n)
+                         for (i in 1:n) {
+                             Arow <- .U_eX[i, ] %*% tmp
+                             diagA[i] <<- Arow[i]
+                             diagAAt[i] <<- sum(Arow * Arow)
+                         }
                          Kt <<- Matrix(0, n, q)
                          L <<- solve(D_b)
                      }
                  },
                  tau_e = function() {
                      if (isTRUE(.setTau_e)) return(.tau_e)
-                     .tau_e <<- calcTau(diag(A), .s(theta=FALSE, pp=.self),
+                     .tau_e <<- calcTau(diagA, .s(theta=FALSE, pp=.self),
                                         rho_e, rho_sigma_e, .self, kappa_e,
                                         .tau_e, method)
                      .setTau_e <<- TRUE

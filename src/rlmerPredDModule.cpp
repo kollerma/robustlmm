@@ -940,4 +940,6 @@ RCPP_MODULE(rlmerPredD_module) {
   function("wgt_e", &Rwgt_e);
   function("wgt_b", &Rwgt_b);
 
+  function("calculateA", &calculateA);
+  function("computeDiagonalOfProduct", &computeDiagonalOfProduct);
 }

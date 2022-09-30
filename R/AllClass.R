@@ -53,7 +53,7 @@ setRefClass("rlmerPredD",
                      .U_eX   = "Matrix",       ## U_e\inv X
                      .U_eZ   = "Matrix",       ## U_e\inv Z
                      M_XX    = "Matrix",       ## M_XX
-                     U_btZt.U_et = "Matrix",   ## U_b\tr Z\tr U_e\inv\tr
+                     U_btZt.U_et = "sparseMatrix",   ## U_b\tr Z\tr U_e\inv\tr
                      calledInit = "logical",   ## whether initMatrices has been called yet
                      M_XZ0   = "Matrix",       ## M_XZ = M_XZ0 %*% U_b
                      M_ZZ0   = "Matrix",       ## M_ZZ = U_b\tr %*% M_ZZ0 %*% U_b
@@ -342,7 +342,8 @@ setRefClass("rlmerPredD_DAS",
                  .setTbk = "logical",
                  .Tbk    = "Matrix",        ## cache for T_{b,k}
                  blocks  = "list",
-                 idx     = "list"
+                 idx     = "list",
+                 useLargeDataAlgorithm = "logical"
                  ),
             contains = "rlmerPredD",
             methods =
@@ -359,6 +360,7 @@ setRefClass("rlmerPredD_DAS",
                     callSuper(object)
                     blocks <<- object@blocks
                     idx <<- object@idx
+                    useLargeDataAlgorithm <<- getOption("RLMER_USE_LARGE_DATA_ALGORITHM", n > 5000)
                  },
                  initRho = function(object) {
                      callSuper(object)
@@ -402,11 +404,10 @@ setRefClass("rlmerPredD_DAS",
                      if (!isTRUE(calledInit)) initMatrices()
                      if (any(!zeroB)) {
                          r <- M()
-                         tmp3 <- crossprod(U_btZt.U_et, r$M_bb) ## U_e\inv Z U_b M_bb
                          A <- tcrossprod(.U_eX, ## X M_Bb U_b Z U_e\inv
-                                         as(crossprod(U_btZt.U_et, r$M_bB), "denseMatrix"))
+                                         crossprod(U_btZt.U_et, r$M_bB))
                          A <- A + t(A) + tcrossprod(.U_eX, .U_eX %*% r$M_BB) +
-                                 tmp3 %*% U_btZt.U_et
+                             crossprod(U_btZt.U_et, r$M_bb) %*% U_btZt.U_et
                      } else {
                          ## no random effects
                          A <- .U_eX %*% solve(M_XX, t(.U_eX)) ## just the hat matrix
@@ -417,32 +418,36 @@ setRefClass("rlmerPredD_DAS",
                      if (!isTRUE(calledInit)) initMatrices()
                      if (any(!zeroB)) {
                          r <- M()
-                         tmp3 <- crossprod(U_btZt.U_et, r$M_bb) ## U_e\inv Z U_b M_bb
-                         tmp4 <- crossprod(U_btZt.U_et, r$M_bB)
-                         # A <- tcrossprod(.U_eX, ## X M_Bb U_b Z U_e\inv
-                         #                 as(crossprod(U_btZt.U_et, r$M_bB), "denseMatrix"))
-                         # A <- A + t(A) + tcrossprod(.U_eX, .U_eX %*% r$M_BB) +
-                         #     tmp3 %*% U_btZt.U_et
-                         diagAAt <<- diagA <<- numeric(n)
-                         for (i in 1:n) {
-                             Arow <- tcrossprod(.U_eX[i, ], tmp4)
-                             Acol <- tcrossprod(tmp4[i, ], .U_eX)
-                             Arow <- drop(Arow + Acol + tcrossprod(.U_eX[i, ], .U_eX %*% r$M_BB) +
-                                              tmp3[i, ] %*% U_btZt.U_et)
-                             diagA[i] <<- Arow[i]
-                             diagAAt[i] <<- sum(Arow * Arow)
+                         tmp1 <- crossprod(U_btZt.U_et, r$M_bb) ## U_e\inv Z U_b M_bb
+                         if (useLargeDataAlgorithm) {
+                             result <- calculateA(as.matrix(.U_eX), U_btZt.U_et,
+                                                  as.matrix(r$M_bb), as.matrix(r$M_bB), as.matrix(r$M_BB))
+                             diagA <<- result[["diagA"]]
+                             diagAAt <<- result[["diagAAt"]]
+                         } else {
+                             A <- tcrossprod(.U_eX, ## X M_Bb U_b Z U_e\inv
+                                             crossprod(U_btZt.U_et, r$M_bB))
+                             A <- A + t(A) + tcrossprod(.U_eX, .U_eX %*% r$M_BB) +
+                                 tmp1 %*% U_btZt.U_et
+                             diagA <<- diag(A)
+                             diagAAt <<- rowSums(A^2)
                          }
-                         Kt <<- -1*(tcrossprod(.U_eX, r$M_bB) + tmp3)
+                         Kt <<- -1*(tcrossprod(.U_eX, r$M_bB) + tmp1)
                          L <<- r$M_bb %*% Lambda_b
                      } else {
                          ## no random effects
-                         ## A <<- .U_eX %*% solve(M_XX, t(.U_eX)) ## just the hat matrix
-                         tmp <- solve(M_XX, t(.U_eX))
-                         diagAAt <<- diagA <<- numeric(n)
-                         for (i in 1:n) {
-                             Arow <- .U_eX[i, ] %*% tmp
-                             diagA[i] <<- Arow[i]
-                             diagAAt[i] <<- sum(Arow * Arow)
+                         if (useLargeDataAlgorithm) {
+                             tmp <- solve(M_XX, t(.U_eX))
+                             diagAAt <<- diagA <<- numeric(n)
+                             for (i in 1:n) {
+                                 Arow <- .U_eX[i, ] %*% tmp
+                                 diagA[i] <<- Arow[i]
+                                 diagAAt[i] <<- sum(Arow * Arow)
+                             }
+                         } else {
+                             A <- .U_eX %*% solve(M_XX, t(.U_eX)) ## just the hat matrix
+                             diagA <<- diag(A)
+                             diagAAt <<- rowSums(A * A)
                          }
                          Kt <<- Matrix(0, n, q)
                          L <<- solve(D_b)

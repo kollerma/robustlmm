@@ -174,4 +174,9 @@ int calcTauNonDiag(const BlockTypeIndex* const blockType, SpMatrixd& value,
                    const PsiFuncXPtr& rho, const PsiFuncXPtr& rhoSigma,
                    ExpectationNd* const expectation);
 
+List calculateA(const MMap iU_eX, const MSpMatrixd U_btZtiU_et,
+                const MMap M_bb, const MMap M_bB, const MMap M_BB);
+
+VectorXd computeDiagonalOfProduct(const MMap A, const MMap B);
+
 #endif

@@ -82,8 +82,8 @@ calcMatrices <- function(object, numpoints=13) {
         ## Mst = Ms since D_resp is diagonal
         ## MsLtZt = solve(L\tr Z\tr P D_resp Z L + lD), L\tr Z\tr)
         ## LZMs = MsLtZt\tr
-        Ms <- solve(Lat %*% ZtPDZ %*% La +
-                    laD.re)
+        Ms <- as(solve(Lat %*% ZtPDZ %*% La +
+                    laD.re), "denseMatrix")
         MsLtZt <- Ms %*% LtZt
 
         ## Q = Q_\theta = CXt D.resp Z L Ms
@@ -131,9 +131,11 @@ cmp <- function(rfm) {
     res <- c(D_e=all.equal(las$D_e, rfm@pp$D_e),
              D_b=all.equal(las$D_b, rfm@pp$D_b),
              Lambda_b=all.equal(las$Lambda_b, rfm@pp$Lambda_b),
-             A=all.equal(las$A, rfm@pp$A),
-             B=all.equal(las$B, rfm@pp$B()),
-             K=all.equal(las$K, rfm@pp$K()),
+             A=all.equal(las$A, rfm@pp$A(), check.attributes = FALSE),
+             diagA=all.equal(diag(las$A), rfm@pp$diagA, check.attributes = FALSE),
+             diagAAt=all.equal(diag(tcrossprod(las$A)), rfm@pp$diagAAt, check.attributes = FALSE),
+             B=all.equal(las$B, rfm@pp$B(), check.attributes = FALSE),
+             K=all.equal(las$K, rfm@pp$K(), check.attributes = FALSE),
              L=all.equal(las$L, rfm@pp$L),
              J=all.equal(las$J, rfm@pp$J()),
              Epsi2_e=all.equal(las$Epsi2_e, rfm@pp$Epsi2_e),

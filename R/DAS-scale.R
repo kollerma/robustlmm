@@ -184,11 +184,14 @@ calcTau <- function(a, s, rho.e, rho.sigma.e, pp,
         ## FIXME: this always returns tau_e irrespective of a and s...
         ## Tau <- with(pp, V_e - EDpsi_e * (t(A) + A) + Epsi2_e * tcrossprod(A) +
         ##                     B() %*% tcrossprod(Epsi_bpsi_bt, B()))
-        tau2 <- with(pp, diag(V_e) - EDpsi_e * 2 * diagA + Epsi2_e * diagAAt)
         B <- pp$B()
         tmp <- tcrossprod(pp$Epsi_bpsi_bt, B)
-        for (i in 1:pp$n) {
-            tau2[i] <- tau2[i] + B[i, ] %*% tmp[, i]
+        if (pp$useLargeDataAlgorithm) {
+            tau2 <- with(pp, diag(V_e) - EDpsi_e * 2 * diagA + Epsi2_e * diagAAt) +
+                computeDiagonalOfProduct(as.matrix(B), as.matrix(tmp))
+        } else {
+            tau2 <- with(pp, diag(V_e) - EDpsi_e * 2 * diagA + Epsi2_e * diagAAt) +
+                diag(B %*% tmp)
         }
         tau <- sqrt(tau2)
         if (method == "DASvar") return(tau)

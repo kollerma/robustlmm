@@ -44,8 +44,16 @@ rfm4 <- rlmer(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2, doFit=F
 
 testA <- function(rfm) {
     A <- rfm@pp$A()
-    stopifnot(all.equal(diag(A), rfm@pp$diagA, check.attributes = FALSE),
-              all.equal(rowSums(A^2), rfm@pp$diagAAt, check.attributes = FALSE))
+
+    doTest <- function() {
+        rfm@pp$updateMatrices()
+        stopifnot(all.equal(diag(A), rfm@pp$diagA, check.attributes = FALSE),
+                  all.equal(rowSums(A^2), rfm@pp$diagAAt, check.attributes = FALSE))
+    }
+    doTest()
+
+    rfm@pp$useLargeDataAlgorithm <- TRUE
+    doTest()
 }
 testA(rfm1)
 testA(rfm2)
@@ -63,8 +71,14 @@ testTau <- function(rfm) {
         rfm@pp$Epsi2_e * tcrossprod(fullA) +
         B %*% tcrossprod(rfm@pp$Epsi_bpsi_bt, B)
     target <- sqrt(diag(Tau))
-    current <- calcTau(a = NULL, s = NULL, method = "DASvar", pp = rfm@pp)
-    stopifnot(all.equal(target, current, check.attributes = FALSE))
+    doTest <- function() {
+        current <- calcTau(a = NULL, s = NULL, method = "DASvar", pp = rfm@pp)
+        stopifnot(all.equal(target, current, check.attributes = FALSE))
+    }
+    doTest()
+
+    rfm@pp$useLargeDataAlgorithm <- TRUE
+    doTest()
 }
 testTau(rfm1)
 testTau(rfm2)
@@ -104,7 +118,7 @@ testG <- function(object, theta=FALSE) {
         a <- diag(object@pp$L)
         s <- .s(object, theta = TRUE)
     } else {
-        a <- diag(object@pp$A)
+        a <- diag(object@pp$A())
         s <- .s(object)
     }
 

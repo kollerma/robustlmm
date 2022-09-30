@@ -636,3 +636,50 @@ int calcTauNonDiag(const BlockTypeIndex* const blockType, SpMatrixd& value,
  SpMatrixd Tau_b(q_, q_);
  Tau_b.setFromTriplets(tripletList.begin(), tripletList.end());
  */
+
+// methods to compute A and tau for DASvar for rlmer
+
+// compute diagA and diagAAt
+// r <- M()
+// tmp1 <- crossprod(U_btZt.U_et, r$M_bb) ## U_e\inv Z U_b M_bb
+// tmp2 <- crossprod(U_btZt.U_et, r$M_bB)
+// tmp3 <- .U_eX %*% r$M_BB
+// for (i in 1:n) {
+//     Arow <- tcrossprod(.U_eX[i, ], tmp2) +
+//         tcrossprod(tmp2[i, ], .U_eX) +
+//         tcrossprod(.U_eX[i, ], tmp3) +
+//         tmp1[i, ] %*% U_btZt.U_et
+//     diagA[i] <<- Arow[i]
+//     diagAAt[i] <<- sum(Arow * Arow)
+// }
+
+// Returns list of vectors diagA and diagAAt
+// inputs: U_btZt.U_et sparse
+//         .U_eX, M_bb, M_bB, M_BB dense
+List calculateA(const MMap iU_eX, const MSpMatrixd U_btZtiU_et,
+                const MMap M_bb, const MMap M_bB, const MMap M_BB) {
+    MatrixXd tmp1(U_btZtiU_et.adjoint() * M_bb);
+    MatrixXd tmp2(U_btZtiU_et.adjoint() * M_bB);
+    MatrixXd tmp3(iU_eX * M_BB);
+    const int n(iU_eX.rows());
+    VectorXd Arow(n);
+    VectorXd diagA(n);
+    VectorXd diagAAt(n);
+    for (int i = 0; i < n; ++i) {
+        Arow = iU_eX.row(i) * tmp2.adjoint() + tmp2.row(i) * iU_eX.adjoint() +
+            iU_eX.row(i) * tmp3.adjoint() + tmp1.row(i) * U_btZtiU_et;
+        diagA[i] = Arow[i];
+        diagAAt[i] = Arow.squaredNorm();
+    }
+    return List::create(Named("diagA") = diagA,
+                        Named("diagAAt") = diagAAt);
+}
+
+VectorXd computeDiagonalOfProduct(const MMap A, const MMap B) {
+    const int n(A.rows());
+    VectorXd result(n);
+    for (int i = 0; i < n; ++i) {
+        result[i] = A.row(i) * B.col(i);
+    }
+    return result;
+}

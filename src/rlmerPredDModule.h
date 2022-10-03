@@ -157,16 +157,16 @@ class rlmerPredD_DAS : public rlmerPredD {
   // this class corresponds to DASvar
   // overload calcTau_e and calcTau_b for other methods
 protected:
-  MatrixXd A_, Kt_, L_;
+  MatrixXd Kt_, L_;
   double kappa_e_;
-  VectorXd kappa_b_;
+  VectorXd diagA_, diagAAt_, kappa_b_;
 
 private:
   bool initTau_e_, setTau_e_, initTau_b_, setTau_b_;
   SpMatrixd Tau_b_;
   VectorXd tau_e_;
 
-  VectorXd s(MatrixXd m1, MatrixXd m2);
+  VectorXd s(VectorXd m1, MatrixXd m2);
 
 public:
   rlmerPredD_DAS(Rcpp::List args, MMap X, MSpMatrixd Zt);
@@ -177,7 +177,10 @@ public:
 
   MatrixXd getB();
   MatrixXd getK_copy();
-  MatrixXd& getA();
+  VectorXd& getDiagA();
+  VectorXd& getDiagAAt();
+  VectorXd getDiagA_copy();
+  VectorXd getDiagAAt_copy();
   MatrixXd getA_copy();
   MatrixXd getKt_copy();
   MatrixXd getL_copy();

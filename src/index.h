@@ -97,7 +97,7 @@ class BlockTypeIndex : public BaseIndex {
   friend class IndexMapper;
 
 public:
-  const unsigned dim_;
+  const unsigned dim_, offset_;
 
 private:
   bool blockTypeDropped_;
@@ -107,7 +107,7 @@ private:
 
 protected:
   BlockTypeIndex(const unsigned blockTypeIndex, const IndexMapper* indexMapper,
-                 const unsigned dim,
+                 const unsigned dim, const unsigned offset,
                  const std::vector<RandomEffectIndex*> randomEffects,
                  const std::vector<BlockIndex*> blocks,
                  const std::vector<ThetaIndex*> thetas);
@@ -120,6 +120,7 @@ public:
   const std::vector<BlockIndex*>& getBlocks() const;
   const std::vector<ThetaIndex*>& getThetas() const;
   unsigned getNumberOfBlocks() const;
+  unsigned getIndexWithinBlockType(const BlockIndex* block) const;
 
 private:
   bool isDropped(const VectorXd& theta) const;

@@ -663,6 +663,12 @@ rlmerPredD_Rcpp <-
                   A = function() {
                     ptr()$A()
                   },
+                  diagA = function() {
+                    ptr()$diagA()
+                  },
+                  diagAAt = function() {
+                    ptr()$diagAAt()
+                  },
                   Kt = function() {
                     ptr()$Kt()
                   },

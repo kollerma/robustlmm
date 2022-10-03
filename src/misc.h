@@ -88,6 +88,7 @@ void setBlock(const T1& target, const int colOffset, const int rowOffset, const 
 SpMatrixd bdiag(const std::vector<MatrixXd>& mVec);
 MatrixXd zeroDiag(ConstMatrixXd& m);
 void zeroNaNs(MatrixXd& m);
+void zeroNaNs(VectorXd& v);
 
 namespace std {
 template<typename T>

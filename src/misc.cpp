@@ -60,6 +60,15 @@ void zeroNaNs(MatrixXd& m) {
   }
 }
 
+void zeroNaNs(VectorXd& v) {
+  if (!v.hasNaN()) return;
+  for (unsigned i = 0, rows = v.rows(); i < rows; i++) {
+    if (ISNAN(v.coeff(i))) {
+      v(i) = 0.;
+    }
+  }
+}
+
 void warn(std::string msg) {
   static Rcpp::Function *fun = NULL;
   if (fun == NULL)

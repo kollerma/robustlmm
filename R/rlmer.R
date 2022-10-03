@@ -513,7 +513,16 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
         idx <- !.zeroB(lobj)
         ## stop if all are zero
         if (!any(idx)) break
-        L <- t(chol(T[idx,idx]))
+        Tidx <- T[idx, idx]
+        if (any(diag(Tidx) == 0.0)) {
+            ## partially dropped block: can't handle yet.
+            idxZeroes <- which(idx)[which(diag(Tidx) == 0.0)]
+            blockAffected <- which(sapply(lobj@idx, function(cand) any(cand == idxZeroes)))
+            stop("Covariance matrix for random effects block ", blockAffected,
+                 " with grouping factor ", names(lobj@cnms)[blockAffected],
+                 " is singular. Please simplify the model and run again.")
+        }
+        L <- t(chol(Tidx))
         T.bs <- numeric(q) ## set the others to zero
         T.bs[idx] <- forwardsolve(L, b.s(lobj)[idx])
         ## compute weights

@@ -8,7 +8,7 @@ source(file.path(xtraR, "unitTestObjects.R"))
 testScalarTauParameters <- function(tol = 1e-8) {
   cat("testScalarTauParameters...")
   i <- 1
-  a <- diag(rPDAStaus[[i]]$A())[1]
+  a <- rPDAStaus[[i]]$diagA()[1]
   s <- rPDAStaus[[i]]$s_e()[1]
   kappa <- rPDAStaus[[i]]$kappa_e()
   rho <- attr(rPDAStaus[[i]], "input")$rho_e_src
@@ -43,7 +43,7 @@ testScalarTauParameters()
 
 testCalcTau <- function(i, nodes, tol = 1e-8) {
   cat("testCalcTau for", names(rPDAStaus)[i], "...")
-  a <- diag(rPDAStaus[[i]]$A())[1]
+  a <- rPDAStaus[[i]]$diagA()[1]
   s <- rPDAStaus[[i]]$s_e()[1]
   kappa <- rPDAStaus[[i]]$kappa_e()
   rho <- attr(rPDAStaus[[i]], "input")$rho_e_src
@@ -68,7 +68,7 @@ for (i in seq_along(rPDAStaus)) testCalcTau(i, length(rPDASTests[[i]]$ghz))
 
 testCalcTauVectorized <- function(i, nodes, tol = 1e-8) {
   cat("testCalcTauVectorized for", names(rPDAStaus)[i], "...")
-  a <- diag(rPDAStaus[[i]]$A())
+  a <- rPDAStaus[[i]]$diagA()
   s <- rPDAStaus[[i]]$s_e()
   kappa <- rPDAStaus[[i]]$kappa_e()
   rho <- attr(rPDAStaus[[i]], "input")$rho_e_src
@@ -94,14 +94,16 @@ for (i in seq_along(rPDAStaus)) testCalcTauVectorized(i, length(rPDASTests[[i]]$
 test.DAStau_e <- function(i, tol = 5e-6) {
   cat("test.DAStau_e for", names(rPDAStaus)[i], "...")
   ltest <- function() {
-    a <- diag(rPDASTests[[i]]$A())
+    a <- rPDASTests[[i]]$diagA
     s <- unname(.s(theta=FALSE, pp=rPDASTests[[i]]))
     kappa <- rPDASTests[[i]]$kappa_e
     rho <- attr(rPDASs[[i]], "input")$rho_e_src
     rhoSigma <- attr(rPDASs[[i]], "input")$rhoSigma_e_src
 
     ## check inputs
-    stopifnot(all.equal(a, diag(rPDAStaus[[i]]$A()),
+    stopifnot(all.equal(a, rPDAStaus[[i]]$diagA(),
+                        tolerance = 5e-6, check.attributes = FALSE),
+              all.equal(rPDASTests[[i]]$diagAAt, rPDAStaus[[i]]$diagAAt(),
                         tolerance = 5e-6, check.attributes = FALSE),
               all.equal(s, rPDAStaus[[i]]$s_e(),
                         tolerance = 5e-6, check.attributes = FALSE),

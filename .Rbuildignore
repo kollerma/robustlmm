@@ -13,3 +13,5 @@ vignettes/jss.bst
 vignettes/jss.cls
 vignettes/*.log
 ^\.github$
+tools
+.vscode

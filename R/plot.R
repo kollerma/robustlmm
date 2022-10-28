@@ -1,8 +1,5 @@
 ## plot functions for rlmerMod objects
 
-##' @importFrom ggplot2 ggplot geom_point ggtitle facet_wrap
-##' @importFrom ggplot2 geom_line geom_ribbon aes aes_string
-
 globalVariables("theoretical", add=TRUE)
 
 ## internal functions, called via plot.rlmerMod
@@ -11,11 +8,11 @@ ta <- function(obj, title="") {
     data <- data.frame(fitted = fitted(obj),
                        resid = resid(obj),
                        weights = if (is(obj, "rlmerMod")) getME(obj, "w_e") else 1)
-    plt <- ggplot(data, aes(fitted, resid))
-    if (title != "") plt <- plt + ggtitle(title)
+    plt <- ggplot2::ggplot(data, ggplot2::aes(fitted, resid))
+    if (title != "") plt <- plt + ggplot2::ggtitle(title)
     if (is(obj, "rlmerMod"))
-        plt + geom_point(aes(color = weights))
-    else plt + geom_point()
+        plt + ggplot2::geom_point(ggplot2::aes(color = weights))
+    else plt + ggplot2::geom_point()
 }
 ## QQ-plots inclusive coloring for weights
 qq <- function(obj, type = c("resid", "ranef"), title="",
@@ -44,13 +41,13 @@ qq <- function(obj, type = c("resid", "ranef"), title="",
                    ranef = getME(obj, "w_b_vector"))[ord0]
         } else 1
     if (multiply.weights) data0$sample <- data0$sample * data0$weights
-    plt <- ggplot(data0, aes(theoretical, sample))
-    if (title != "") plt <- plt + ggtitle(title)
+    plt <- ggplot2::ggplot(data0, ggplot2::aes(theoretical, sample))
+    if (title != "") plt <- plt + ggplot2::ggtitle(title)
     plt <-
         if (is(obj, "rlmerMod"))
-            plt + geom_point(aes(color = weights))
-        else plt + geom_point()
-    if (length(levels(data0$level)) > 1) plt + facet_wrap(~ level) else plt
+            plt + ggplot2::geom_point(ggplot2::aes(color = weights))
+        else plt + ggplot2::geom_point()
+    if (length(levels(data0$level)) > 1) plt + ggplot2::facet_wrap(~ level) else plt
 }
 ## scatterplots for correlated random effects
 rsc <- function(obj, title="") {
@@ -66,12 +63,12 @@ rsc <- function(obj, title="") {
         ## create a plot for all combinations
         for (i in 1L:(nc-1L)) {
             for (j in (i+1L):nc) {
-                lplt <- ggplot(df, aes_string(x=qn(colnames(df)[i]),
-                                              y=qn(colnames(df)[j])))
-                if (title != "") lplt <- lplt + ggtitle(sprintf(title, g))
+                lplt <- ggplot2::ggplot(df, ggplot2::aes_string(x=qn(colnames(df)[i]),
+                                                      y=qn(colnames(df)[j])))
+                if (title != "") lplt <- lplt + ggplot2::ggtitle(sprintf(title, g))
                 lplt <- if (is(obj, "rlmerMod"))
-                    lplt + geom_point(aes(color = weights))
-                else lplt + geom_point()
+                    lplt + ggplot2::geom_point(ggplot2::aes(color = weights))
+                else lplt + ggplot2::geom_point()
                 plots <- c(plots, list(lplt))
             }
         }
@@ -97,8 +94,8 @@ rsc <- function(obj, title="") {
 ##'   robustness weights when producing the Q-Q plots.
 ##' @param ask waits for user input before displaying each plot.
 ##' @param ... currently ignored.
-##' @return a list of plots of class \code{\link{ggplot}} that can be used for
-##'   further modification before plotting (using \code{print}).
+##' @return a list of plots of class \code{\link[ggplot2]{ggplot}} that can be
+##'   used for further modification before plotting (using \code{print}).
 ##' @seealso \code{\link{getME}}, \code{\link[ggplot2]{ggplot}}
 ##' @examples
 ##' \dontrun{
@@ -119,6 +116,9 @@ plot.rlmerMod <- function(x, y=NULL, which=1:4,
                           ...) {
     if (!inherits(x, "rlmerMod") & !inherits(x, "lmerMod"))
         stop("Use only with 'rlmerMod' and 'lmerMod' objects")
+    if (!isPackageInstalled("ggplot2"))
+        stop("Package 'ggplot2' is required to use 'plot.rlmerMod'.",
+             "Please install it using 'install.packages(\"ggplot2\")'.")
     show <- rep.int(FALSE, 4)
     if (!is.numeric(which) || any(which < 1) || any(which > 4))
         stop("'which' must be in 1:4")

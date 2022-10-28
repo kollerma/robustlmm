@@ -1,8 +1,8 @@
 Package: robustlmm
 Type: Package
 Title: Robust Linear Mixed Effects Models
-Version: 3.0-7
-Date: 2022-10-03
+Version: 3.0-8
+Date: 2022-10-28
 Author: Manuel Koller
 Maintainer: Manuel Koller <kollerma@proton.me>
 Description: Implements the Robust Scoring Equations estimator to fit linear
@@ -17,6 +17,7 @@ Depends:
     Matrix (>= 1.0-13),
     R (>= 3.5.0)
 Suggests:
+    ggplot2,
     reshape2,
     microbenchmark,
     emmeans (>= 1.4),
@@ -29,9 +30,9 @@ Suggests:
     skewt,
     fs,
     dplyr,
-    ggh4x
+    ggh4x,
+    testthat
 Imports:
-    ggplot2,
     lattice,
     nlme,
     methods,
@@ -66,7 +67,7 @@ Collate:
     'simulationStudies.R'
     'asymptoticEfficiency.R'
     'emmeans.R'
-LinkingTo: Rcpp, RcppEigen, robustbase, cubature (> 1.3-8)
+LinkingTo: Rcpp, robustbase, Matrix
 Encoding: UTF-8
 RcppModules: psi_function_module
 SystemRequirements: C++11

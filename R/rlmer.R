@@ -182,9 +182,6 @@
 ##' ## dropping of VC
 ##' system.time(print(rlmer(Yield ~ (1|Batch), Dyestuff2, method="DASvar")))
 ##'
-##' ## new Rcpp implementation
-##' system.time(print(rlmerRcpp(Yield ~ (1|Batch), Dyestuff2, method="DASvar")))
-##'
 ##' \dontrun{
 ##'   ## Default method "DAStau"
 ##'   system.time(rfm.DAStau <- rlmer(Yield ~ (1|Batch), Dyestuff))
@@ -213,33 +210,7 @@
 ##'
 ##' @importFrom lme4 lmer
 ##' @importFrom stats getCall
-##' @rdname rlmer
-##' @name rlmer
 ##' @export
-rlmerRcpp <- function(formula, data, ..., method = c("DAStau", "DASvar"),
-                      setting, rho.e, rho.b, rho.sigma.e, rho.sigma.b,
-                      rel.tol = 1e-8,  max.iter = 40 * (r + 1)^2, verbose = 0,
-                      doFit = TRUE, init)
-{
-    lcall <- match.call()
-    pf <- parent.frame()
-    method <- match.arg(method)
-    linit <- .rlmerInit(lcall, pf, formula, data, method, rho.e, rho.b, rho.sigma.e,
-                        rho.sigma.b, rel.tol, max.iter, verbose, init, setting, ...)
-    lobj <- linit$obj
-    init <- linit$init
-
-    ## FIXME this should be moved to .convLme4Rlmer
-    lobj@pp <- convToRlmerPredD(init, lobj)
-
-    ## required for max.iter:
-    r <- len(lobj, "theta")
-
-    return(.rlmer(lobj, rel.tol, max.iter, verbose, doFit))
-}
-
-##' @export
-##' @rdname rlmer
 rlmer <- function(formula, data, ..., method = c("DAStau", "DASvar"),
                   setting, rho.e, rho.b, rho.sigma.e, rho.sigma.b,
                   rel.tol = 1e-8, max.iter = 40 * (r + 1)^2, verbose = 0,
@@ -461,7 +432,7 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
         stop("can only do REML when using averaged DAS-estimate for sigma")
 
     ## Prepare for DAStau
-    if (method == "DAStau" && inherits(lobj@pp, "rlmerPredD")) {
+    if (method == "DAStau") {
         ## 4d int
         ## vectorize it!
         ghZ <- as.matrix(expand.grid(lobj@pp$ghz, lobj@pp$ghz, lobj@pp$ghz, lobj@pp$ghz))
@@ -508,7 +479,7 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
         ## symmetrize T to avoid non symmetric warning, then apply chol
         T <- symmpart(T)
         ## save to cache
-        if (inherits(lobj@pp, "rlmerPredD")) lobj@pp$setT(T)
+        lobj@pp$setT(T)
         ## apply chol to non-zero part only
         idx <- !.zeroB(lobj)
         ## stop if all are zero

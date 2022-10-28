@@ -12,3 +12,5 @@ vignettes/simulationStudies.tex
 vignettes/Sweave.sty
 vignettes/jss.bst
 vignettes/jss.cls
+*.Rprof
+tests/*.pdf

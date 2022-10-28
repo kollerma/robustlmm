@@ -2,27 +2,9 @@
 % Please edit documentation in R/rlmer.R, R/lmer.R
 \name{rlmer}
 \alias{rlmer}
-\alias{rlmerRcpp}
 \alias{lmerNoFit}
 \title{Robust Scoring Equations Estimator for Linear Mixed Models}
 \usage{
-rlmerRcpp(
-  formula,
-  data,
-  ...,
-  method = c("DAStau", "DASvar"),
-  setting,
-  rho.e,
-  rho.b,
-  rho.sigma.e,
-  rho.sigma.b,
-  rel.tol = 1e-08,
-  max.iter = 40 * (r + 1)^2,
-  verbose = 0,
-  doFit = TRUE,
-  init
-)
-
 rlmer(
   formula,
   data,
@@ -242,9 +224,6 @@ This is mainly used to verify the algorithms to reproduce the fit by
 \examples{
 ## dropping of VC
 system.time(print(rlmer(Yield ~ (1|Batch), Dyestuff2, method="DASvar")))
-
-## new Rcpp implementation
-system.time(print(rlmerRcpp(Yield ~ (1|Batch), Dyestuff2, method="DASvar")))
 
 \dontrun{
   ## Default method "DAStau"

@@ -102,44 +102,4 @@ testInit <- function(formula, data, ...) {
 testInit(Yield ~ (1 | Batch), Dyestuff)
 testInit(Yield ~ (1 | Batch), Dyestuff, rho.e = smoothPsi, rho.b = smoothPsi)
 
-## test values are updated in input, copy creates proper copy and
-## update doesn't change old object
-checkEquivalence <- function(object1, object2 = object1, opConst = isTRUE, opChangeable = isTRUE) {
-  ## resp part
-  stopifnot(opChangeable(all.equal(object1@resp$mu, object2@resp$ptr()$mu)),
-            opConst(all.equal(object1@resp$offset, object2@resp$ptr()$offset)),
-            ##sqrtXwt,
-            opConst(all.equal(object1@resp$sqrtrwt, object2@resp$ptr()$sqrtrwt)),
-            opConst(all.equal(object1@resp$weights, object2@resp$ptr()$weights)),
-            opChangeable(all.equal(object1@resp$wtres, object2@resp$ptr()$wtres)),
-            opConst(all.equal(object1@resp$y, object2@resp$ptr()$y)))
-  ## pp part
-  stopifnot(opConst(all.equal(object1@pp$X, object2@pp$ptr()$X, check.attributes = FALSE)),
-            opConst(all.equal(object1@pp$Zt, object2@pp$ptr()$Zt, check.attributes = FALSE)),
-            opChangeable(all.equal(object1@pp$input$Lambdat, object2@pp$ptr()$Lambdat())),
-            opChangeable(all.equal(object1@pp$input$theta, object2@pp$ptr()$theta(), check.attributes = FALSE)),
-            opChangeable(all.equal(object1@pp$input$b.s, object2@pp$ptr()$b_s())),
-            opChangeable(all.equal(object1@pp$input$sigma, object2@pp$ptr()$sigma())))
-}
-
-rfm1 <- rlmerRcpp(Yield ~ (1 | Batch), Dyestuff, doFit = FALSE)
-checkEquivalence(rfm1)
-
-rfm1a <- rfm1
-rfm1a@pp <- rfm1@pp$copy()
-rfm1a@resp <- rfm1@resp$copy()
-
-robustlmm:::theta(rfm1a, fit.effects = TRUE, update.sigma = TRUE) <- 3
-checkEquivalence(rfm1a)
-checkEquivalence(rfm1a, rfm1, opChangeable = function(x) !isTRUE(x))
-checkEquivalence(rfm1, rfm1a, opChangeable = function(x) !isTRUE(x))
-
-## test load / save equivalence
-tfile <- tempfile()
-rfm1b <- rfm1a
-save(rfm1b, file = tfile)
-load(tfile)
-checkEquivalence(rfm1b, rfm1a)
-unlink(tfile)
-
 cat('Time elapsed: ', proc.time(),'\n') # for ``statistical reasons''

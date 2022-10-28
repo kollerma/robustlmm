@@ -32,7 +32,7 @@ Loading required package: Matrix
 +         if (classic) fits[[method]][["lmer"]] <- fm
 +         cat("\n########", method, "########\n")
 +         try({cat("Time elapsed:",
-+                  system.time(m <- rlmerRcpp(formula, data, method=method,
++                  system.time(m <- rlmer(formula, data, method=method,
 +                                         rho.e = rho.e, rho.b = rho.b, ...)),
 +                  "\n")
 +              fits[[method]][["IRWLS"]] <- m
@@ -106,7 +106,7 @@ Loading required package: Matrix
 +     rho.e = smoothPsi, rho.b = smoothPsi)
 
 ######## DASvar ########
-Time elapsed: 0.071 0.003 0.073 0 0 
+Time elapsed: 0.292 0.007 0.3 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -144,7 +144,7 @@ Rho functions used for fitting:
 -19.822   1.081  33.966 -30.283  67.013 -51.900 
 
 ######## DAStau ########
-Time elapsed: 0.044 0 0.044 0 0 
+Time elapsed: 0.191 0.002 0.193 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -211,7 +211,7 @@ sigma               55.3
 
 ######## DASvar ########
 boundary (singular) fit: see help('isSingular')
-Time elapsed: 0.043 0.001 0.044 0 0 
+Time elapsed: 0.237 0 0.237 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -250,7 +250,7 @@ A B C D E F
 
 ######## DAStau ########
 boundary (singular) fit: see help('isSingular')
-Time elapsed: 0.047 0.001 0.047 0 0 
+Time elapsed: 0.255 0.002 0.257 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -316,14 +316,14 @@ sigma               4.06
 +     rho.e = smoothPsi, rho.b = smoothPsi)
 
 ######## DASvar ########
-Time elapsed: 0.211 0.043 0.07 0 0 
+Time elapsed: 0.139 0.001 0.14 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
 
 Scaled residuals: 
     Min      1Q  Median      3Q     Max 
--2.2164 -0.6474  0.0528  0.5885  3.4336 
+-2.2164 -0.6474  0.0528  0.5885  3.4337 
 
 Random effects:
  Groups   Name        Variance Std.Dev.
@@ -357,7 +357,7 @@ Rho functions used for fitting:
     eff: smoothed Huber (k = 1.345, s = 10) 
     vcp: smoothed Huber, Proposal 2 (k = 1.345, s = 10) 
          a          b          c          d          e          f          g 
- 4.436e-01  4.436e-01  1.241e-01  2.030e-01 -1.046e-06 -2.536e-01 -8.075e-01 
+ 4.436e-01  4.436e-01  1.241e-01  2.030e-01 -1.094e-06 -2.536e-01 -8.075e-01 
          h          i          j          k          l          m          n 
  4.872e-01 -4.441e-01 -4.541e-01  5.688e-01  2.945e-01  8.498e-01  2.945e-01 
          o          p          q          r          s          t          u 
@@ -368,7 +368,7 @@ Rho functions used for fitting:
 -2.667e-02 -7.956e-01 
 
 ######## DAStau ########
-Time elapsed: 0.193 0.125 0.061 0 0 
+Time elapsed: 0.15 0.003 0.153 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -380,7 +380,7 @@ Scaled residuals:
 Random effects:
  Groups   Name        Variance Std.Dev.
  plate    (Intercept) 0.9054   0.9515  
- sample   (Intercept) 4.5339   2.1293  
+ sample   (Intercept) 4.5338   2.1293  
  Residual             0.3114   0.5581  
 Number of obs: 144, groups: plate, 24; sample, 6
 
@@ -409,13 +409,13 @@ Rho functions used for fitting:
     eff: smoothed Huber (k = 1.345, s = 10) 
     vcp: smoothed Huber, Proposal 2 (k = 1.345, s = 10) 
         a         b         c         d         e         f         g         h 
- 0.450838  0.450838  0.128410  0.205545  0.000502 -0.256535 -0.815539  0.490628 
+ 0.450838  0.450838  0.128411  0.205545  0.000502 -0.256535 -0.815539  0.490628 
         i         j         k         l         m         n         o         p 
 -0.446899 -0.456519  0.575339  0.297994  0.858936  0.297994  0.554159  0.020649 
         q         r         s         t         u         v         w         x 
--0.163812 -0.164205 -0.815539  0.575339 -0.501182 -0.164248 -0.451685 -0.717135 
+-0.163812 -0.164206 -0.815539  0.575339 -0.501182 -0.164248 -0.451685 -0.717135 
         A         B         C         D         E         F 
- 0.559397 -0.265494  0.499107 -0.034026 -0.023533 -0.794299 
+ 0.559397 -0.265494  0.499107 -0.034026 -0.023533 -0.794300 
 
 ################################################
 ################################################
@@ -477,8 +477,8 @@ sigma                0.558
 + }
 > 
 > cat('Time elapsed: ', proc.time(),'\n') # for ``statistical reasons''
-Time elapsed:  2.597 0.399 2.257 0.002 0.006 
+Time elapsed:  2.693 0.069 2.763 0.002 0.004 
 > 
 > proc.time()
    user  system elapsed 
-  2.599   0.406   2.257 
+  2.695   0.073   2.763 

@@ -14,11 +14,7 @@ setSigma <- function(object, value) {
 
 ### Set fixed effects
 setFixef <- function(object, value, ...) {
-    if (inherits(object@pp, "rlmerPredD")) {
-        object@pp$beta <- value
-    } else {
-        object@pp$setBeta(value)
-    }
+    object@pp$beta <- value
     ## update mu and wtres
     object@resp$updateMu(.mu(object))
     invisible(object)
@@ -45,11 +41,7 @@ setU <- function(object, value) {
 
 ### Set b
 setB <- function(object, value) {
-    if (inherits(object@pp, "rlmerPredD")) {
-        object@pp$setB(value)
-    } else {
-        object@pp$setB_r(value)
-    }
+    object@pp$setB(value)
     invisible(object)
 }
 ## keep b<- for backwards compatibility

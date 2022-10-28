@@ -459,17 +459,30 @@ rlmerPredD_DAS::rlmerPredD_DAS(List args, MMap X, MSpMatrixd Zt) :
 
 void rlmerPredD_DAS::updateMatrices() {
   rlmerPredD::updateMatrices();
+  diagA_ = VectorXd(n_);
+  diagAAt_ = VectorXd(n_);
   if (allRandomEffectsDropped()) {
-    A_ = invU_eX_ * lltM_XX_.solve(invU_eX_.adjoint());
+    MatrixXd tmp(lltM_XX_.solve(invU_eX_.adjoint()));
+    for (unsigned int i = 0; i < n_; i++) {
+        VectorXd Arow(invU_eX_.row(i) * tmp);
+        diagA_(i) = Arow.coeff(i);
+        diagAAt_(i) = Arow.squaredNorm();
+    }
     Kt_ = MatrixXd(n_, q_).setZero();
     LLT<MatrixXd> llt_D_b(D_b_);
     L_ = llt_D_b.solve(MatrixXd::Identity(q_, q_));
   } else {
-    MatrixXd tmp2(tcrossprod(invU_eX_, crossprod(invU_btZtU_et_, Mobj()->bB())));
-    MatrixXd tmp3(crossprod(invU_btZtU_et_, Mobj()->bb()));
-    A_ = tcrossprod(invU_eX_ * Mobj()->BB(), invU_eX_) + tmp2 + tmp2.adjoint() +
-      tmp3 * invU_btZtU_et_;
-    Kt_ = (tcrossprod(invU_eX_, Mobj()->bB()) + tmp3) * -1.;
+    MatrixXd tmp1(crossprod(invU_btZtU_et_, Mobj()->bb()));
+    MatrixXd tmp2(crossprod(invU_btZtU_et_, Mobj()->bB()));
+    MatrixXd tmp3(invU_eX_ * Mobj()->BB());
+    VectorXd Arow(n_);
+    for (unsigned int i = 0; i < n_; i++) {
+        Arow = invU_eX_.row(i) * tmp2.adjoint()  + tmp2.row(i) * invU_eX_.adjoint() +
+            invU_eX_.row(i) * tmp3.adjoint() + tmp1.row(i) * invU_btZtU_et_;
+        diagA_(i) = Arow.coeff(i);
+        diagAAt_(i) = Arow.squaredNorm();
+    }
+    Kt_ = (tcrossprod(invU_eX_, Mobj()->bB()) + tmp1) * -1.;
     L_ = Mobj()->bb() * Lambda_b_;
   }
 }
@@ -492,11 +505,32 @@ MatrixXd rlmerPredD_DAS::getK_copy() {
 }
 
 MatrixXd rlmerPredD_DAS::getA_copy() {
-  return MatrixXd(A_);
+  MatrixXd A;
+  if (allRandomEffectsDropped()) {
+    A = invU_eX_ * lltM_XX_.solve(invU_eX_.adjoint());
+  } else {
+    MatrixXd tmp2(tcrossprod(invU_eX_, crossprod(invU_btZtU_et_, Mobj()->bB())));
+    MatrixXd tmp3(crossprod(invU_btZtU_et_, Mobj()->bb()));
+    A = tcrossprod(invU_eX_ * Mobj()->BB(), invU_eX_) + tmp2 + tmp2.adjoint() +
+      tmp3 * invU_btZtU_et_;
+  }
+  return A;
 }
 
-MatrixXd& rlmerPredD_DAS::getA() {
-  return A_;
+VectorXd& rlmerPredD_DAS::getDiagA() {
+  return diagA_;
+}
+
+VectorXd& rlmerPredD_DAS::getDiagAAt() {
+  return diagAAt_;
+}
+
+VectorXd rlmerPredD_DAS::getDiagA_copy() {
+  return VectorXd(diagA_);
+}
+
+VectorXd rlmerPredD_DAS::getDiagAAt_copy() {
+  return VectorXd(diagAAt_);
 }
 
 MatrixXd rlmerPredD_DAS::getKt_copy() {
@@ -519,10 +553,10 @@ SpMatrixd rlmerPredD_DAS::getTau_b_copy() {
   return SpMatrixd(getTau_b());
 }
 
-VectorXd rlmerPredD_DAS::s(MatrixXd m1, MatrixXd m2) {
-  zeroNaNs(m1);
+VectorXd rlmerPredD_DAS::s(VectorXd v1, MatrixXd m2) {
+  zeroNaNs(v1);
   zeroNaNs(m2);
-  VectorXd result = rho_e_->Epsi2() * (m1.rowwise().squaredNorm());
+  VectorXd result = rho_e_->Epsi2() * v1;
   if (!allRandomEffectsDropped()) {
     result += m2.array().square().matrix().eval() * Epsi_bpsi_bt_.diagonal();
   }
@@ -530,7 +564,8 @@ VectorXd rlmerPredD_DAS::s(MatrixXd m1, MatrixXd m2) {
 }
 
 VectorXd rlmerPredD_DAS::s_e() {
-  return s(zeroDiag(A_), this->getB());
+  VectorXd v1(diagAAt_ - diagA_.cwiseAbs2());
+  return s(v1, this->getB());
 }
 
 std::vector<MatrixXd> rlmerPredD_DAS::s_b() {
@@ -613,10 +648,13 @@ SpMatrixd rlmerPredD_DAS::getInitTau_b() {
 
 VectorXd rlmerPredD_DAS::calcTau_e() {
   MatrixXd B(getB());
-  MatrixXd Tau_e(V_e_.toDenseMatrix() - rho_e_->EDpsi() * (A_.adjoint() + A_) +
-    rho_e_->Epsi2() * tcrossprod(A_) +
-    B * tcrossprod(Epsi_bpsi_bt_, B));
-  return Tau_e.diagonal().cwiseSqrt();
+  MatrixXd tmp(tcrossprod(Epsi_bpsi_bt_, B));
+  VectorXd tau2 = V_e_.diagonal() - rho_e_->EDpsi() * 2 * diagA_ +
+    rho_e_->Epsi2() * diagAAt_;
+    for (unsigned int i = 0; i < n_; i++) {
+      tau2(i) += B.row(i) * tmp.col(i);
+    }
+  return tau2.cwiseSqrt();
 }
 
 SpMatrixd rlmerPredD_DAS::calcTau_b() {
@@ -717,7 +755,7 @@ rlmerPredD_DAStau::~rlmerPredD_DAStau() {
 VectorXd rlmerPredD_DAStau::calcTau_e() {
   VectorXd initialValue(getInitTau_e());
   return calcTau(initialValue, relativeTolerance_, maxOperations_,
-                 getA().diagonal(), s_e(), getKappa_e(),
+                 getDiagA(), s_e(), getKappa_e(),
                  getRho_e(), getRhoSigma_e(), getExpectation2d());
 }
 
@@ -882,7 +920,9 @@ RCPP_MODULE(rlmerPredD_module) {
   .method("kappa_b", &rlmerPredD_DAS::getKappa_b_copy, "kappa_b accessor")
   .method("Tb", &rlmerPredD_DAS::getTau_b_copy, "Tau_b accessor")
   .method("tau_e", &rlmerPredD_DAS::getTau_e_copy, "tau_e accessor")
-  .method("A", &rlmerPredD_DAS::getA_copy, "A accessor")
+  .method("A", &rlmerPredD_DAS::getA_copy, "compute A")
+  .method("diagA", &rlmerPredD_DAS::getDiagA_copy, "diagA accessor")
+  .method("diagAAt", &rlmerPredD_DAS::getDiagAAt_copy, "diagAAt accessor")
   .method("Kt", &rlmerPredD_DAS::getKt_copy, "Kt accessor")
   .method("L", &rlmerPredD_DAS::getL_copy, "L accessor")
   ;
@@ -940,4 +980,6 @@ RCPP_MODULE(rlmerPredD_module) {
   function("wgt_e", &Rwgt_e);
   function("wgt_b", &Rwgt_b);
 
+  function("calculateA", &calculateA);
+  function("computeDiagonalOfProduct", &computeDiagonalOfProduct);
 }

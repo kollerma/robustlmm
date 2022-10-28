@@ -182,9 +182,6 @@
 ##' ## dropping of VC
 ##' system.time(print(rlmer(Yield ~ (1|Batch), Dyestuff2, method="DASvar")))
 ##'
-##' ## new Rcpp implementation
-##' system.time(print(rlmerRcpp(Yield ~ (1|Batch), Dyestuff2, method="DASvar")))
-##'
 ##' \dontrun{
 ##'   ## Default method "DAStau"
 ##'   system.time(rfm.DAStau <- rlmer(Yield ~ (1|Batch), Dyestuff))
@@ -213,33 +210,7 @@
 ##'
 ##' @importFrom lme4 lmer
 ##' @importFrom stats getCall
-##' @rdname rlmer
-##' @name rlmer
 ##' @export
-rlmerRcpp <- function(formula, data, ..., method = c("DAStau", "DASvar"),
-                      setting, rho.e, rho.b, rho.sigma.e, rho.sigma.b,
-                      rel.tol = 1e-8,  max.iter = 40 * (r + 1)^2, verbose = 0,
-                      doFit = TRUE, init)
-{
-    lcall <- match.call()
-    pf <- parent.frame()
-    method <- match.arg(method)
-    linit <- .rlmerInit(lcall, pf, formula, data, method, rho.e, rho.b, rho.sigma.e,
-                        rho.sigma.b, rel.tol, max.iter, verbose, init, setting, ...)
-    lobj <- linit$obj
-    init <- linit$init
-
-    ## FIXME this should be moved to .convLme4Rlmer
-    lobj@pp <- convToRlmerPredD(init, lobj)
-
-    ## required for max.iter:
-    r <- len(lobj, "theta")
-
-    return(.rlmer(lobj, rel.tol, max.iter, verbose, doFit))
-}
-
-##' @export
-##' @rdname rlmer
 rlmer <- function(formula, data, ..., method = c("DAStau", "DASvar"),
                   setting, rho.e, rho.b, rho.sigma.e, rho.sigma.b,
                   rel.tol = 1e-8, max.iter = 40 * (r + 1)^2, verbose = 0,
@@ -513,7 +484,16 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
         idx <- !.zeroB(lobj)
         ## stop if all are zero
         if (!any(idx)) break
-        L <- t(chol(T[idx,idx]))
+        Tidx <- T[idx, idx]
+        if (any(diag(Tidx) == 0.0)) {
+            ## partially dropped block: can't handle yet.
+            idxZeroes <- which(idx)[which(diag(Tidx) == 0.0)]
+            blockAffected <- which(sapply(lobj@idx, function(cand) any(cand == idxZeroes)))
+            stop("Covariance matrix for random effects block ", blockAffected,
+                 " with grouping factor ", names(lobj@cnms)[blockAffected],
+                 " is singular. Please simplify the model and run again.")
+        }
+        L <- t(chol(Tidx))
         T.bs <- numeric(q) ## set the others to zero
         T.bs[idx] <- forwardsolve(L, b.s(lobj)[idx])
         ## compute weights

@@ -9,6 +9,7 @@ require(robustlmm)
 ## rlmer
 G <- robustlmm:::G
 updateSigma <- robustlmm:::updateSigma
+calcTau <- robustlmm:::calcTau
 `theta<-` <- robustlmm:::`theta<-`
 getX <- robustlmm:::getX
 .s <- robustlmm:::.s
@@ -36,6 +37,95 @@ rfm3 <- rlmer(Reaction ~ Days + (Days|Subject), sleepstudy, doFit=FALSE,
 sleepstudy2 <- within(sleepstudy, Group <- letters[1:4])
 rfm4 <- rlmer(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2, doFit=FALSE,
               rho.e = cPsi, rho.b = cPsi)
+
+####
+## Test row-wise computation of A
+####
+
+testCalculateA <- function(rfm) {
+    invU_eX <- rfm@pp$`.->.U_eX`
+    invU_btZtinvU_et <- rfm@pp$`.->U_btZt.U_et`
+    M <- rfm@pp$M()
+
+    tmp1 <- as.matrix(crossprod(invU_btZtinvU_et, M$M_bb))
+    tmp2 <- as.matrix(crossprod(invU_btZtinvU_et, M$M_bB))
+    tmp3 <- as.matrix(invU_eX %*% M$M_BB)
+
+    A <- tcrossprod(invU_eX, tmp2) +
+        tcrossprod(tmp2, invU_eX) +
+        tcrossprod(invU_eX, tmp3) +
+        tmp1 %*% invU_btZtinvU_et
+
+    expectedDiagA <- diag(A)
+    expectedDiagAAt <- diag(tcrossprod(A))
+
+    res <- robustlmm:::calculateA(as(as(invU_eX, "generalMatrix"), "unpackedMatrix"),
+                                  invU_btZtinvU_et,
+                                  as(as(M$M_bb, "generalMatrix"), "unpackedMatrix"),
+                                  as(as(M$M_bB, "generalMatrix"), "unpackedMatrix"),
+                                  as(as(M$M_BB, "generalMatrix"), "unpackedMatrix"))
+
+    stopifnot(all.equal(expectedDiagA, res$diagA, check.attributes = FALSE),
+              all.equal(expectedDiagAAt, res$diagAAt, check.attributes = FALSE))
+}
+testCalculateA(rfm1)
+testCalculateA(rfm2)
+testCalculateA(rfm3)
+testCalculateA(rfm4)
+
+testA <- function(rfm) {
+    A <- rfm@pp$A()
+    rfm@pp$updateMatrices()
+    stopifnot(all.equal(diag(A), rfm@pp$diagA, check.attributes = FALSE),
+              all.equal(rowSums(A^2), rfm@pp$diagAAt, check.attributes = FALSE))
+}
+testA(rfm1)
+testA(rfm2)
+testA(rfm3)
+testA(rfm4)
+
+####
+## Test row-wise computation of tau
+####
+
+testComputeDiagonalOfProduct <- function() {
+    A <- Matrix(1:4, 2, 2)
+    B <- Matrix(11:14, 2, 2)
+    C <- Matrix(1:6, 2, 3)
+    D <- Matrix(11:16, 3, 2)
+    E <- Matrix(1:6, 2, 3)
+
+    stopifnot(
+        all.equal(diag(A %*% B), robustlmm:::computeDiagonalOfProduct(A, B)),
+        all.equal(diag(C %*% D), robustlmm:::computeDiagonalOfProduct(C, D)),
+        all.equal(diag(A %*% E), robustlmm:::computeDiagonalOfProduct(A, E)),
+        all.equal(diag(D %*% E), robustlmm:::computeDiagonalOfProduct(D, E)),
+        all.equal(diag(t(E) %*% A), robustlmm:::computeDiagonalOfProduct(t(E), A)))
+
+    testthat::expect_error(robustlmm:::computeDiagonalOfProduct(C, B))
+    testthat::expect_error(robustlmm:::computeDiagonalOfProduct(NULL, B))
+    testthat::expect_error(robustlmm:::computeDiagonalOfProduct(A, NULL))
+    testthat::expect_error(robustlmm:::computeDiagonalOfProduct(NULL, NULL))
+    testthat::expect_error(robustlmm:::computeDiagonalOfProduct())
+
+    cat("testComputeDiagonalOfProduct passed\n")
+}
+testComputeDiagonalOfProduct()
+
+testTau <- function(rfm) {
+    fullA <- rfm@pp$A()
+    B <- rfm@pp$B()
+    Tau <- rfm@pp$V_e - rfm@pp$EDpsi_e * (t(fullA) + fullA) +
+        rfm@pp$Epsi2_e * tcrossprod(fullA) +
+        B %*% tcrossprod(rfm@pp$Epsi_bpsi_bt, B)
+    target <- sqrt(diag(Tau))
+    current <- calcTau(a = NULL, s = NULL, method = "DASvar", pp = rfm@pp)
+    stopifnot(all.equal(target, current, check.attributes = FALSE))
+}
+testTau(rfm1)
+testTau(rfm2)
+testTau(rfm3)
+testTau(rfm4)
 
 ####
 ## Test function G
@@ -70,7 +160,7 @@ testG <- function(object, theta=FALSE) {
         a <- diag(object@pp$L)
         s <- .s(object, theta = TRUE)
     } else {
-        a <- diag(object@pp$A)
+        a <- diag(object@pp$A())
         s <- .s(object)
     }
 

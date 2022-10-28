@@ -581,7 +581,7 @@ int calcTauNonDiag(const BlockTypeIndex* const blockType, SpMatrixd& value,
   VectorXd Lkk00(blockType->getNumberOfBlocks());
   for (const BlockIndex* block : blockType->getBlocks()) {
     bidx0 = block->getRandomEffects()[0]->getIndex();
-    Lkk00[block->getIndex()] = L.coeff(bidx0, bidx0);
+    Lkk00[blockType->getIndexWithinBlockType(block)] = L.coeff(bidx0, bidx0);
   }
   // sort indexes based on comparing values in Lkk[0,0]
   std::sort(idx.begin(), idx.end(), CompareIndicesByAnotherVectorValues(&Lkk00));
@@ -636,3 +636,50 @@ int calcTauNonDiag(const BlockTypeIndex* const blockType, SpMatrixd& value,
  SpMatrixd Tau_b(q_, q_);
  Tau_b.setFromTriplets(tripletList.begin(), tripletList.end());
  */
+
+// methods to compute A and tau for DASvar for rlmer
+
+// compute diagA and diagAAt
+// r <- M()
+// tmp1 <- crossprod(U_btZt.U_et, r$M_bb) ## U_e\inv Z U_b M_bb
+// tmp2 <- crossprod(U_btZt.U_et, r$M_bB)
+// tmp3 <- .U_eX %*% r$M_BB
+// for (i in 1:n) {
+//     Arow <- tcrossprod(.U_eX[i, ], tmp2) +
+//         tcrossprod(tmp2[i, ], .U_eX) +
+//         tcrossprod(.U_eX[i, ], tmp3) +
+//         tmp1[i, ] %*% U_btZt.U_et
+//     diagA[i] <<- Arow[i]
+//     diagAAt[i] <<- sum(Arow * Arow)
+// }
+
+// Returns list of vectors diagA and diagAAt
+// inputs: U_btZt.U_et sparse
+//         .U_eX, M_bb, M_bB, M_BB dense
+List calculateA(const MMap invU_eX_, const MSpMatrixd invU_btZtinvU_et_,
+                const MMap M_bb, const MMap M_bB, const MMap M_BB) {
+    MatrixXd tmp1(invU_btZtinvU_et_.adjoint() * M_bb);
+    MatrixXd tmp2(invU_btZtinvU_et_.adjoint() * M_bB);
+    MatrixXd tmp3(invU_eX_ * M_BB);
+    const int n(invU_eX_.rows());
+    VectorXd Arow(n);
+    VectorXd diagA(n);
+    VectorXd diagAAt(n);
+    for (int i = 0; i < n; ++i) {
+        Arow = invU_eX_.row(i) * tmp2.adjoint() + tmp2.row(i) * invU_eX_.adjoint() +
+            invU_eX_.row(i) * tmp3.adjoint() + tmp1.row(i) * invU_btZtinvU_et_;
+        diagA(i) = Arow.coeff(i);
+        diagAAt(i) = Arow.squaredNorm();
+    }
+    return List::create(Named("diagA") = diagA,
+                        Named("diagAAt") = diagAAt);
+}
+
+VectorXd computeDiagonalOfProduct(const MMap A, const MMap B) {
+    const int n(A.rows());
+    VectorXd result(n);
+    for (int i = 0; i < n; ++i) {
+        result[i] = A.row(i) * B.col(i);
+    }
+    return result;
+}

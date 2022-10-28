@@ -83,11 +83,11 @@ ThetaIndex::ThetaIndex(const unsigned thetaIndex, const unsigned blockTypeIndex,
 // class BlockTypeIndex
 
 BlockTypeIndex::BlockTypeIndex(const unsigned blockTypeIndex, const IndexMapper* indexMapper,
-                               const unsigned dim,
+                               const unsigned dim, const unsigned offset,
                                const std::vector<RandomEffectIndex*> randomEffects,
                                const std::vector<BlockIndex*> blocks,
                                const std::vector<ThetaIndex*> thetas) :
-  BaseIndex(blockTypeIndex, indexMapper), dim_(dim), blockTypeDropped_(false),
+  BaseIndex(blockTypeIndex, indexMapper), dim_(dim), offset_(offset), blockTypeDropped_(false),
   randomEffects_(randomEffects), blocks_(blocks), thetas_(thetas) {}
 
 bool BlockTypeIndex::isNonDiagonal() const {
@@ -116,6 +116,10 @@ const std::vector<ThetaIndex*>& BlockTypeIndex::getThetas() const {
 
 unsigned BlockTypeIndex::getNumberOfBlocks() const {
   return blocks_.size();
+}
+
+unsigned BlockTypeIndex::getIndexWithinBlockType(const BlockIndex* block) const {
+  return block->getIndex() - offset_;
 }
 
 bool BlockTypeIndex::isDropped(const VectorXd& theta) const {
@@ -185,6 +189,7 @@ void IndexMapper::initialiseThetas(const std::vector<VectorXi>& blockThetaMap) {
 
 void IndexMapper::initialiseBlockTypes(const MiVec& dim, const std::vector<VectorXi>& idx,
                                        const std::vector<VectorXi>& blockThetaMap) {
+  unsigned offset(0);
   anyBlockTypeNonDiagonal_ = false;
   blockTypes_.reserve(dim.size());
   for (int blockType = 0, size = dim.size(); blockType < size; ++blockType) {
@@ -213,8 +218,9 @@ void IndexMapper::initialiseBlockTypes(const MiVec& dim, const std::vector<Vecto
       thetas.push_back(thetas_[blockThetaMap[blockType][theta] - 1].get());
     }
 
-    blockTypes_.emplace_back(new BlockTypeIndex(blockType, this, dim[blockType], randomEffects,
+    blockTypes_.emplace_back(new BlockTypeIndex(blockType, this, dim[blockType], offset, randomEffects,
                                                 blocks, thetas));
+    offset += blocks.size();
   }
 
 }

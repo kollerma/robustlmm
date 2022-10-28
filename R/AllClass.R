@@ -1,6 +1,4 @@
-loadModule("rlmerPredD_module", TRUE)
-loadModule("rlmerResp_module", TRUE)
-loadModule("fitEffects_module", TRUE)
+loadModule("rlmerMatrixUtils_module", TRUE)
 
 ##' @importFrom Matrix bdiag
 ##' @importFrom methods new setAs setClass setRefClass setMethod
@@ -53,7 +51,7 @@ setRefClass("rlmerPredD",
                      .U_eX   = "Matrix",       ## U_e\inv X
                      .U_eZ   = "Matrix",       ## U_e\inv Z
                      M_XX    = "Matrix",       ## M_XX
-                     U_btZt.U_et = "Matrix",   ## U_b\tr Z\tr U_e\inv\tr
+                     U_btZt.U_et = "sparseMatrix",   ## U_b\tr Z\tr U_e\inv\tr
                      calledInit = "logical",   ## whether initMatrices has been called yet
                      M_XZ0   = "Matrix",       ## M_XZ = M_XZ0 %*% U_b
                      M_ZZ0   = "Matrix",       ## M_ZZ = U_b\tr %*% M_ZZ0 %*% U_b
@@ -186,7 +184,7 @@ setRefClass("rlmerPredD",
                          if (isTRUE(calledInit)) return()
                          ## initialize often required matrices and other stuff
                          dim <<- object@dim
-                         .U_eX <<- solve(U_e, X)
+                         .U_eX <<- as(solve(U_e, X), "denseMatrix")
                          .U_eZ <<- solve(U_e, t(Zt))
                          U_btZt.U_et <<- t(.U_eZ %*% U_b)
                          initRho(object)
@@ -197,18 +195,18 @@ setRefClass("rlmerPredD",
                          cache.M <<- list()
                          if (any(!zeroB)) {
                              ## M_bb. := M_bb\inv
-                             cache.M$M_bb. <<- crossprod(U_b,(M_ZZ0 - M_ZX0M_XX.M_ZZ0)) %*% U_b +
-                                 Lambda_bD_b
-                             cache.M$M_XZ <<- M_XZ <- M_XZ0 %*% U_b
+                             cache.M$M_bb. <<- as(crossprod(U_b,(M_ZZ0 - M_ZX0M_XX.M_ZZ0)) %*% U_b +
+                                 Lambda_bD_b, "denseMatrix")
+                             cache.M$M_XZ <<- M_XZ <- as(M_XZ0 %*% U_b, "denseMatrix")
                              M_ZX.M_XX <- t(solve(M_XX, M_XZ))
-                             cache.M$M_bB <<- -1*solve(cache.M$M_bb., M_ZX.M_XX)
+                             cache.M$M_bB <<- as(-1*solve(cache.M$M_bb., M_ZX.M_XX), "denseMatrix")
                          } else { ## all random effects dropped
-                             cache.M$M_bb. <<- Lambda_bD_b
-                             cache.M$M_XZ <<- M_XZ <- Matrix(0, p, q)
-                             cache.M$M_bB <<- Matrix(0, q, p)
+                             cache.M$M_bb. <<- as(Lambda_bD_b, "denseMatrix")
+                             cache.M$M_XZ <<- M_XZ <- as(Matrix(0, p, q), "denseMatrix")
+                             cache.M$M_bB <<- matrix(0, q, p)
                          }
-                         cache.M$M_BB <<- solve(M_XX, Diagonal(p) - M_XZ %*% cache.M$M_bB)
-                         cache.M$M_bb <<- solve(cache.M$M_bb.)
+                         cache.M$M_BB <<- as(solve(M_XX, Diagonal(p) - M_XZ %*% cache.M$M_bB), "denseMatrix")
+                         cache.M$M_bb <<- as(solve(cache.M$M_bb.), "denseMatrix")
                          set.M <<- TRUE
                          return(cache.M)
                      },
@@ -329,7 +327,8 @@ setRefClass("rlmerPredD",
 
 setRefClass("rlmerPredD_DAS",
             fields =
-            list(A       = "Matrix",        ## Matrix A
+            list(diagA   = "numeric",       ## Digonal of matrix A
+                 diagAAt = "numeric",       ## Diagonal of matrix A %*% t(A)
                  Kt      = "Matrix",        ## Matrix B = lfrac * Kt, K = t(Kt)
                  L       = "Matrix",        ## Matrix L
                  kappa_e = "numeric",       ## kappa_e^(sigma) (only required for DASvar and DAStau)
@@ -397,28 +396,49 @@ setRefClass("rlmerPredD_DAS",
                  T = function() {
                      if (.setTbk) .Tbk else Tb() ## fallback to Tb()
                  },
+                 A = function() {
+                     if (!isTRUE(calledInit)) initMatrices()
+                     if (any(!zeroB)) {
+                         r <- M()
+                         A <- tcrossprod(.U_eX, ## X M_Bb U_b Z U_e\inv
+                                         crossprod(U_btZt.U_et, r$M_bB))
+                         A <- A + t(A) + tcrossprod(.U_eX, .U_eX %*% r$M_BB) +
+                             crossprod(U_btZt.U_et, r$M_bb) %*% U_btZt.U_et
+                     } else {
+                         ## no random effects
+                         A <- .U_eX %*% solve(M_XX, t(.U_eX)) ## just the hat matrix
+                     }
+                     return(A)
+                 },
                  updateMatrices = function() {
                      if (!isTRUE(calledInit)) initMatrices()
                      if (any(!zeroB)) {
                          r <- M()
-                         tmp2 <- tcrossprod(.U_eX, ## X M_Bb U_b Z U_e\inv
-                                            crossprod(U_btZt.U_et, r$M_bB))
-                         tmp3 <- crossprod(U_btZt.U_et, r$M_bb) ## U_e\inv Z U_b M_bb
-
-                         A <<- tcrossprod(.U_eX %*% r$M_BB, .U_eX) +
-                             tmp2 + t(tmp2) + tmp3 %*% U_btZt.U_et
-                         Kt <<- -1*(tcrossprod(.U_eX, r$M_bB) + tmp3)
+                         tmp1 <- crossprod(U_btZt.U_et, r$M_bb) ## U_e\inv Z U_b M_bb
+                         ## FIXME pass in tmp1 instead of r$M_bb
+                         result <- calculateA(.U_eX, U_btZt.U_et,
+                                              r$M_bb, r$M_bB, r$M_BB)
+                         diagA <<- result[["diagA"]]
+                         diagAAt <<- result[["diagAAt"]]
+                         Kt <<- -1*(tcrossprod(.U_eX, r$M_bB) + tmp1)
                          L <<- r$M_bb %*% Lambda_b
                      } else {
                          ## no random effects
-                         A <<- .U_eX %*% solve(M_XX, t(.U_eX)) ## just the hat matrix
+                         ## FIXME also do this in c++?
+                         tmp <- solve(M_XX, t(.U_eX))
+                         diagAAt <<- diagA <<- numeric(n)
+                         for (i in 1:n) {
+                             Arow <- .U_eX[i, ] %*% tmp
+                             diagA[i] <<- Arow[i]
+                             diagAAt[i] <<- sum(Arow * Arow)
+                         }
                          Kt <<- Matrix(0, n, q)
                          L <<- solve(D_b)
                      }
                  },
                  tau_e = function() {
                      if (isTRUE(.setTau_e)) return(.tau_e)
-                     .tau_e <<- calcTau(diag(A), .s(theta=FALSE, pp=.self),
+                     .tau_e <<- calcTau(diagA, .s(theta=FALSE, pp=.self),
                                         rho_e, rho_sigma_e, .self, kappa_e,
                                         .tau_e, method)
                      .setTau_e <<- TRUE
@@ -427,305 +447,38 @@ setRefClass("rlmerPredD_DAS",
                 )
             )
 
-## This is basically a copy of the rmerPredD-class,
-## but with fields replaced by functions.
-##
-## @title rlmerPredD_Rcpp
-## @slot all see rlmerPredD class
-##' @importClassesFrom Rcpp Module
-rlmerPredD_Rcpp <-
-  setRefClass("rlmerPredD_Rcpp",
-              fields =
-                list(input = "list",
-                     n = "numeric",
-                     p = "numeric",
-                     q = "numeric",
-                     X = "matrix",
-                     Zt = "dgCMatrix",
-                     method = "character",
-                     Ptr = "refClass"
-                ),
-              methods =
-                list(
-                  initialize = function(...) {
-                    ## TODO test that we're not creating unnecessary copies!
-                    args <- list(...)
-                    input <<- args$input
-                    X <<- as(args$X, "matrix")
-                    Zt <<- as(args$Zt, "CsparseMatrix")
-                    n <<- nrow(X)
-                    p <<- ncol(X)
-                    q <<- nrow(Zt)
-                    method <<- args$method
-                    initializePtr()
-                  },
-                  copy = function(shallow = FALSE) {
-                    def <- .refClassDef
-                    selfEnv <- as.environment(.self)
-                    vEnv    <- new.env(parent=emptyenv())
-
-                    for (field in setdiff(names(def@fieldClasses), "Ptr")) {
-                      if (shallow)
-                        assign(field, get(field, envir = selfEnv), envir = vEnv)
-                      else {
-                        current <- get(field, envir = selfEnv)
-                        if (is(current, "envRefClass"))
-                          current <- current$copy(FALSE)
-                        ## FIXME is this enough to make sure elements are copied as well?
-                        ## (e.g., beta inside input list?)
-                        assign(field, forceCopy(current), envir = vEnv)
-                      }
-                    }
-                    do.call(rlmerPredD_Rcpp$new, c(as.list(vEnv), n=nrow(vEnv$V), Class=def))
-                  },
-                  ptr = function() {
-                    'returns the external pointer, regenerating if necessary'
-                    if (is.null(Ptr) || isnull(Ptr$.pointer)) initializePtr()
-                    Ptr
-                  },
-                  initializePtr = function() {
-
-                    rho_e_instance <- input$rho_e_src@getInstanceWithOriginalDefaults();
-                    rhoSigma_e_instance <- input$rhoSigma_e_src@getInstanceWithOriginalDefaults()
-                    rho_b_instance <- lapply(input$rho_b_src, function(x) x@getInstanceWithOriginalDefaults())
-                    rhoSigma_b_instance <- lapply(input$rhoSigma_b_src, function(x) x@getInstanceWithOriginalDefaults())
-
-                    input$rho_e_instance <<- rho_e_instance
-                    input$rho_e <<- rho_e_instance$.pointer
-                    input$rhoSigma_e_instance <<- rhoSigma_e_instance
-                    input$rhoSigma_e <<- rhoSigma_e_instance$.pointer
-                    input$rho_b_instance <<- rho_b_instance
-                    input$rho_b <<- lapply(rho_b_instance, function(x) x$field(".pointer"))
-                    input$rhoSigma_b_instance <<- rhoSigma_b_instance
-                    input$rhoSigma_b <<- lapply(rhoSigma_b_instance, function(x) x$field(".pointer"))
-
-                    Ptr <<- switch(tolower(method),
-                                   dasvar = new(rlmerPredD_DAS, input, X, Zt),
-                                   dastau = new(rlmerPredD_DAStau, input, X, Zt),
-                                   stop("Unknown method ", method, ". Valid method arguments are: DASvar, DAStau."))
-                    Ptr$initMatrices()
-                  },
-                  setSigma = function(value) {
-                    ptr()$setSigma(value)
-                  },
-                  setU = function(value) {
-                    ptr()$setU(value)
-                  },
-                  setB_s = function(value) {
-                    ptr()$setB_s(value)
-                  },
-                  setB_r = function(value) {
-                    ptr()$setB_r(value)
-                  },
-                  setBeta = function(value) {
-                    ptr()$setBeta(value)
-                  },
-                  setTheta = function(value) {
-                    ptr()$setTheta(value)
-                  },
-                  Lambdat = function() {
-                    ptr()$Lambdat()
-                  },
-                  M = function() {
-                    ptr()$M()
-                  },
-                  unsc = function() {
-                    ptr()$unsc()
-                  },
-                  b = function() {
-                    ptr()$b()
-                  },
-                  zeroB = function() {
-                    ptr()$zeroB()
-                  },
-                  U_b = function() {
-                    ptr()$U_b()
-                  },
-                  U_e = function() {
-                    ptr()$U_e()
-                  },
-                  V_e = function() {
-                    ptr()$V_e()
-                  },
-                  theta = function() {
-                    ## take from input?
-                    ptr()$theta()
-                  },
-                  beta = function() {
-                    ## take from input?
-                    ptr()$beta()
-                  },
-                  b_s = function() {
-                    ## take from input?
-                    ptr()$b_s()
-                  },
-                  effects = function() {
-                    ptr()$effects()
-                  },
-                  sigma = function() {
-                    ptr()$sigma()
-                  },
-                  M_XZ0 = function() {
-                    ptr()$M_XZ0()
-                  },
-                  M_ZZ0 = function() {
-                    ptr()$M_ZZ0()
-                  },
-                  M_ZZ0_sub_M_ZX0invM_XXMZZ0 = function() {
-                    ptr()$M_ZZ0_sub_M_ZX0invM_XXMZZ0()
-                  },
-                  Lambda_b = function() {
-                    ptr()$Lambda_b()
-                  },
-                  Lambda_bD_b = function() {
-                    ptr()$Lambda_bD_b()
-                  },
-                  Epsi_bbt = function() {
-                    ptr()$Epsi_bbt()
-                  },
-                  Epsi_bpsi_bt = function() {
-                    ptr()$Epsi_bpsi_bt()
-                  },
-                  Epsi2_b = function() {
-                    ptr()$Epsi2_b()
-                  },
-                  invU_btZtU_et = function() {
-                    ptr()$invU_btZtU_et()
-                  },
-                  invU_eX = function() {
-                    ptr()$invU_eX()
-                  },
-                  mu = function() {
-                    ptr()$mu()
-                  },
-                  distB = function() {
-                    ptr()$distB()
-                  },
-                  bBlockMap = function() {
-                    ptr()$bBlockMap()
-                  },
-                  ## methods from rlmerPredD_DAS class:
-                  s_e = function() {
-                    ptr()$s_e()
-                  },
-                  S_b = function() {
-                    ptr()$S_b()
-                  },
-                  kappa_e = function() {
-                    ptr()$kappa_e()
-                  },
-                  kappa_b = function() {
-                    ptr()$kappa_b()
-                  },
-                  Tb = function() {
-                    ptr()$Tb()
-                  },
-                  tau_e = function() {
-                    ptr()$tau_e()
-                  },
-                  A = function() {
-                    ptr()$A()
-                  },
-                  Kt = function() {
-                    ptr()$Kt()
-                  },
-                  L = function() {
-                    ptr()$L()
-                  }
-                )
-  )
-rlmerPredD_Rcpp$lock("n", "p", "q", "X", "Zt", "method")
-
-## This is basically a copy of the lmerResp-class
-##
-## REVISION: 1611
-##
-## @title rlmerResp_Rcpp
-## @name rlmerResp_Rcpp-class
-## @slot all see lmerResp class
-rlmerResp_Rcpp <-
-  setRefClass("rlmerResp_Rcpp",
-              fields =
-                list(Ptr     = "refClass",
-                     mu      = "numeric",
+setRefClass("rlmerResp",
+            fields =
+                list(mu      = "numeric",
                      offset  = "numeric",
-                     ##sqrtXwt = "numeric",
                      sqrtrwt = "numeric",
                      weights = "numeric",
                      wtres   = "numeric",
-                     y       = "numeric"),
-              methods =
-                list(initialize = function(...) {
-                  if (!nargs()) return()
-                  ll <- list(...)
-                  if (is.null(ll$y)) stop("y must be specified")
-                  y <<- as.numeric(ll$y)
-                  n <- length(y)
-                  mu <<- if (!is.null(ll[["mu"]]))
-                    as.numeric(ll[["mu"]]) else numeric(n)
-                  offset <<- if (!is.null(ll$offset))
-                    as.numeric(ll$offset) else numeric(n)
-                  weights <<- if (!is.null(ll$weights))
-                    as.numeric(ll$weights) else rep.int(1,n)
-                  ## sqrtXwt <<- if (!is.null(ll$sqrtXwt))
-                  ##   as.numeric(ll$sqrtXwt) else sqrt(weights)
-                  sqrtrwt <<- if (!is.null(ll$sqrtrwt))
-                    as.numeric(ll$sqrtrwt) else sqrt(weights)
-                  wtres   <<- sqrtrwt * (y - mu)
-                  initializePtr()
-                },
-                copy         = function(shallow = FALSE) {
-                  def <- .refClassDef
-                  selfEnv <- as.environment(.self)
-                  vEnv    <- new.env(parent=emptyenv())
-                  for (field in setdiff(names(def@fieldClasses), "Ptr")) {
-                    if (shallow)
-                      assign(field, get(field, envir = selfEnv), envir = vEnv)
-                    else {
-                      current <- get(field, envir = selfEnv)
-                      if (is(current, "envRefClass"))
-                        current <- current$copy(FALSE)
-                      ## deep-copy hack +0
-                      assign(field, forceCopy(current), envir = vEnv)
-                    }
-                  }
-                  do.call(new, c(as.list(vEnv), Class=def))
-                },
-                ptr = function() {
-                  'returns the external pointer, regenerating if necessary'
-                  if (is.null(Ptr) || isnull(Ptr$.pointer)) initializePtr()
-                  Ptr
-                },
-                initializePtr = function() {
-                  Ptr <<- new(rlmerResp, y, weights, offset, mu, ## sqrtXwt,
-                              sqrtrwt, wtres)
-                  Ptr$updateMu(mu - offset)
-                },
-                allInfo = function() {
-                  'return all the information available on the object'
-                  data.frame(y=y, offset=offset, weights=weights, mu=mu,
-                             rwt=sqrtrwt, wres=wtres)
-                },
-                # setOffset  = function(oo) {
-                #   'change the offset in the model (used in profiling)'
-                #   ptr()$setOffset(as.numeric(oo))
-                # },
-                # setResp    = function(rr) {
-                #   'change the response in the model, usually after a deep copy'
-                #   ptr()$setResp(as.numeric(rr))
-                # },
-                # setWeights = function(ww) {
-                #   'change the prior weights in the model'
-                #   ptr()$setWeights(as.numeric(ww))
-                # },
-                updateMu  = function(gamma) {
-                  'update mu and wtres from the linear predictor'
-                  ptr()$updateMu(gamma)
-                })
-  )
-
-rlmerResp_Rcpp$lock("mu", "offset", ## "sqrtXwt",
-                    "sqrtrwt", "weights", "wtres")#, "y")
+                     y       = "numeric"
+                ),
+            methods =
+                list(
+                    initialize = function(...) {
+                        if (!nargs()) return()
+                        ll <- list(...)
+                        if (is.null(ll$y)) stop("y must be specified")
+                        y <<- as.numeric(ll$y)
+                        n <- length(y)
+                        mu <<- if (!is.null(ll$mu))
+                            as.numeric(ll$mu) else numeric(n)
+                        offset <<- if (!is.null(ll$offset))
+                            as.numeric(ll$offset) else numeric(n)
+                        weights <<- if (!is.null(ll$weights))
+                            as.numeric(ll$weights) else rep.int(1,n)
+                        sqrtrwt <<- if (!is.null(ll$sqrtrwt))
+                            as.numeric(ll$sqrtrwt) else sqrt(weights)
+                        wtres   <<- sqrtrwt * (y - mu)
+                    },
+                    updateMu = function(lmu) {
+                        mu <<- lmu
+                        wtres <<- sqrtrwt * (y - mu)
+                    })
+)
 
 ##' Class "rlmerMod" of Robustly Fitted Mixed-Effect Models
 ##'
@@ -971,8 +724,11 @@ setClass("rlmerMod",
         weights <- weights(from)
     } else stop("Unsupported object of class", class(from))
 
-    resp <- new("rlmerResp_Rcpp", y = y, offset = offset,
-                weights = weights, mu = mu)
+    resp <- new("rlmerResp",
+                mu = mu,
+                offset = offset,
+                weights = weights,
+                y = y)
     pp <- new("rlmerPredD",
               X=X,
               Zt=Zt,

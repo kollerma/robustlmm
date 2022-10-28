@@ -209,6 +209,10 @@ VarCorr.summary.rlmerMod <- function(x, ...) x$varcor
 ##' @export
 print.VarCorr.rlmerMod <- getS3method("print", "VarCorr.merMod")
 
+##' @export
+as.data.frame.VarCorr.rlmerMod <-
+    getS3method("as.data.frame", "VarCorr.merMod")
+
 ## __NOT YET EXPORTED__
 ## "format()" the 'VarCorr' matrix of the random effects -- for
 ## print()ing and show()ing

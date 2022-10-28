@@ -69,7 +69,7 @@ test.updateMatrices <- function(i) {
   cat("test.updateMatrices for", names(rPDs)[i],"...")
   ltest <- function() {
     ## A
-    expected <- as.matrix(rPDASTests[[i]]$A)
+    expected <- as.matrix(rPDASTests[[i]]$A())
     actual <- rPDASs[[i]]$A()
     stopifnot(all.equal(actual, expected, check.attributes = FALSE))
 
@@ -113,9 +113,15 @@ for (i in seq_along(rPDASs)) test.updateMatrices(i)
 test.tau_e <- function(i) {
   cat("test.tau_e for", names(rPDs)[i], "...")
   ltest <- function() {
-    Tau <- with(rPDASTests[[i]], V_e - EDpsi_e * (t(A) + A) + Epsi2_e * tcrossprod(A) +
-                  B() %*% tcrossprod(Epsi_bpsi_bt, B()))
-    expected <- sqrt(diag(Tau))
+    ## Tau <- with(rPDASTests[[i]], V_e - EDpsi_e * (t(A) + A) + Epsi2_e * tcrossprod(A) +
+    ##               B() %*% tcrossprod(Epsi_bpsi_bt, B()))
+    tau2 <- with(rPDASTests[[i]], diag(V_e) - EDpsi_e * 2 * diagA + Epsi2_e * diagAAt)
+    B <- rPDASTests[[i]]$B()
+    tmp <- tcrossprod(rPDASTests[[i]]$Epsi_bpsi_bt, B)
+    for (j in 1:rPDASTests[[i]]$n) {
+      tau2[j] <- tau2[j] + B[j, ] %*% tmp[, j]
+    }
+    expected <- sqrt(tau2)
     actual <- rPDASs[[i]]$tau_e()
     stopifnot(all.equal(actual, expected, check.attributes = FALSE,
                         tolerance = 5e-6))

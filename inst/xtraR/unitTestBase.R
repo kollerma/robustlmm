@@ -328,7 +328,8 @@ if (!exists("unitTestBaseWasRun")) {
 
   setRefClass("rlmerPredD_DAS_test",
               fields =
-                list(A       = "Matrix",        ## Matrix A
+                list(diagA   = "numeric",       ## Diagonal of matrix A
+                     diagAAt = "numeric",       ## Diagonal of matrix A %*% t(A)
                      Kt      = "Matrix",        ## Matrix B = lfrac * Kt, K = t(Kt)
                      L       = "Matrix",        ## Matrix L
                      kappa_e = "numeric",       ## kappa_e^(sigma) (only required for DASvar and DAStau)
@@ -397,28 +398,57 @@ if (!exists("unitTestBaseWasRun")) {
                   T = function() {
                     if (.setTbk) .Tbk else Tb() ## fallback to Tb()
                   },
+                  A = function() {
+                      if (!isTRUE(calledInit)) initMatrices()
+                      if (any(!zeroB)) {
+                          r <- M()
+                          tmp3 <- crossprod(U_btZt.U_et, r$M_bb) ## U_e\inv Z U_b M_bb
+                          A <- tcrossprod(.U_eX, ## X M_Bb U_b Z U_e\inv
+                                          as(crossprod(U_btZt.U_et, r$M_bB), "denseMatrix"))
+                          A <- A + t(A) + tcrossprod(.U_eX, .U_eX %*% r$M_BB) +
+                              tmp3 %*% U_btZt.U_et
+                      } else {
+                          ## no random effects
+                          A <- .U_eX %*% solve(M_XX, t(.U_eX)) ## just the hat matrix
+                      }
+                      return(A)
+                  },
                   updateMatrices = function() {
-                    if (!isTRUE(calledInit)) initMatrices()
-                    if (any(!zeroB)) {
-                      r <- M()
-                      tmp2 <- tcrossprod(.U_eX, ## X M_Bb U_b Z U_e\inv
-                                         crossprod(U_btZt.U_et, r$M_bB))
-                      tmp3 <- crossprod(U_btZt.U_et, r$M_bb) ## U_e\inv Z U_b M_bb
-
-                      A <<- tcrossprod(.U_eX %*% r$M_BB, .U_eX) +
-                        tmp2 + t(tmp2) + tmp3 %*% U_btZt.U_et
-                      Kt <<- -1*(tcrossprod(.U_eX, r$M_bB) + tmp3)
-                      L <<- r$M_bb %*% Lambda_b
-                    } else {
-                      ## no random effects
-                      A <<- .U_eX %*% solve(M_XX, t(.U_eX)) ## just the hat matrix
-                      Kt <<- Matrix(0, n, q)
-                      L <<- solve(D_b)
-                    }
+                      if (!isTRUE(calledInit)) initMatrices()
+                      if (any(!zeroB)) {
+                          r <- M()
+                          tmp3 <- crossprod(U_btZt.U_et, r$M_bb) ## U_e\inv Z U_b M_bb
+                          # A <- tcrossprod(.U_eX, ## X M_Bb U_b Z U_e\inv
+                          #                 as(crossprod(U_btZt.U_et, r$M_bB), "denseMatrix"))
+                          # A <- A + t(A) + tcrossprod(.U_eX, .U_eX %*% r$M_BB) +
+                          #     tmp3 %*% U_btZt.U_et
+                          diagAAt <<- diagA <<- numeric(n)
+                          for (i in 1:n) {
+                              Arow <- tcrossprod(.U_eX[i, ], crossprod(U_btZt.U_et, r$M_bB))
+                              Arow <- drop(2 * Arow + tcrossprod(.U_eX[i, ], .U_eX %*% r$M_BB) +
+                                               tmp3[i, ] %*% U_btZt.U_et)
+                              diagA[i] <<- Arow[i]
+                              diagAAt[i] <<- sum(Arow * Arow)
+                          }
+                          Kt <<- -1*(tcrossprod(.U_eX, r$M_bB) + tmp3)
+                          L <<- r$M_bb %*% Lambda_b
+                      } else {
+                          ## no random effects
+                          ## A <<- .U_eX %*% solve(M_XX, t(.U_eX)) ## just the hat matrix
+                          tmp <- solve(M_XX, t(.U_eX))
+                          diagAAt <<- diagA <<- numeric(n)
+                          for (i in 1:n) {
+                              Arow <- .U_eX[i, ] %*% tmp
+                              diagA[i] <<- Arow[i]
+                              diagAAt[i] <<- sum(Arow * Arow)
+                          }
+                          Kt <<- Matrix(0, n, q)
+                          L <<- solve(D_b)
+                      }
                   },
                   tau_e = function() {
                     if (isTRUE(.setTau_e)) return(.tau_e)
-                    .tau_e <<- calcTau(diag(A), .s(theta=FALSE, pp=.self),
+                    .tau_e <<- calcTau(diagA, .s(theta=FALSE, pp=.self),
                                        rho_e, rho_sigma_e, .self, kappa_e,
                                        .tau_e, method)
                     .setTau_e <<- TRUE

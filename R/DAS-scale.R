@@ -186,13 +186,8 @@ calcTau <- function(a, s, rho.e, rho.sigma.e, pp,
         ##                     B() %*% tcrossprod(Epsi_bpsi_bt, B()))
         B <- pp$B()
         tmp <- tcrossprod(pp$Epsi_bpsi_bt, B)
-        if (pp$useLargeDataAlgorithm) {
-            tau2 <- with(pp, diag(V_e) - EDpsi_e * 2 * diagA + Epsi2_e * diagAAt) +
-                computeDiagonalOfProduct(as.matrix(B), as.matrix(tmp))
-        } else {
-            tau2 <- with(pp, diag(V_e) - EDpsi_e * 2 * diagA + Epsi2_e * diagAAt) +
-                diag(B %*% tmp)
-        }
+        tau2 <- with(pp, diag(V_e) - EDpsi_e * 2 * diagA + Epsi2_e * diagAAt) +
+            computeDiagonalOfProduct(as(B, "unpackedMatrix"), as(tmp, "unpackedMatrix"))
         tau <- sqrt(tau2)
         if (method == "DASvar") return(tau)
     }
@@ -245,10 +240,6 @@ calcTau <- function(a, s, rho.e, rho.sigma.e, pp,
 
 calcTau.nondiag <- function(object, ghZ, ghw, skbs, kappas, max.iter,
                             rel.tol = 1e-4, verbose = 0) {
-    if (!inherits(object@pp, "rlmerPredD")) {
-        return(object@pp$Tb())
-    }
-
     ## define 4d integration function
     ## int4d <- function(fun) drop(apply(ghZ, 1, fun) %*% ghw)
     ## initial values
@@ -522,7 +513,7 @@ updateThetaTau <- function(object, max.iter = 100, rel.tol = 1e-6, verbose = 0) 
     ## update sigma without refitting effects
     updateSigma(object, fit.effects = FALSE)
     ## set Tbk cache
-    if (inherits(object@pp, "rlmerPredD")) object@pp$setT(Diagonal(x=tau2))
+    object@pp$setT(Diagonal(x=tau2))
 
     invisible(object)
 }

@@ -37,8 +37,8 @@ robustness weights when producing the Q-Q plots.}
 \item{ask}{waits for user input before displaying each plot.}
 }
 \value{
-a list of plots of class \code{\link{ggplot}} that can be used for
-  further modification before plotting (using \code{print}).
+a list of plots of class \code{\link[ggplot2]{ggplot}} that can be
+  used for further modification before plotting (using \code{print}).
 }
 \description{
 Diagnostic plots for objects of class \code{rlmerMod} and \code{lmerMod}.

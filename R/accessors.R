@@ -68,8 +68,7 @@ Lambda <- function(object) {
 ## @title Get U_b
 ## @param object merMod object
 U_b <- function(object) {
-   if (class(object)[1] == "lmerMod") t(object@pp$Lambdat) else
-     if (inherits(object@pp, "rlmerPredD")) object@pp$U_b else object@pp$U_b()
+   if (class(object)[1] == "lmerMod") t(object@pp$Lambdat) else object@pp$U_b
 }
 
 ## Get Lind
@@ -77,7 +76,7 @@ U_b <- function(object) {
 ## @title Get Lind
 ## @param object merMod object
 Lind <- function(object) {
-  if (inherits(object@pp, "rlmerPredD")) object@pp$Lind else attr(object@pp, "input")[["Lind"]]
+  object@pp$Lind
 }
 
 ## Get lower
@@ -163,7 +162,7 @@ residuals.rlmerMod <- function(object, type = c("response", "weighted"),
 
 ### Get sigma (so that we are not coercing all the time)
 .sigma <- function(object, ...)
-  if (inherits(object@pp, "rlmerPredD")) object@pp$sigma else object@pp$sigma()
+  object@pp$sigma
 ##' @importFrom lme4 sigma
 ##' @export
 sigma.rlmerMod <- .sigma
@@ -189,11 +188,11 @@ deviance.rlmerMod <- .deviance
 
 ### Get fixed effects
 .fixef <- function(object)
-  if (inherits(object@pp, "rlmerPredD")) object@pp$beta else object@pp$beta()
+  object@pp$beta
 
 ### Get u
 b.s <- .u <- function(object, ...)
-  if (inherits(object@pp, "rlmerPredD")) object@pp$b.s else object@pp$b_s()
+  object@pp$b.s
 u.rlmerMod <- function(object, ...) {
     ret <- b.s(object)
     names(ret) <- dimnames(getZ(object))[[2]]
@@ -204,7 +203,7 @@ u.lmerMod <- function(object, ...) object@u
 
 ### Get b
 .b <- function(object, ...)
-  if (inherits(object@pp, "rlmerPredD")) object@pp$b.r else object@pp$b()
+  object@pp$b.r
 b.rlmerMod <- function(object, ...) {
     ret <- .b(object)
     names(ret) <- dimnames(getZ(object))[[2]]
@@ -503,8 +502,7 @@ getME.rlmerMod <-
 theta <- function(object) {
     if (is(object, "rlmerMod")) {
         ## add names like lme4
-        tt <- if (inherits(object@pp, "rlmerPredD"))
-          object@pp$theta else object@pp$theta()
+        tt <- object@pp$theta
         nc <- c(unlist(mapply(function(g,e) {
             mm <- outer(e,e,paste,sep=".")
             diag(mm) <- e
@@ -517,25 +515,25 @@ theta <- function(object) {
 }
 
 .zeroB <- function(object, pp = object@pp)
-  if (inherits(pp, "rlmerPredD")) pp$zeroB else pp$zeroB()
+  pp$zeroB
 
 .U_btZt.U_et <- function(object)
-  if (inherits(object@pp, "rlmerPredD")) object@pp$U_btZt.U_et else object@pp$invU_btZtU_et()
+  object@pp$U_btZt.U_et
 
 ..U_eX <- function(object)
-  if (inherits(object@pp, "rlmerPredD")) object@pp$.U_eX else object@pp$invU_eX()
+  object@pp$.U_eX
 
 .U_e <- function(object)
-  if (inherits(object@pp, "rlmerPredD")) object@pp$U_e else object@pp$U_e()
+  object@pp$U_e
 
 .U_b <- function(object)
-  if (inherits(object@pp, "rlmerPredD")) object@pp$U_b else object@pp$U_b()
+  object@pp$U_b
 
 .Lambda_b <- function(object)
-  if (inherits(object@pp, "rlmerPredD")) object@pp$Lambda_b else object@pp$Lambda_b()
+  object@pp$Lambda_b
 
 .kappa_b <- function(object)
-  if (inherits(object@pp, "rlmerPredD")) object@pp$kappa_b else object@pp$kappa_b()
+  object@pp$kappa_b
 
 .kappa_e <- function(object)
-  if (inherits(object@pp, "rlmerPredD")) object@pp$kappa_e else object@pp$kappa_e()
+  object@pp$kappa_e

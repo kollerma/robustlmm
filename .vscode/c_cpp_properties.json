@@ -7,9 +7,9 @@
                 "/Library/Frameworks/R.framework/Resources/include",
                 "/Library/Frameworks/R.framework/Versions/Current/Resources/library/cpp11/include",
                 "/Library/Frameworks/R.framework/Versions/Current/Resources/library/Rcpp/include",
-                "/Library/Frameworks/R.framework/Versions/4.2-arm64/Resources/library/RcppEigen/include",
                 "/Library/Frameworks/R.framework/Versions/4.2-arm64/Resources/library/cubature/include",
-                "/Library/Frameworks/R.framework/Versions/4.2-arm64/Resources/library/robustbase/include"
+                "/Library/Frameworks/R.framework/Versions/4.2-arm64/Resources/library/robustbase/include",
+                "/Library/Frameworks/R.framework/Versions/4.2-arm64/Resources/library/Matrix/include"
             ],
             "defines": [],
             "macFrameworkPath": [

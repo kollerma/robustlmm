@@ -553,7 +553,7 @@ setRefClass("rlmerResp",
 ##'
 ##' @export
 setClass("rlmerMod",
-         representation(resp    = "refClass",
+         representation(resp    = "rlmerResp",
                         Gp      = "integer",
                         call    = "call",
 			frame   = "data.frame", # "model.frame" is not S4-ized yet
@@ -813,11 +813,7 @@ updateWeights <- function(object) {
 ## @param object rlmerMod object to update
 ## @return nothing
 updatePp <- function(object) {
-    if (inherits(object@pp, "rlmerPredD")) {
-        object@pp$lower <- object@lower
-    } else if (!identical(object@pp$lower, object@lower)) {
-          stop("Can't set lower value in Rcpp implementation at the moment.")
-    }
+    object@pp$lower <- object@lower
     dd <- object@devcomp$dims
     object@pp$setSigma(object@devcomp$cmp[[ifelse(dd["REML"], "sigmaREML", "sigmaML")]])
     object@pp$setB.s(object@b.s)

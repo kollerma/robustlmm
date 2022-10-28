@@ -41,11 +41,7 @@ setU <- function(object, value) {
 
 ### Set b
 setB <- function(object, value) {
-    if (inherits(object@pp, "rlmerPredD")) {
-        object@pp$setB(value)
-    } else {
-        object@pp$setB_r(value)
-    }
+    object@pp$setB(value)
     invisible(object)
 }
 ## keep b<- for backwards compatibility

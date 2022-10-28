@@ -432,7 +432,7 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
         stop("can only do REML when using averaged DAS-estimate for sigma")
 
     ## Prepare for DAStau
-    if (method == "DAStau" && inherits(lobj@pp, "rlmerPredD")) {
+    if (method == "DAStau") {
         ## 4d int
         ## vectorize it!
         ghZ <- as.matrix(expand.grid(lobj@pp$ghz, lobj@pp$ghz, lobj@pp$ghz, lobj@pp$ghz))
@@ -479,7 +479,7 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
         ## symmetrize T to avoid non symmetric warning, then apply chol
         T <- symmpart(T)
         ## save to cache
-        if (inherits(lobj@pp, "rlmerPredD")) lobj@pp$setT(T)
+        lobj@pp$setT(T)
         ## apply chol to non-zero part only
         idx <- !.zeroB(lobj)
         ## stop if all are zero

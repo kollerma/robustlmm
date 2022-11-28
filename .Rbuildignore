@@ -1,6 +1,7 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
 inst/xtraR/effect\.R
+inst/xtraR/benchmarkingCImplementation\.R
 vignettes/simulationStudies-.*
 vignettes/simulationStudies\.log
 vignettes/simulationStudies\.pdf

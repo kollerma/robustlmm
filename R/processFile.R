@@ -298,7 +298,7 @@ checkEqualsStoredResult <- function(fit, storedResults, ...) {
     }
     actual <- processFit(fit, ...)
     actual <- actual[names(expected)]
-    tolerance <- sqrt(.Machine$double.eps)
+    tolerance <- 1.0e-7
     if (is(fit, "lqmm")) {
         tolerance <- 0.01 ## summary.lqmm uses bootstrap.
         ## The result are sometimes different even though we specify the rng seed.

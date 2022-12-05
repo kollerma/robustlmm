@@ -4,6 +4,26 @@
 
 extern cholmod_common c;
 
+/*
+ * copied from Matrix.h and Matrix_stubs.c and removed Matrix_ prefix
+ * Using Matrix_ versions did result in not machting declarations:
+ * (return type mismatch, type 'Rboolean' should match type 'bool')
+ */
+const char *valid_ge_dense[] = { MATRIX_VALID_ge_dense, ""};
+const char *valid_Csparse[] = { MATRIX_VALID_Csparse, ""};
+
+bool isclass_ge_dense(SEXP x);
+bool isclass_Csparse(SEXP x);
+
+bool isclass_ge_dense(SEXP x) {
+    return R_check_class_etc(x, valid_ge_dense) >= 0;
+}
+
+bool isclass_Csparse(SEXP x) {
+    return R_check_class_etc(x, valid_Csparse) >= 0;
+}
+/* end copy */
+
 namespace Rcpp {
 
     dgeMatrix::dgeMatrix(S4 mat) {
@@ -15,13 +35,13 @@ namespace Rcpp {
         Dimnames = mat.slot("Dimnames");
         x = mat.slot("x");
         factors = mat.slot("factors");
-    };
+    }
 
     template <> dgeMatrix as(SEXP mat) {
         if (Rf_isNull(mat)) {
             throw std::invalid_argument("Cannot construct dgeMatrix from NULL");
         }
-        if (!Matrix_isclass_ge_dense(mat)) {
+        if (!isclass_ge_dense(mat)) {
             throw std::invalid_argument("Cannot construct dgeMatrix from this object");
         }
         return dgeMatrix(mat);
@@ -55,7 +75,7 @@ namespace Rcpp {
         if (Rf_isNull(mat)) {
             throw std::invalid_argument("Cannot construct dense matrix from NULL");
         }
-        if (!Matrix_isclass_ge_dense(mat)) {
+        if (!isclass_ge_dense(mat)) {
             throw std::invalid_argument("Cannot construct dense matrix from this object");
         }
         return chm_dense(mat);
@@ -81,7 +101,7 @@ namespace Rcpp {
         if (Rf_isNull(mat)) {
             throw std::invalid_argument("Cannot construct sparse matrix from NULL");
         }
-        if (!Matrix_isclass_Csparse(mat)) {
+        if (!isclass_Csparse(mat)) {
             throw std::invalid_argument("Cannot construct sparse matrix from this object");
         }
         return chm_sparse(mat);
@@ -122,19 +142,19 @@ List calculateA(const chm_dense& invU_eX, const chm_sparse& invU_btZtinvU_et,
     const int ione(1), n(invU_eX.m.nrow), p(invU_eX.m.ncol),
         q(invU_btZtinvU_et.m.nrow), size_tmp3(n * p);
     const double one(1), zero(0);
-    if (invU_btZtinvU_et.m.ncol != n) {
+    if (invU_btZtinvU_et.m.ncol != (size_t) n) {
         throw std::invalid_argument("Number of columns of invU_btZtinvU_et should be equal to number of rows in invU_eX.");
     }
-    if (M_bb.m.nrow != q || M_bb.m.ncol != q) {
+    if (M_bb.m.nrow != (size_t) q || M_bb.m.ncol != (size_t) q) {
         throw std::invalid_argument("Number of rows and columns of M_bb should be equal to number of rows in invU_btZtinvU_et.");
     }
-    if (M_bB.m.nrow != q) {
+    if (M_bB.m.nrow != (size_t) q) {
         throw std::invalid_argument("Number of rows of M_bB should be equal to number of rows in invU_btZtinvU_et.");
     }
-    if (M_bB.m.ncol != p) {
+    if (M_bB.m.ncol != (size_t) p) {
         throw std::invalid_argument("Number of columns of M_bB should be equal to number of columns in invU_eX.");
     }
-    if (M_BB.m.nrow != p || M_BB.m.ncol != p) {
+    if (M_BB.m.nrow != (size_t) p || M_BB.m.ncol != (size_t) p) {
         throw std::invalid_argument("Number of rows and columns of M_BB should be equal to number of columns in invU_eX.");
     }
     CHM_DN tmp1 = M_cholmod_allocate_dense(n, q, n, M_bb.m.xtype, &c);

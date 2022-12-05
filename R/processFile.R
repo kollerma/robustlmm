@@ -272,14 +272,28 @@ checkProcessed <-
         contents <- load(processedFile)
         checkContents(contents, processedFile, "results")
         datasets[["numberOfDatasets"]] <- 1
+        filteredFittingFunctions <- filterOnCran(fittingFunctions)
         firstFits <-
-            unlist(lapply(fittingFunctions, function(fun)
-                fun(datasets)), recursive = FALSE)
+            unlist(lapply(filteredFittingFunctions,
+                          function(fun)
+                              fun(datasets)),
+                   recursive = FALSE)
         for (fit in firstFits) {
             checkEqualsStoredResult(fit, results, ...)
         }
         return(results)
     }
+
+filterOnCran <- function(fittingFunctions) {
+    if (interactive() || identical(Sys.getenv("NOT_CRAN"), "true")) {
+        return(fittingFunctions)
+    } else {
+        idx <-
+            fittingFunctions %in% c(fitDatasets_rlmer_DAStau_lmerNoFit,
+                                    fitDatasets_lmer)
+        return(fittingFunctions[idx])
+    }
+}
 
 checkEqualsStoredResult <- function(fit, storedResults, ...) {
     if (is(fit, "package-not-installed")) {
@@ -302,6 +316,8 @@ checkEqualsStoredResult <- function(fit, storedResults, ...) {
     if (is(fit, "lqmm")) {
         tolerance <- 0.01 ## summary.lqmm uses bootstrap.
         ## The result are sometimes different even though we specify the rng seed.
+    } else if (is(fit, "varComprob")) {
+        tolerance <- 1.0e-6
     }
     check <-
         all.equal(expected,

@@ -109,5 +109,6 @@ rfm2@pp$.setTau_e <- rfm@pp$.setTau_e
 rfm2@pp$.tau_e <- rfm@pp$.tau_e
 rfm2@pp$.setTbk <- rfm@pp$.setTbk
 rfm2@pp$.Tbk <- rfm@pp$.Tbk
+rfm2@pp$groupsA <- rfm@pp$groupsA
 rfm@pp$initGH()
 stopifnot(all.equal(rfm, rfm2, tolerance = 1e-6))

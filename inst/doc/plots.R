@@ -68,8 +68,8 @@ Mmat <- function(object) { ## create Matrix M
 Dmat <- function(object) { ## create augmented design matrix
     with(object@pp, {
         D <- Matrix(0, p+q, n+q)
-        D[1:p, 1:n] <- t(.U_eX)
-        D[p+(1:q), 1:n] <- t(.U_eZ %*% U_b)
+        D[1:p, 1:n] <- t(U_eX)
+        D[p+(1:q), 1:n] <- t(U_eZ %*% U_b)
         D[p+(1:q), n+(1:q)] <- -Lambda_b
         D })
 }

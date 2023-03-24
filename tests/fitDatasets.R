@@ -51,7 +51,7 @@ if (isPackageInstalled("lqmm")) {
 ## }
 if (isPackageInstalled("robustvarComp")) {
     fitDatasets_varComprob_custom <- function(datasets, postFit) {
-        lcontrol <- eval(parse(text="robustvarComp::varComprob.control"))(lower = datasets[["lower"]])
+        lcontrol <- robustvarComp::varComprob.control(lower = datasets[["lower"]])
         return(
             fitDatasets_varComprob(
                 datasets,

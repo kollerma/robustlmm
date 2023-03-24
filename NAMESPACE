@@ -91,7 +91,7 @@ if(getRversion() >= "3.3.0") {
 } else {
    importFrom(lme4, sigma)
 }
-importFrom(Matrix,bdiag)
+importFrom(Matrix,.bdiag)
 importFrom(Matrix,Diagonal)
 importFrom(Matrix,forceSymmetric)
 importFrom(Matrix,isDiagonal)

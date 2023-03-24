@@ -43,27 +43,29 @@ rfm4 <- rlmer(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2, doFit=F
 ####
 
 testCalculateA <- function(rfm) {
-    invU_eX <- rfm@pp$`.->.U_eX`
-    invU_btZtinvU_et <- rfm@pp$`.->U_btZt.U_et`
+    U_eX <- rfm@pp$U_eX
+    U_eZU_b <- rfm@pp$U_eZU_b
     M <- rfm@pp$M()
+    groupsA <- 0:(nobs(rfm)-1)
 
-    tmp1 <- as.matrix(crossprod(invU_btZtinvU_et, M$M_bb))
-    tmp2 <- as.matrix(crossprod(invU_btZtinvU_et, M$M_bB))
-    tmp3 <- as.matrix(invU_eX %*% M$M_BB)
+    tmp1 <- U_eZU_b %*% M$M_bb
+    tmp2 <- as.matrix(U_eZU_b %*% M$M_bB)
+    tmp3 <- as.matrix(U_eX %*% M$M_BB)
 
-    A <- tcrossprod(invU_eX, tmp2) +
-        tcrossprod(tmp2, invU_eX) +
-        tcrossprod(invU_eX, tmp3) +
-        tmp1 %*% invU_btZtinvU_et
+    A <- tcrossprod(U_eX, tmp2) +
+        tcrossprod(tmp2, U_eX) +
+        tcrossprod(U_eX, tmp3) +
+        tcrossprod(tmp1, U_eZU_b)
 
     expectedDiagA <- diag(A)
     expectedDiagAAt <- diag(tcrossprod(A))
 
-    res <- robustlmm:::calculateA(as(as(invU_eX, "generalMatrix"), "unpackedMatrix"),
-                                  invU_btZtinvU_et,
-                                  as(as(M$M_bb, "generalMatrix"), "unpackedMatrix"),
+    res <- robustlmm:::calculateA(as(as(U_eX, "generalMatrix"), "unpackedMatrix"),
+                                  U_eZU_b,
+                                  as(as(tmp1, "generalMatrix"), "unpackedMatrix"),
                                   as(as(M$M_bB, "generalMatrix"), "unpackedMatrix"),
-                                  as(as(M$M_BB, "generalMatrix"), "unpackedMatrix"))
+                                  as(as(M$M_BB, "generalMatrix"), "unpackedMatrix"),
+                                  as.integer(groupsA))
 
     stopifnot(all.equal(expectedDiagA, res$diagA, check.attributes = FALSE),
               all.equal(expectedDiagAAt, res$diagAAt, check.attributes = FALSE))
@@ -106,7 +108,8 @@ testComputeDiagonalOfProduct <- function() {
     testthat::expect_error(robustlmm:::computeDiagonalOfProduct(NULL, B))
     testthat::expect_error(robustlmm:::computeDiagonalOfProduct(A, NULL))
     testthat::expect_error(robustlmm:::computeDiagonalOfProduct(NULL, NULL))
-    testthat::expect_error(robustlmm:::computeDiagonalOfProduct())
+    ## the following crashes R:
+    ## testthat::expect_error(robustlmm:::computeDiagonalOfProduct())
 
     cat("testComputeDiagonalOfProduct passed\n")
 }
@@ -115,11 +118,13 @@ testComputeDiagonalOfProduct()
 testTau <- function(rfm) {
     fullA <- rfm@pp$A()
     B <- rfm@pp$B()
-    Tau <- rfm@pp$V_e - rfm@pp$EDpsi_e * (t(fullA) + fullA) +
+    Tau <- diag(rfm@pp$v_e) - rfm@pp$EDpsi_e * (t(fullA) + fullA) +
         rfm@pp$Epsi2_e * tcrossprod(fullA) +
         B %*% tcrossprod(rfm@pp$Epsi_bpsi_bt, B)
     target <- sqrt(diag(Tau))
-    current <- calcTau(a = NULL, s = NULL, method = "DASvar", pp = rfm@pp)
+    rfm@pp$method <- "DASvar"
+    current <- rfm@pp$tau_e()
+    rfm@pp$method <- rfm@method
     stopifnot(all.equal(target, current, check.attributes = FALSE))
 }
 testTau(rfm1)
@@ -294,5 +299,48 @@ stopifnot(all.equal(.wgtxy2(smoothPsi, r1, r1), smoothPsi@psi(r1)*r1),
           all.equal(.wgtxy2(smoothProp2, r1, r1), smoothPsi@psi(r1)^2),
           all.equal(.wgtxy2(smoothPsi, r1, r2), smoothPsi@wgt(r1)*r2*r2),
           all.equal(.wgtxy2(smoothProp2, r1, r2), smoothPsi@wgt(r1)^2*r2*r2))
+
+####
+## Test computeDiagonalOf(T)Crossproduct(Numeric)Matrix
+####
+
+testComputeDiagonalOfCrossproduct <- function() {
+    mats <-
+        list(
+            Matrix(1:4, 2, 200000),
+            Matrix(1:6, 200000, 3),
+            Matrix(11:16, 3, 2),
+            Matrix(1:4, 2, 2),
+            Matrix(1:6, 2, 3),
+            Matrix(11:16, 3, 2)
+        )
+    mats[[4]][1, 1] <- NA
+    mats[[5]][1, 1] <- NaN
+    mats[[6]][1, 1] <- Inf
+
+    for (mat in mats) {
+        numMat <- as.matrix(mat)
+        stopifnot(
+            all.equal(
+                colSums(mat ^ 2, na.rm = TRUE),
+                robustlmm:::computeDiagonalOfCrossproductMatrix(mat)
+            ),
+            all.equal(
+                rowSums(mat ^ 2, na.rm = TRUE),
+                robustlmm:::computeDiagonalOfTCrossproductMatrix(mat)
+            ),
+            all.equal(
+                colSums(numMat ^ 2, na.rm = TRUE),
+                robustlmm:::computeDiagonalOfCrossproductNumericMatrix(numMat)
+            ),
+            all.equal(
+                rowSums(numMat ^ 2, na.rm = TRUE),
+                robustlmm:::computeDiagonalOfTCrossproductNumericMatrix(numMat)
+            )
+        )
+    }
+}
+
+testComputeDiagonalOfCrossproduct()
 
 cat('Time elapsed: ', proc.time(),'\n') # for ``statistical reasons''

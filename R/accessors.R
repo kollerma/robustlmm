@@ -183,7 +183,7 @@ deviance.rlmerMod <- .deviance
     ## Author: Manuel Koller, Date: 11 Apr 2011, 11:40
 
     ## FIXME: ?? offset will be added in updateMu
-    drop(crossprod(.Zt(object), .b(object)) + (.X(object) %*% .fixef(object)))
+    crossprod(.Zt(object), .b(object))@x + (.X(object) %*% .fixef(object))[,1]
 }
 
 ### Get fixed effects
@@ -517,11 +517,11 @@ theta <- function(object) {
 .zeroB <- function(object, pp = object@pp)
   pp$zeroB
 
-.U_btZt.U_et <- function(object)
-  object@pp$U_btZt.U_et
+.U_eZU_b <- function(object)
+  object@pp$U_eZU_b
 
-..U_eX <- function(object)
-  object@pp$.U_eX
+.U_eX <- function(object)
+  object@pp$U_eX
 
 .U_e <- function(object)
   object@pp$U_e

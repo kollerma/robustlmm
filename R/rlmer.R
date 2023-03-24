@@ -221,13 +221,10 @@ rlmer <- function(formula, data, ..., method = c("DAStau", "DASvar"),
     method <- match.arg(method)
     lobj <- .rlmerInit(lcall, pf, formula, data, method, rho.e, rho.b, rho.sigma.e,
                        rho.sigma.b, rel.tol, max.iter, verbose, init, setting, ...)$obj
-    if (substr(lobj@method, 1, 3) == "DAS") {
-        lobj@pp <- as(lobj@pp, "rlmerPredD_DAS")
-        lobj@pp$method <- lobj@method
-    }
+    lobj@pp <- as(lobj@pp, "rlmerPredD_DAS")
+    lobj@pp$method <- lobj@method
     lobj@pp$initRho(lobj)
     lobj@pp$initMatrices(lobj)
-    lobj@pp$updateMatrices()
 
     ## required for max.iter:
     r <- len(lobj, "theta")
@@ -262,25 +259,15 @@ rlmer <- function(formula, data, ..., method = c("DAStau", "DASvar"),
         init <- linit
     } else if (is.function(init)) {
         init <- do.call(init,list(formula=formula, data=data, REML=TRUE, ...))
-    } else if (is(init, "merMod") || is(init, "rlmerMod")) {
-        ## check whether formula and data match with
-        ## the ones in the provided in init
-        if (is.null(icall <- getCall(init)))
-            stop("Object 'init' should contain a 'call' component")
-        if (!identical(as.character(lcall$formula), as.character(icall$formula)) |
-            !identical(lcall$data, icall$data))
-            warning("Arguments 'data' and 'formula' do not match with 'init': ",
-                    "using model specification from 'init'")
-    } else stop("Unsuitable init object, aborting.",
+    } else if (!is(init, "merMod") && !is(init, "rlmerMod")) {
+        stop("Unsuitable init object, aborting.",
                 "Expecting no, list (see ?rlmer), rlmerMod or merMod object")
+    }
     lobj <- as(init, "rlmerMod")
     lobj@call <- lcall
 
-    ## give a warning if weights or offset are used
-    if (any(lobj@resp$weights != 1))
-        stop("Argument weights is unsave to use at the moment.")
-    if (any(lobj@resp$offset != 0))
-        warning("Argument offset is untested.")
+    if (any(lobj@resp$weights == 0))
+        stop("Observations with zero weights are not allowed.")
 
     if (!missing(setting)) {
         if (!missing(rho.e) || !missing(rho.sigma.e) ||
@@ -372,7 +359,10 @@ getDefaultRhoB <- function(dimension, rho) {
 }
 
 .rlmer <- function(lobj, rel.tol, max.iter, verbose, doFit) {
-    if (!doFit) return(updateWeights(lobj))
+    if (!doFit) {
+        lobj@pp$updateMatrices()
+        return(updateWeights(lobj))
+    }
 
     ## do not start with theta == 0
     if (any(theta(lobj)[lobj@lower == 0] == 0)) {
@@ -415,10 +405,7 @@ getDefaultRhoB <- function(dimension, rho) {
 .rlmer.fit <- function(lobj, rel.tol, max.iter, verbose) {
     ## do fit: non diagonal case differently
     if (!isDiagonal(.U_b(lobj))) {
-        if (lobj@method %in%  c("DASvar", "DAStau")) {
-            lobj <- rlmer.fit.DAS.nondiag(lobj, verbose, max.iter, rel.tol)
-        } else
-            stop("Non-diagonal case only supported by DAStau and DASvar")
+        lobj <- rlmer.fit.DAS.nondiag(lobj, verbose, max.iter, rel.tol)
     } else {
         lobj <- rlmer.fit.DAS(lobj, verbose, max.iter, rel.tol)
     }
@@ -436,6 +423,8 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
         ## 4d int
         ## vectorize it!
         ghZ <- as.matrix(expand.grid(lobj@pp$ghz, lobj@pp$ghz, lobj@pp$ghz, lobj@pp$ghz))
+        ghZ12 <- ghZ[, 1:2]
+        ghZ34 <- ghZ[, 3:4]
         ghw <- apply(as.matrix(expand.grid(lobj@pp$ghw, lobj@pp$ghw, lobj@pp$ghw, lobj@pp$ghw)), 1, prod)
     } else {
         ghZ <- ghw <- c()
@@ -449,13 +438,14 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
     ## compute kappa
     kappas <- .kappa_b(lobj)
     ## zero pattern for T matrix
-    nzT <- as.matrix(crossprod(bdiag(lobj@blocks[lobj@ind])) == 0)
+    nzT <- as.matrix(crossprod(.bdiag(lobj@blocks[lobj@ind])) == 0)
+    expectedEntriesLength <- prod(dim(nzT)) - sum(nzT)
     q <- lobj@pp$q
     ## false convergence indicator
     fc <- rep(FALSE, length(lobj@blocks))
     if (verbose > 0) {
         theta0 <- theta(lobj)
-        if (verbose > 2) {
+        if (verbose > 1) {
             coef0 <- .fixef(lobj)
             b.s0 <- b.s(lobj)
             sigma0 <- .sigma(lobj)
@@ -471,15 +461,12 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
         q <- len(lobj, "b")
         T <- switch(method,
                     DASvar=lobj@pp$Tb(),
-                    DAStau=calcTau.nondiag(lobj, ghZ, ghw, .S(lobj), kappas, max.iter,
+                    DAStau=calcTau.nondiag(lobj, ghZ12, ghZ34, ghw, .S(lobj), kappas, max.iter,
                                            rel.tol = rel.tol, verbose = verbose),
-                    stop("Non-diagonal case only implemented for DASvar"))
+                    stop("Non-diagonal case only implemented for DASvar and DAStau"))
+        T <- as(T, "CsparseMatrix")
         ## compute robustness weights and add to t and bs
         T[nzT] <- 0
-        ## symmetrize T to avoid non symmetric warning, then apply chol
-        T <- symmpart(T)
-        ## save to cache
-        lobj@pp$setT(T)
         ## apply chol to non-zero part only
         idx <- !.zeroB(lobj)
         ## stop if all are zero
@@ -515,12 +502,12 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
             }
         }
         WbDelta <- Diagonal(x=wbsDelta)
-        T <- WbDelta %*% T
+        T <- as(WbDelta %*% T, "CsparseMatrix")
         bs <- sqrt(wbsEta) * b.s(lobj)
+        Tstart <- 1
 
         ## cycle block types
         for(type in seq_along(lobj@blocks)) {
-            if (convBlks[type]) next
             bidx <- lobj@idx[[type]]
             if (verbose > 5) {
                 cat("Tau for blocktype ", type, ":", as.vector(T[bidx[,1],bidx[,1]]), "\n")
@@ -538,14 +525,44 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
             }
             s <- nrow(bidx)
             K <- ncol(bidx)
+            Tend <- Tstart + s * s * K - 1
+            if (convBlks[type]) {
+                Tstart <- Tend + 1
+                next
+            }
+            if (verbose > 5) {
+                cat("Tau for blocktype ", type, ":", as.vector(T[bidx[,1],bidx[,1]]), "\n")
+            }
+            ## catch dropped vc
+            if (all(abs(bs[bidx]) < 1e-7)) {
+                if (verbose > 1)
+                    cat("Block", type, "dropped (all = 0), stopping iterations.\n")
+                Ubtilde <- lobj@blocks[[type]]
+                pat <- Ubtilde != 0
+                Lind <- Ubtilde[pat]
+                thetatilde[Lind] <- 0
+                convBlks[type] <- TRUE
+                Tstart <- Tend + 1
+                next
+            }
             ## right hand side
-            ## sum over blocks
-            rhs <- matrix(0, s, s)
-            for (k in 1:K) {
-                ## add weights
-                rhs <- rhs + T[bidx[,k],bidx[,k]]
+            if (length(T@x) == expectedEntriesLength) {
+                rhs <- matrix(rowSums(matrix(T@x[Tstart:Tend], s * s)), s)
+                if (isTRUE(getOption("robustlmm.check_rhs_optimisation"))) {
+                    check <- matrix(0, s, s)
+                    for (k in 1:K) {
+                        check <- check + as.matrix(T[bidx[,k],bidx[,k]])
+                    }
+                    stopifnot(all.equal(rhs, check))
+                }
+            } else {
+                rhs <- matrix(0, s, s)
+                for (k in 1:K) {
+                    rhs <- rhs + as.matrix(T[bidx[,k],bidx[,k]])
+                }
             }
             rhs <- rhs / K
+            Tstart <- Tend + 1
             ## left hand side
             lbs <- matrix(bs[bidx], ncol(bidx), nrow(bidx), byrow=TRUE)
             ## add left hand side
@@ -555,7 +572,6 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
                 cat("RHS:", as.vector(rhs), "\n")
                 cat("sum(abs(LHS - RHS)):", sum(abs(lhs - rhs)), "\n")
             }
-            ## if (isTRUE(all.equal(rhs, lhs, check.attributes=FALSE, tolerance = rel.tol))) {
             diff <- abs(rhs - lhs)
             if (all(diff < rel.tol * max(diff, rel.tol))) {
                 if (verbose > 1)
@@ -652,11 +668,6 @@ rlmer.fit.DAS <- function(lobj, verbose, max.iter, rel.tol) {
     if (!.isREML(lobj))
         stop("can only do REML when using averaged DAS-estimate for sigma")
 
-    lupdateTheta <- switch(lobj@method,
-                           DASvar=,
-                           DAStau=updateThetaTau,
-                           stop("method not supported by rlmer.fit.DAS:", lobj@method))
-
     ## fit
     converged <- FALSE
     theta0 <- theta(lobj)
@@ -670,7 +681,7 @@ rlmer.fit.DAS <- function(lobj, verbose, max.iter, rel.tol) {
         iter <- iter + 1
         if (verbose > 0) cat("Iteration", iter, "\n")
         ## fit theta
-        lupdateTheta(lobj, max.iter, rel.tol/10, verbose)
+        updateThetaTau(lobj, max.iter, rel.tol/10, verbose)
         theta1 <- theta(lobj)
 
         if (verbose > 0) {

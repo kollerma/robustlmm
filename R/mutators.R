@@ -76,15 +76,12 @@ setTheta <- function(object, value, eps = 1e-7, fit.effects = TRUE,
             value[idx.cur] <- 0
         offset <- offset + length(trm)
     }
-    ## cat("Setting theta to", value, "\n")
     object@pp$setTheta(value)
     ## update sigma, fit effects?
     if (fit.effects) {
         if (update.sigma) {
             updateSigma(object, fit.effects = fit.effects)
-            ##cat("Updated sigma to", .sigma(object), "\n")
         } else {
-            ## cat("Starting values:", .fixef(object), b.s(object), "\n")
             fitEffects(c(.fixef(object), b.s(object)), object)
         }
     } else {

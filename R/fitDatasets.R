@@ -835,10 +835,9 @@ fitDatasets_varComprob <-
             }
             warnings <- NULL
             set.seed(attr(data, "datasetIndex"))
-            fun <- eval(parse(text="robustvarComp::varComprob"))
             result <- withCallingHandlers(
                 eval(substitute(
-                    fun(
+                    robustvarComp::varComprob(
                         fixed = formula,
                         groups = groups,
                         data = data,
@@ -905,8 +904,7 @@ fitDatasets_varComprob_compositeTau <-
 
 varComrob.control.or.null <- function(...) {
     if (isPackageInstalled("robustvarComp")) {
-        fun <- eval(parse(text="robustvarComp::varComprob.control"))
-        return(fun(...))
+        return(robustvarComp::varComprob.control(...))
     } else {
         return(NULL)
     }

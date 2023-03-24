@@ -35,23 +35,29 @@ std.e <- function(object, sigma = .sigma(object), matrix, drop=TRUE) {
 ## @param center whether to return the centered distances.
 ## @param ... ignored
 .dk <- function(object, sigma, center, bs = b.s(object), ...) {
-    ua <- uArranged(object, bs/sigma)
+    ua <- uArranged(object, bs / sigma)
     unlist(lapply(seq_along(object@blocks), function(bt) {
         us <- ua[[bt]]
         s <- ncol(us)
-        if (s == 1) return(us)
+        if (s == 1)
+            return(us)
         ## else: square, sum and subtract s
-        ret <- rowSums(us*us)
-        if (center) ret <- ret - .kappa_b(object)[bt]*s
+        ret <- computeDiagonalOfTCrossproductNumericMatrix(us)
+        if (center)
+            ret <- ret - .kappa_b(object)[bt] * s
         ret
-        }))
+    }))
 }
 ## these helper functions are for the non-centered case, i.e., for estimating
 ## the random effects themselves. modularize distance function: compute
 ## sum(bs^2) - s
-.d <- function(bs, s=length(bs)) {
-    if (s == 1) return(bs)
-    if (is.matrix(bs)) rowSums(bs*bs) else sum(bs*bs)
+.d <- function(bs, s = length(bs)) {
+    if (s == 1)
+        return(bs)
+    if (is.matrix(bs))
+        computeDiagonalOfTCrossproductNumericMatrix(bs)
+    else
+        sum(bs * bs)
 }
 ## same function, but assume we've already summed
 .d2 <- function(sbs2, s) {

@@ -60,7 +60,7 @@ G <- function(tau = rep(1, length(a)), a, s, rho, rho.sigma, pp) {
 
     ret <- numeric(length(a))
     psi <- rho.sigma@psi
-    for (i in 1:length(a)) {
+    for (i in seq_along(a)) {
         x <- (pp$ghZ - a[i]*rho@psi(pp$ghZ) - s[i]*pp$ghZt)/tau[i]
         ret[i] <- sum(psi(x)*x*pp$ghW)
     }
@@ -75,13 +75,13 @@ G <- function(tau = rep(1, length(a)), a, s, rho, rho.sigma, pp) {
 ## @param object rlmerMod object
 ## @param theta logical if s is required for theta or sigma_e
 ## @return vector of s
-.s <- function(object, theta = FALSE, pp = object@pp) {
+.s <- function(object, theta = FALSE, pp = object@pp, B = pp$B()) {
     if (theta) {
-        M1 <- pp$K()
+        M1 <- pp$Kt
         M2 <- pp$L
         diag(M2) <- 0
     } else {
-        M2 <- pp$B()
+        M2 <- B
     }
     ## setting NA to 0 (they come from 0 variance components)
     if (any(naIdx <- is.na(M2))) {
@@ -89,7 +89,7 @@ G <- function(tau = rep(1, length(a)), a, s, rho, rho.sigma, pp) {
     }
     ## calculate s:
     if (theta) {
-        ret <- rowSums(M1^2, na.rm = TRUE)
+        ret <- computeDiagonalOfCrossproductMatrix(M1)
     } else {
         ret <- pp$diagAAt - pp$diagA^2
     }
@@ -106,30 +106,28 @@ G <- function(tau = rep(1, length(a)), a, s, rho, rho.sigma, pp) {
 ## @param object rlmerMod object
 ## @return list of matrices S_k
 .S <- function(object) {
-    ret <- list()
+    ret <- vector("list", max(object@k))
     idx <- !.zeroB(object)
     tmpEL <- object@pp$L %*% object@pp$Epsi_bpsi_bt
-    for (k in 1:max(object@k)) {
+    for (k in seq_along(ret)) {
         ind <- object@k == k
+        notInd <- which(!ind)
+        ind <- which(ind)
         ## check if the block was dropped (u == 0)
         if (any(idx[ind])) {
-            ## Ltmp <- object@pp$L[ind, !ind, drop=FALSE]
-            ## use symmpart to calm chol()
-            ret <- c(ret, list(drop(lchol(symmpart(
+            ret[[k]] <- drop(lchol(
                 ## Matrix K_{\theta,k} consists of the
                 ## rows belonging block k and all columns
-                object@rho.e@Epsi2() * tcrossprod(object@pp$K()[ind, , drop=FALSE]) +
-                ## Matrix L_{\theta,-k} consists of the
-                ## rows belonging to block k and all but columns
-                ## except the ones belonging to block k
-                tcrossprod(object@pp$L[ind, !ind, drop=FALSE],
-                           tmpEL[ind, !ind, drop=FALSE])
-                ## tcrossprod(Ltmp, Ltmp %*%
-                ##            object@pp$Epsi_bpsi_bt[!ind, !ind, drop=FALSE])
-                )))))
+                object@rho.e@Epsi2() *
+                    crossproductColumnSubMatrix(object@pp$Kt, ind) +
+                    ## Matrix L_{\theta,-k} consists of the
+                    ## rows belonging to block k and all but columns
+                    ## except the ones belonging to block k
+                    tCrossproductColumnRowSubMatrices(object@pp$L, tmpEL, ind, notInd)
+            ))
         } else {
             ## return a zero block of the correct size
-            ret <- c(ret, list(matrix(0, sum(ind), sum(ind))))
+            ret[[k]] <- matrix(0, sum(ind), sum(ind))
         }
     }
     ret
@@ -152,7 +150,11 @@ calcKappaTau <- function(rho, s=1) {
     } else {
         tfun3 <- function(v, kappa) psi(v-s*kappa)*dchisq(v, s)
         tfun4 <- function(kappa) integrate(tfun3, 0, Inf, kappa=kappa)$value
-        uniroot(tfun4, c(0, 1), tol = .Machine$double.eps^0.5)$root
+        tolerance <- sqrt(.Machine$double.eps)
+        if (tfun4(1) > -tolerance) {
+            return(1)
+        }
+        uniroot(tfun4, c(0, 1), tol = tolerance)$root
     }
 }
 
@@ -177,20 +179,9 @@ calcKappaTauB <- function(object) {
 ## @param max.it maximum number of iterations allowed
 
 calcTau <- function(a, s, rho.e, rho.sigma.e, pp,
-                    kappa, tau = rep(1, length(a)), method="DAStau",
+                    kappa, tau = rep(1, length(a)),
                     rel.tol = 1e-6, max.it = 200) {
     stopifnot(length(a) == length(s))
-    if (method == "DASvar" || !is.numeric(tau) || length(tau) != length(a)) {
-        ## FIXME: this always returns tau_e irrespective of a and s...
-        ## Tau <- with(pp, V_e - EDpsi_e * (t(A) + A) + Epsi2_e * tcrossprod(A) +
-        ##                     B() %*% tcrossprod(Epsi_bpsi_bt, B()))
-        B <- pp$B()
-        tmp <- tcrossprod(pp$Epsi_bpsi_bt, B)
-        tau2 <- with(pp, diag(V_e) - EDpsi_e * 2 * diagA + Epsi2_e * diagAAt) +
-            computeDiagonalOfProduct(as(B, "unpackedMatrix"), as(tmp, "unpackedMatrix"))
-        tau <- sqrt(tau2)
-        if (method == "DASvar") return(tau)
-    }
     psi <- rho.e@psi
     psiZ <- psi(pp$ghZ)
     ## function to find root from
@@ -207,7 +198,6 @@ calcTau <- function(a, s, rho.e, rho.sigma.e, pp,
         s_i <- s[i]
         j <- 0
         while ((j <- j + 1) < i) {
-            ## if( (a_i == a[j]) && (s_i == s[j]) ) {
             if( abs(a_i - a[j]) < 1e-8 && abs(s_i - s[j]) < 1e-8 ) {
                 check <- TRUE
                 tau[i] <- tau[j]
@@ -216,11 +206,9 @@ calcTau <- function(a, s, rho.e, rho.sigma.e, pp,
         }
 
         if (!check) {
-            ##cat(sprintf("calculating tau[%i]: a[%i] = %g, s[%i] = %g...\n", i, i, a[i], i, s[i]))
             it <- 0
             conv <- FALSE
             while(!conv && (it <- it + 1) < max.it && tau[i] <= 1) {
-                ##print(tau[i])
                 tau0 <- tau[i]
                 tau[i] <- fun(tau0, a_i, s_i)
                 conv <- abs(tau[i] - tau0) < rel.tol * max(rel.tol, tau0)
@@ -238,20 +226,10 @@ calcTau <- function(a, s, rho.e, rho.sigma.e, pp,
     tau
 }
 
-calcTau.nondiag <- function(object, ghZ, ghw, skbs, kappas, max.iter,
+calcTau.nondiag <- function(object, ghZ12, ghZ34, ghw, skbs, kappas, max.iter,
                             rel.tol = 1e-4, verbose = 0) {
-    ## define 4d integration function
-    ## int4d <- function(fun) drop(apply(ghZ, 1, fun) %*% ghw)
     ## initial values
-    T <- object@pp$T()
-    ## move into list
-    TkbsI <- list()
-    ## cycle blocks
-    for (type in seq_along(object@blocks)) {
-        bidx <- object@idx[[type]]
-        for (k in 1:ncol(bidx)) ## 1:K
-            TkbsI <- c(TkbsI, list(as.matrix(T[bidx[,k],bidx[,k]])))
-    }
+    TkbsI <- object@pp$TList()
 
     ## Compute Taus
     Tbks <- list()
@@ -283,14 +261,14 @@ calcTau.nondiag <- function(object, ghZ, ghw, skbs, kappas, max.iter,
             wgtDelta <- function(u) (psi.sigma(u) - psi.sigma(u-skappa))/s
             lastSk <- lastLkk <- matrix()
             lastRet <- NA
+            tmp0 <- wgt(.d(ghZ12,2)) * ghZ12
             ## cycle blocks
             for (k in 1:ncol(bidx)) { ## 1:K
-                lTbk <- as.matrix(TkbsI[[ind[k]]])
+                lTbk <- TkbsI[[ind[k]]]
                 lbidx <- bidx[,k]
                 Lkk <- as.matrix(object@pp$L[lbidx, lbidx])
                 Sk <- as.matrix(skbs[[ind[k]]])
                 ## check for almost equal blocks
-                ## if (!(isTRUE(all.equal(lastSk, Sk)) && isTRUE(all.equal(lastLkk, Lkk)))) {
                 diff <- if (any(dim(lastSk) != dim(Sk))) 1 else
                     abs(c(lastSk - Sk, lastLkk - Lkk))
                 if (any(diff >= rel.tol * max(diff, rel.tol))) {
@@ -299,6 +277,9 @@ calcTau.nondiag <- function(object, ghZ, ghw, skbs, kappas, max.iter,
                     lastLkk <- Lkk
                     if (verbose > 5)
                         cat("TbkI for k =", k, ":", lTbk, "\n")
+                    btilde <- ghZ12 - tmp0 %*% Lkk - ghZ34 %*% Sk
+                    btilde12 <- btilde[,1] * btilde[,2]
+                    btildeSq <- btilde * btilde
                     conv <- FALSE
                     iter <- 0
                     while (!conv && (iter <- iter + 1) < max.iter) {
@@ -307,41 +288,21 @@ calcTau.nondiag <- function(object, ghZ, ghw, skbs, kappas, max.iter,
                             warning("chol(lTbk) failed: ", lLTbk, "\nlTbk was: ", paste(lTbk),
                                     "\nSetting it to Tb()\n")
                             conv <- TRUE
-                            lTbk <- as.matrix(TkbsI[[ind[k]]])
+                            lTbk <- TkbsI[[ind[k]]]
                         } else {
-                            ## browser()
-                            if (FALSE) {
-
-                            ## old:
-                            funA <- function(u) {
-                              btilde <- u[1:2] - wgt(.d(u[1:2],2)) * Lkk %*% u[1:2] - crossprod(Sk, u[3:4])
-                              wgtDelta(drop(crossprod(backsolve(lLTbk, btilde))))
-                              ## not needed: *prod(dnorm(c(u1,u2,u3,u4)))
-                            }
-                            a <- int4d(funA)
-                            funB <- function(u) {
-                              btilde <- u[1:2] - wgt(.d(u[1:2],2)) * Lkk %*% u[1:2] -
-                                crossprod(Sk, u[3:4])
-                              wgt.sigma(drop(crossprod(backsolve(lLTbk, btilde))))*tcrossprod(btilde)
-                            }
-                            B <- matrix(int4d(funB), s)
-
-                            }
-                            btilde <- ghZ[,1:2] - wgt(.d(ghZ[,1:2],2)) * ghZ[, 1:2] %*% Lkk -
-                                ghZ[, 3:4] %*% Sk
-                            tmp1 <- colSums(backsolve(lLTbk, t(btilde))^2)
-                            tmp2 <- btilde[,1] * btilde[,2]
+                            tmp1 <- computeDiagonalOfCrossproductNumericMatrix(backsolve(lLTbk, t(btilde)))
                             a <- sum(wgtDelta(tmp1) * ghw)
                             if (abs(a) < 1e-7) {
                                 a <- lasta
                             } else {
                                 lasta <- a
                             }
-                            B <- matrix(colSums(wgt.sigma(tmp1) * ghw *
-                                                matrix(c(btilde[,1]*btilde[,1], tmp2, tmp2,
-                                                         btilde[,2]*btilde[,2]), length(ghw))),2)
+                            tmp2 <- wgt.sigma(tmp1) * ghw
+                            tmp3 <- sum(tmp2 * btilde12)
+                            B <- matrix(c(sum(tmp2 * btildeSq[,1]),
+                                          tmp3, tmp3,
+                                          sum(tmp2 * btildeSq[,2])), 2)
                             lTbk1 <- B/a
-                            ## conv <- isTRUE(all.equal(lTbk, lTbk1)) ## rel.tol default 1e-8
                             diff <- abs(c(lTbk - lTbk1))
                             conv <- all(diff < rel.tol * max(diff, rel.tol))
                             if (verbose > 5) {
@@ -372,10 +333,11 @@ calcTau.nondiag <- function(object, ghZ, ghw, skbs, kappas, max.iter,
         }
     }
 
+    ## update cache
+    object@pp$setTList(Tbks)
+
     ## combine into Matrix
-    out <- bdiag(Tbks)
-    ## print(object@pp$Tb()[1:4, 1:4])
-    ## print(out[1:4, 1:4])
+    out <- .bdiag(Tbks)
     return(out)
 }
 
@@ -512,8 +474,6 @@ updateThetaTau <- function(object, max.iter = 100, rel.tol = 1e-6, verbose = 0) 
              update.sigma = FALSE)
     ## update sigma without refitting effects
     updateSigma(object, fit.effects = FALSE)
-    ## set Tbk cache
-    object@pp$setT(Diagonal(x=tau2))
 
     invisible(object)
 }

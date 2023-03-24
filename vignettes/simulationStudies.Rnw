@@ -296,7 +296,7 @@ were used -- they are not listed here.
 Models were fit using code from
 \pkg{robustlmm} \citet{robustlmm},
 \pkg{lme4} \citep{lme4},
-\pkg{robustvarComp} (no longer on CRAN) \citep{robustvarComp},
+\pkg{robustvarComp} \citep{robustvarComp},
 \pkg{heavy} (no longer on  CRAN) \citep{heavy},
 \pkg{lqmm} \citep{lqmm}.
 Support for \code{rlme} from \pkg{rlme}  \citep{rlme} is also

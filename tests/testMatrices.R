@@ -36,8 +36,8 @@ calcMatrices <- function(object, numpoints=13) {
         t3 <- c(t3, rep(list(.calcE.psi_bpsi_bt(lr, ld)), lq/ld))
     }
     D_b <- Diagonal(x=tmp)
-    Epsi_bbt <- bdiag(t2)
-    Epsi_bpsi_bt <- bdiag(t3)
+    Epsi_bbt <- .bdiag(t2)
+    Epsi_bpsi_bt <- .bdiag(t3)
     Epsi2_b <- diag(Epsi_bpsi_bt)
     Lambda_b <- solve(D_b) * object@rho.e@EDpsi()
 
@@ -47,10 +47,6 @@ calcMatrices <- function(object, numpoints=13) {
     XtDX <- crossprod(X, DX)
     ZtDX <- ZtD %*% X
     ZtDZ <- tcrossprod(ZtD, Zt)
-
-    ## Initialize Jacobian Matrix (complete for given theta)
-    J0 <- Matrix(0, p + q, p + q)
-    J0[1:p, 1:p] <- XtDX
 
     ## CXt = C X\tr = solve(X\tr D.resp X, X\tr)
     CXt <- solve(XtDX, t(X))
@@ -102,24 +98,17 @@ calcMatrices <- function(object, numpoints=13) {
         A <- H - T - crossprod(T, P) + crossprod(MsLtZt, LtZt)
         ## B = lambda_e / lambda_b *(S - Z L Ms)
         B <- t(K) %*% Lambda_b
-
-        ## Complete Jacobian
-        J <- J0
-        J[p+(1:q), 1:p] <- t(J[1:p, p+(1:q)] <- crossprod(ZtDX, object@pp$U_b))
-        t.idx <- (p+(1:q))[idx]
-        J[t.idx, t.idx] <- crossprod(La[idx, idx], ZtDZ[idx, idx] %*% La[idx, idx]) + laD.re[idx, idx]
     } else {
         Ms <- solve(laD.re)
         A <- H
         ## Fixing Dimnames slot
         A@Dimnames <- list(A@Dimnames[[1]], NULL)
-        B <- Matrix(0, object@pp$n, object@pp$q)
-        K <- Matrix(0, object@pp$q, object@pp$n)
+        B <- as(Matrix(0, object@pp$n, object@pp$q), "unpackedMatrix")
+        K <- as(Matrix(0, object@pp$q, object@pp$n), "unpackedMatrix")
         L <- Ms %*% Lambda_b
-        J <- J0
     }
 
-    return(list(A = A, B = B, K = K, L = L, J = J,
+    return(list(A = A, B = B, K = K, L = L,
                 D_e = D_e, D_b = D_b, Lambda_b = Lambda_b,
                 Epsi2_e = Epsi2_e, Epsi2_b = Epsi2_b,
                 Epsi_bbt = Epsi_bbt, Epsi_bpsi_bt = Epsi_bpsi_bt,
@@ -137,7 +126,6 @@ cmp <- function(rfm) {
              B=all.equal(las$B, rfm@pp$B(), check.attributes = FALSE),
              K=all.equal(las$K, rfm@pp$K(), check.attributes = FALSE),
              L=all.equal(las$L, rfm@pp$L),
-             J=all.equal(las$J, rfm@pp$J()),
              Epsi2_e=all.equal(las$Epsi2_e, rfm@pp$Epsi2_e),
              Epsi2_b=all.equal(las$Epsi2_b, rfm@pp$Epsi2_b),
              Epsi_bbt=all.equal(las$Epsi_bbt, rfm@pp$Epsi_bbt),

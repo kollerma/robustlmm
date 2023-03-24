@@ -56,16 +56,57 @@ namespace Rcpp {
 }
 
 using namespace Rcpp;
-    
+
 // [[Rcpp::export]]
-NumericVector computeDiagonalOfProductBlas(const dgeMatrix& A, const dgeMatrix& B) {
-    if (A.Dim[1] != B.Dim[0]) {
-        throw std::invalid_argument(\"Matrices are not conformable for multiplication\");
+NumericMatrix crossproductColumnSubMatrix(const dgeMatrix& A, const IntegerVector& columnIndexesOneBased) {
+    const int n(A.Dim[0]), m(columnIndexesOneBased.length()), one(1);
+    NumericMatrix result(m, m);
+    for (int i = 0; i < m; ++i) {
+        int column = columnIndexesOneBased(i) - 1;
+        if (column >= A.Dim[1]) {
+            throw std::invalid_argument(\"Column index outside of valid range\");
+        }
+        const double *pcolumn = &A.x[column * n];
+        result(i, i) = F77_CALL(ddot)(&n, pcolumn, &one, pcolumn, &one);
+        for (int j = 0; j < i; ++j) {
+            int row = columnIndexesOneBased(j) - 1;
+            const double *prow = &A.x[row * n];
+            double cell = F77_CALL(ddot)(&n, pcolumn, &one, prow, &one);
+            result(i, j) = result(j, i) = cell;
+        }
     }
-    const int n(A.Dim[0]), m(B.Dim[0]), one(1), out(n < B.Dim[1] ? n : B.Dim[1]);
-    NumericVector result(out);
-    for (int i = 0; i < out; ++i) {
-        result[i] = F77_CALL(ddot)(&m, &A.x[i], &n, &B.x[m * i], &one);
+    return result;
+}
+
+
+// [[Rcpp::export]]
+NumericMatrix tcrossproductColumnRowSubMatrices(const dgeMatrix& A, const dgeMatrix& B,
+    const IntegerVector& rowIndexesOneBased, const IntegerVector& columnIndexesOneBased) {
+    const int n(A.Dim[0]), m(rowIndexesOneBased.length());
+    if (n != B.Dim[0] || A.Dim[1] != B.Dim[1]) {
+        throw std::invalid_argument(\"Matrix dimensions do not agree\");
+    }
+    NumericMatrix result(m, m);
+    for (int k = 0; k < columnIndexesOneBased.length(); ++k) {
+        int column = columnIndexesOneBased(k) - 1;
+        if (column >= A.Dim[1]) {
+            throw std::invalid_argument(\"Column index outside of valid range\");
+        }
+    }
+    for (int i = 0; i < m; ++i) {
+        int row = rowIndexesOneBased(i) - 1;
+        if (row >= n) {
+            throw std::invalid_argument(\"Row index outside of valid range\");
+        }
+        for (int j = 0; j <= i; ++j) {
+            int otherRow = rowIndexesOneBased(j) - 1;
+            double cell = 0;
+            for (int k = 0; k < columnIndexesOneBased.length(); ++k) {
+                int column = columnIndexesOneBased(k) - 1;
+                cell += A.x[n * column + row] * B.x[n * column + otherRow];
+            }
+            result(i, j) = result(j, i) = cell;
+        }
     }
     return result;
 }
@@ -73,31 +114,33 @@ NumericVector computeDiagonalOfProductBlas(const dgeMatrix& A, const dgeMatrix& 
 
 sourceCpp(code = src)
 
-
-nrow <- ncol <- 1000
-A <- matrix(rnorm(nrow * ncol), nrow, ncol)
-B <- matrix(rnorm(nrow * ncol), nrow, ncol)
-Amat <- as(A, "unpackedMatrix")
-Bmat <- as(B, "unpackedMatrix")
-
-microbenchmark(computeDiagonalOfProduct(A, B),
-               computeDiagonalOfProduct(as.matrix(Amat), as.matrix(Bmat)),
-               computeDiagonalOfProductBlas(as(A, "unpackedMatrix"), as(B, "unpackedMatrix")),
-               computeDiagonalOfProductBlas(Amat, Bmat))
-
-
-require(robustlmm)
 rfm <- rlmer(Reaction ~ Days + (Days|Subject), sleepstudy,
              rho.sigma.e = psi2propII(smoothPsi, k = 2.28),
              rho.b = chgDefaults(smoothPsi, k = 5.14, s=10),
              rho.sigma.b = chgDefaults(smoothPsi, k = 5.14, s=10))
 
-B <- rfm@pp$B()
-tmp <- tcrossprod(rfm@pp$Epsi_bpsi_bt, B)
+ind <- rfm@k == 1
+columnIndexes <- which(ind)
 
-microbenchmark(computeDiagonalOfProduct(as.matrix(B), as.matrix(tmp)),
-               computeDiagonalOfProductBlas(as(B, "unpackedMatrix"), as(tmp, "unpackedMatrix")),
-               computeDiagonalOfProductBlas(B, tmp))
+all.equal(as.matrix(crossprod(object@pp$Kt[, ind, drop = FALSE])),
+          crossproductColumnSubMatrix(object@pp$Kt, columnIndexes))
 
-str(as(B, "unpackedMatrix"))
-str(rfm@pp$Epsi_bpsi_bt)
+microbenchmark(crossprod(object@pp$Kt[, ind, drop = FALSE]),
+               crossproductColumnSubMatrix(object@pp$Kt, columnIndexes))
+
+
+tmpEL <- object@pp$L %*% object@pp$Epsi_bpsi_bt
+ind <- rfm@k == 1
+rowIndexes <- which(ind)
+columnIndexes <- which(!ind)
+
+
+all.equal(as.matrix(tcrossprod(object@pp$L[ind, !ind, drop = FALSE],
+                               tmpEL[ind, !ind, drop = FALSE])),
+          tcrossproductColumnRowSubMatrices(object@pp$L, tmpEL,
+                                            rowIndexes, columnIndexes))
+
+microbenchmark(as.matrix(tcrossprod(object@pp$L[ind, !ind, drop = FALSE],
+                               tmpEL[ind, !ind, drop = FALSE])),
+          tcrossproductColumnRowSubMatrices(object@pp$L, tmpEL,
+                                            rowIndexes, columnIndexes))

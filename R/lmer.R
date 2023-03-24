@@ -28,7 +28,6 @@ lmerNoFit <- function(formula, data = NULL, ..., initTheta) {
                        Gp=fm@Gp,
                        lower=fm@lower)
         fr <- fm@frame
-        ##mc <- fm@call
         mkMerMod(environment(devfun), fakeOpt, reTrms, fr, mc)
     } else {
         ## not supported

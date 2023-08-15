@@ -1,7 +1,7 @@
 
-R version 4.2.1 (2022-06-23) -- "Funny-Looking Kid"
-Copyright (C) 2022 The R Foundation for Statistical Computing
-Platform: aarch64-apple-darwin20 (64-bit)
+R Under development (unstable) (2023-08-12 r84939) -- "Unsuffered Consequences"
+Copyright (C) 2023 The R Foundation for Statistical Computing
+Platform: aarch64-apple-darwin20
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
 You are welcome to redistribute it under certain conditions.
@@ -258,13 +258,13 @@ List of 5
   .. .. ..$ : NULL
   .. ..@ x       : num [1:1600] 9.105 8.529 -0.487 -0.502 -0.487 ...
   .. ..@ factors :List of 1
-  .. .. ..$ LU:Formal class 'denseLU' [package "Matrix"] with 4 slots
-  .. .. .. .. ..@ Dimnames:List of 2
-  .. .. .. .. .. ..$ : NULL
-  .. .. .. .. .. ..$ : NULL
+  .. .. ..$ denseLU:Formal class 'denseLU' [package "Matrix"] with 4 slots
   .. .. .. .. ..@ x       : num [1:1600] 9.105 0.9367 -0.0535 -0.0551 -0.0535 ...
   .. .. .. .. ..@ perm    : int [1:40] 1 2 3 4 5 6 7 8 9 10 ...
   .. .. .. .. ..@ Dim     : int [1:2] 40 40
+  .. .. .. .. ..@ Dimnames:List of 2
+  .. .. .. .. .. ..$ : NULL
+  .. .. .. .. .. ..$ : NULL
  $ M_XZ :Formal class 'dgeMatrix' [package "Matrix"] with 4 slots
   .. ..@ Dim     : int [1:2] 2 40
   .. ..@ Dimnames:List of 2
@@ -282,7 +282,7 @@ List of 5
  $ M_BB :Formal class 'dgeMatrix' [package "Matrix"] with 4 slots
   .. ..@ Dim     : int [1:2] 2 2
   .. ..@ Dimnames:List of 2
-  .. .. ..$ : NULL
+  .. .. ..$ : chr [1:2] "(Intercept)" "Days"
   .. .. ..$ : NULL
   .. ..@ x       : num [1:4] 0.08697 -0.00271 -0.00271 0.00446
   .. ..@ factors : list()
@@ -393,4 +393,4 @@ List of 34
 > 
 > proc.time()
    user  system elapsed 
-  1.479   0.075   1.550 
+  1.088   0.066   1.152 

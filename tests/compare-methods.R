@@ -47,6 +47,8 @@ fit <- function(formula, data, methods =  c("DASvar", "DAStau"),
     }
 }
 
+Dyestuff$Yield <- Dyestuff$Yield - 0.5
+
 if (FALSE) {
     ## classic (REML)
     fit(Yield ~ (1 | Batch), Dyestuff)

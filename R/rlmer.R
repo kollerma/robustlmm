@@ -268,6 +268,14 @@ rlmer <- function(formula, data, ..., method = c("DAStau", "DASvar"),
 
     if (any(lobj@resp$weights == 0))
         stop("Observations with zero weights are not allowed.")
+    if (any(lobj@resp$weights < 0))
+        stop("Observations with negative weights are not allowed.")
+    tooSmall <- lobj@resp$weights < 0.1
+    if (any(tooSmall)) {
+        obsString <- createObservationsString(tooSmall)
+        warn(paste0("Detected very small weights (", obsString, "). ",
+                    "You may encounter issues due to numerical instability."))
+    }
 
     if (!missing(setting)) {
         if (!missing(rho.e) || !missing(rho.sigma.e) ||

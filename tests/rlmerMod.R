@@ -57,7 +57,7 @@ stopifnot(theta(rfm5) == c(0, 0, 0, 1))
 ## test updating u
 ## test integrity of rfm1:
 stopifnot(all(Lambda(rfm1) %*% u(rfm1) == b(rfm1)),
-          all(std.b(rfm1, 1, Matrix(b(rfm1))) == u(rfm1)))
+          all(std.b(rfm1, b(rfm1)) == u(rfm1)))
 rfm1a <- rfm1
 rfm1a@pp <- rfm1@pp$copy()
 rfm1a@resp <- rfm1@resp$copy()
@@ -69,10 +69,10 @@ robustlmm:::theta(rfm1b, fit.effects = TRUE, update.sigma = FALSE) <- 3
 ## before setting u or b
 stopifnot(all.equal(u(rfm1a), u(rfm1b)),
           all.equal(drop(Lambda(rfm1a) %*% u(rfm1a)), unname(b(rfm1a))),
-          all.equal(std.b(rfm1a, 1, Matrix(b(rfm1a))), unname(u(rfm1a))),
+          all.equal(std.b(rfm1a, b(rfm1a)), unname(u(rfm1a))),
           all.equal(b(rfm1a), b(rfm1b)),
           all.equal(drop(Lambda(rfm1b) %*% u(rfm1b)), unname(b(rfm1b))),
-          all.equal(std.b(rfm1b, 1, Matrix(b(rfm1b))), unname(u(rfm1b))))
+          all.equal(std.b(rfm1b, b(rfm1b)), unname(u(rfm1b))))
 robustlmm:::u(rfm1a) <- u(rfm1)
 robustlmm:::b(rfm1b) <- drop(Lambda(rfm1b) %*% u(rfm1))
 ## after:
@@ -80,10 +80,10 @@ stopifnot(all.equal(u(rfm1a), u(rfm1)),
           all.equal(unname(b(rfm1b)), drop(Lambda(rfm1b) %*% u(rfm1))),
           all.equal(u(rfm1a), u(rfm1b)),
           all.equal(drop(Lambda(rfm1a) %*% u(rfm1a)), unname(b(rfm1a))),
-          all.equal(std.b(rfm1a, 1, Matrix(b(rfm1a))), unname(u(rfm1a))),
+          all.equal(std.b(rfm1a, b(rfm1a)), unname(u(rfm1a))),
           all.equal(b(rfm1a), b(rfm1b)),
           all.equal(drop(Lambda(rfm1b) %*% u(rfm1b)), unname(b(rfm1b))),
-          all.equal(std.b(rfm1b, 1, Matrix(b(rfm1b))), unname(u(rfm1b))))
+          all.equal(std.b(rfm1b, b(rfm1b)), unname(u(rfm1b))))
 
 ## test dependency on initial values of theta
 testInit <- function(formula, data, ...) {

@@ -126,18 +126,18 @@ setRefClass("rlmerPredD",
                      setB.s = function(value) setU(value),
                      setB = function(value) {
                          b.r <<- value
-                         b.s <<- as(stdB(1, Matrix(value)), "numeric")
+                         b.s <<- stdB(value)
                      },
-                     stdB = function(sigma = sigma, matrix, drop=TRUE, t=FALSE) {
-                         ## matrix not given: return sigma-standardized b.s
-                         if (missing(matrix)) return(b.s / sigma)
-                         ## else standardize matrix
-                         ret <- solve(if (t) t(U_b) else U_b, matrix)
-                         ## set infinite, NA, NaN terms to 0 (they correspond to dropped vc)
-                         if (any(idx <- !is.finite(ret@x)))
-                             ret@x[idx] <- 0
-                         if (drop) ret <- drop(ret)
-                         ret/sigma
+                     stdB = function(vector) {
+                         idx <- diag(U_b) == 0.0
+                         if (any(idx)) {
+                             diag(U_b)[idx] <- NA_real_
+                             ret <- solve(U_b, vector)
+                             ret[idx] <- 0
+                         } else {
+                             ret <- solve(U_b, vector)
+                         }
+                         ret
                      },
                      setLambdat = function(value, Lind) {
                          .Lambdat <<- value
@@ -386,20 +386,6 @@ setRefClass("rlmerPredD_DAS",
                      }
                      return(A)
                  },
-                 A = function() {
-                     if (!isTRUE(calledInit)) initMatrices()
-                     if (any(!zeroB)) {
-                         r <- M()
-                         A <- tcrossprod(.U_eX, ## X M_Bb U_b Z U_e\inv
-                                         crossprod(U_btZt.U_et, r$M_bB))
-                         A <- A + t(A) + tcrossprod(.U_eX, .U_eX %*% r$M_BB) +
-                             crossprod(U_btZt.U_et, r$M_bb) %*% U_btZt.U_et
-                     } else {
-                         ## no random effects
-                         A <- .U_eX %*% solve(M_XX, t(.U_eX)) ## just the hat matrix
-                     }
-                     return(A)
-                 },
                  updateMatrices = function() {
                      if (!isTRUE(calledInit)) initMatrices()
                      if (any(!zeroB)) {
@@ -435,7 +421,15 @@ setRefClass("rlmerPredD_DAS",
                              v_e - EDpsi_e * 2 * diagA + Epsi2_e * diagAAt +
                              computeDiagonalOfProduct(as(Btmp, "unpackedMatrix"),
                                                       as(tmp, "unpackedMatrix"))
+                         tooSmall <- tau2 < 0.01
+                         if (any(tooSmall)) {
+                            tau2[tooSmall] <- 0.01
+                            obsString <- createObservationsString(tooSmall)
+                            warning("Detected very small values for tau^2 for ",
+                                    obsString, ". Using 0.01 instead.")
+                         }
                          .tau_e <<- sqrt(tau2)
+                         if (any(is.na(.tau_e))) browser()
                      }
                      if (method == "DAStau") {
                          stmp <- .s(theta = FALSE, pp = .self, B = Btmp)

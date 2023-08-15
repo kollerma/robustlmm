@@ -2,18 +2,16 @@
 ## Functions to generate commonly required objects   ##
 #######################################################
 
-## std.b: Return the spherical random effects or "Standardize" the Matrix
-## matrix: \eqn{\Lambda^{-1} matrix / \sigma}{Lambda^-1 matrix / sigma}
+## std.b: Return the spherical random effects or "Standardize" the vector
+## vector: \eqn{\Lambda^{-1} vector / \sigma}{Lambda^-1 vector / sigma}
 ##
 ## @title Standardized values
 ## @param object rlmerMod object
 ## @param sigma to use for standardization
-## @param matrix matrix to standardize
-## @param drop apply drop to result?
-## @param t transpose result
+## @param vector vector to standardize
 ## @rdname std
-std.b <- function(object, sigma = .sigma(object), matrix, drop=TRUE, t=FALSE)
-    object@pp$stdB(sigma, matrix, drop, t)
+std.b <- function(object, vector)
+    object@pp$stdB(vector)
 
 ## std.e: Calculate the standardized residuals or "Standardize" the Matrix
 ## sigma: \eqn{R^{-1} matrix / \sigma}{R^-1 matrix / sigma}
@@ -658,3 +656,26 @@ update.rlmerMod <- function(object, formula., ..., evaluate = TRUE) {
     else call
 }
 
+##' @importFrom utils head
+createObservationsString <- function(indicator,
+                                     max = 6,
+                                     obs = which(indicator)) {
+    n <- length(obs)
+    if (n == 1) {
+        return(paste("observation", obs))
+    }
+    if (n > max) {
+        nToShow <- max - 1
+    } else {
+        nToShow <- n - 1
+    }
+    obsString <- paste("observations",
+                       paste(head(obs, n = nToShow),
+                             collapse = ", "))
+    if (n > max) {
+        obsString <- paste(obsString, "and", n - nToShow, "others")
+    } else {
+        obsString <- paste(obsString, "and", obs[n])
+    }
+    return(obsString)
+}

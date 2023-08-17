@@ -131,8 +131,9 @@ setRefClass("rlmerPredD",
                      stdB = function(vector) {
                          idx <- diag(U_b) == 0.0
                          if (any(idx)) {
-                             diag(U_b)[idx] <- NA_real_
-                             ret <- solve(U_b, vector)
+                             lU_b <- U_b
+                             diag(lU_b)[idx] <- NA_real_
+                             ret <- solve(lU_b, vector)
                              ret[idx] <- 0
                          } else {
                              ret <- solve(U_b, vector)

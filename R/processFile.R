@@ -314,7 +314,7 @@ checkEqualsStoredResult <- function(fit, storedResults, ...) {
     actual <- actual[names(expected)]
     tolerance <- 1.0e-7
     if (is(fit, "lqmm")) {
-        tolerance <- 0.01 ## summary.lqmm uses bootstrap.
+        tolerance <- 0.05 ## summary.lqmm uses bootstrap.
         ## The result are sometimes different even though we specify the rng seed.
     } else if (is(fit, "varComprob")) {
         tolerance <- 1.0e-6

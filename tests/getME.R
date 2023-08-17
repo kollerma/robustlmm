@@ -16,12 +16,19 @@ rfm <- rlmer(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2,
 (nmME <- eval(formals(robustlmm:::getME.rlmerMod)$name))
 for (nm in nmME) {
     cat("\nName:", nm, "\n")
+    value <- getME(rfm, name=nm)
+    if (nm == "theta") {
+        value <- value + 1
+    } else if (nm == "A") {
+        value@x <- value@x + 1
+    }
     if (substr(nm, 1, 3) == "rho") {
-       print(getME(rfm, name=nm))
+       print(value)
     } else {
-       str(getME(rfm, name=nm))
+       str(value)
     }
 }
 g.all <- getME(rfm, "ALL")
 g.all[grepl("^rho", names(g.all))] <- NULL
+g.all[["theta"]] <- g.all[["theta"]] + 1
 str(g.all, max.level = 2)

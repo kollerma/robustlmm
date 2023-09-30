@@ -155,6 +155,7 @@ List calculateA(chm_dense& U_eX, chm_sparse& U_eZU_b,
     const int ione(1), n(U_eX.m.nrow), p(U_eX.m.ncol),
         q(U_eZU_b.m.ncol), size_tmp3(n * p);
     const double one(1), zero(0);
+    double onea[] = { 1.0, 0.0 }, zeroa[] = { 0.0, 0.0 };
     if (U_eZU_b.m.nrow != (size_t) n) {
         throw std::invalid_argument("Number of row of U_eZU_b should be equal to number of rows in U_eX.");
     }
@@ -183,7 +184,7 @@ List calculateA(chm_dense& U_eX, chm_sparse& U_eZU_b,
     bool optimizedGroups = false;
     // tmp1 = U_eZU_b M_bb: passed in
     // tmp2 = U_eZU_b M_bB
-    M_cholmod_sdmult(&U_eZU_b.m, 0, &one, &zero, &M_bB.m, tmp2, &c);
+    M_cholmod_sdmult(&U_eZU_b.m, 0, onea, zeroa, &M_bB.m, tmp2, &c);
     // tmp3 = U_eX_ M_BB
     F77_CALL(dgemm)("N", "N", &n, &p, &p, &one, (const double*) U_eX.m.x, &n,
              (const double*) M_BB.m.x, &p, &zero, tmp3, &n FCONE FCONE);
@@ -208,7 +209,7 @@ List calculateA(chm_dense& U_eX, chm_sparse& U_eZU_b,
         for (int j = 0; j < q; ++j) {
             ((double*) tmp4->x)[j] = ((double*) tmp1.m.x)[i + j * n];
         }
-        M_cholmod_sdmult(&U_eZU_b.m, 0, &one, &one, tmp4, Arow, &c);
+        M_cholmod_sdmult(&U_eZU_b.m, 0, onea, onea, tmp4, Arow, &c);
         diagA(i) = ((double *) Arow->x)[i];
         diagAAt(i) = F77_CALL(ddot)(&n, (double *) Arow->x, &ione, (double *) Arow->x, &ione);
     }

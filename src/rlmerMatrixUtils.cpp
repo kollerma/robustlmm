@@ -4,23 +4,22 @@
 
 extern cholmod_common c;
 
-/*
- * copied from Matrix.h and Matrix_stubs.c and removed Matrix_ prefix
- * Using Matrix_ versions did result in not machting declarations:
- * (return type mismatch, type 'Rboolean' should match type 'bool')
- */
-const char *valid_ge_dense[] = { MATRIX_VALID_ge_dense, ""};
-const char *valid_Csparse[] = { MATRIX_VALID_Csparse, ""};
-
 bool isclass_ge_dense(SEXP x);
 bool isclass_Csparse(SEXP x);
 
+/* The following two methods as suggested by @jaganm in Issue #29 */
 bool isclass_ge_dense(SEXP x) {
-    return R_check_class_etc(x, valid_ge_dense) >= 0;
+    static const char *valid[] = {
+        "ngeMatrix", "lgeMatrix", "dgeMatrix", "" };
+    return R_check_class_etc(x, valid) >= 0;
 }
 
 bool isclass_Csparse(SEXP x) {
-    return R_check_class_etc(x, valid_Csparse) >= 0;
+    static const char *valid[] = {
+        "ngCMatrix", "lgCMatrix", "dgCMatrix",
+        "nsCMatrix", "lsCMatrix", "dsCMatrix",
+        "ntCMatrix", "ltCMatrix", "dtCMatrix", "" };
+    return R_check_class_etc(x, valid) >= 0;
 }
 /* end copy */
 

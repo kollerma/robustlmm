@@ -111,9 +111,9 @@ namespace Rcpp {
 
 using namespace Rcpp;
 
-List calculateA(const chm_dense& invU_eX, const chm_sparse& invU_eZU_b,
-                const chm_dense& tmp1, const chm_dense& M_bB,
-                const chm_dense& M_BB, IntegerVector& groupsA);
+List calculateA(chm_dense& U_eX, chm_sparse& U_eZU_b,
+                chm_dense& tmp1, chm_dense& M_bB,
+                chm_dense& M_BB, IntegerVector& groupsA) ;
 
 NumericVector computeDiagonalOfProduct(const dgeMatrix& A, const dgeMatrix& B);
 
@@ -149,9 +149,9 @@ tCrossproductColumnRowSubMatrices(const dgeMatrix& A, const dgeMatrix& B,
 // Returns list of vectors diagA and diagAAt
 // inputs: U_eZU_b sparse
 //         U_eX, tmp1 = U_eZU_b %*% M_bb, M_bB, M_BB dense
-List calculateA(const chm_dense& U_eX, const chm_sparse& U_eZU_b,
-                const chm_dense& tmp1, const chm_dense& M_bB,
-                const chm_dense& M_BB, IntegerVector& groupsA) {
+List calculateA(chm_dense& U_eX, chm_sparse& U_eZU_b,
+                chm_dense& tmp1, chm_dense& M_bB,
+                chm_dense& M_BB, IntegerVector& groupsA) {
     const int ione(1), n(U_eX.m.nrow), p(U_eX.m.ncol),
         q(U_eZU_b.m.ncol), size_tmp3(n * p);
     const double one(1), zero(0);

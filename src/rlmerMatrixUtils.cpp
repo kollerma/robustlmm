@@ -4,23 +4,22 @@
 
 extern cholmod_common c;
 
-/*
- * copied from Matrix.h and Matrix_stubs.c and removed Matrix_ prefix
- * Using Matrix_ versions did result in not machting declarations:
- * (return type mismatch, type 'Rboolean' should match type 'bool')
- */
-const char *valid_ge_dense[] = { MATRIX_VALID_ge_dense, ""};
-const char *valid_Csparse[] = { MATRIX_VALID_Csparse, ""};
-
 bool isclass_ge_dense(SEXP x);
 bool isclass_Csparse(SEXP x);
 
+/* The following two methods as suggested by @jaganm in Issue #29 */
 bool isclass_ge_dense(SEXP x) {
-    return R_check_class_etc(x, valid_ge_dense) >= 0;
+    static const char *valid[] = {
+        "ngeMatrix", "lgeMatrix", "dgeMatrix", "" };
+    return R_check_class_etc(x, valid) >= 0;
 }
 
 bool isclass_Csparse(SEXP x) {
-    return R_check_class_etc(x, valid_Csparse) >= 0;
+    static const char *valid[] = {
+        "ngCMatrix", "lgCMatrix", "dgCMatrix",
+        "nsCMatrix", "lsCMatrix", "dsCMatrix",
+        "ntCMatrix", "ltCMatrix", "dtCMatrix", "" };
+    return R_check_class_etc(x, valid) >= 0;
 }
 /* end copy */
 
@@ -111,9 +110,9 @@ namespace Rcpp {
 
 using namespace Rcpp;
 
-List calculateA(const chm_dense& invU_eX, const chm_sparse& invU_eZU_b,
-                const chm_dense& tmp1, const chm_dense& M_bB,
-                const chm_dense& M_BB, IntegerVector& groupsA);
+List calculateA(chm_dense& U_eX, chm_sparse& U_eZU_b,
+                chm_dense& tmp1, chm_dense& M_bB,
+                chm_dense& M_BB, IntegerVector& groupsA) ;
 
 NumericVector computeDiagonalOfProduct(const dgeMatrix& A, const dgeMatrix& B);
 
@@ -149,12 +148,13 @@ tCrossproductColumnRowSubMatrices(const dgeMatrix& A, const dgeMatrix& B,
 // Returns list of vectors diagA and diagAAt
 // inputs: U_eZU_b sparse
 //         U_eX, tmp1 = U_eZU_b %*% M_bb, M_bB, M_BB dense
-List calculateA(const chm_dense& U_eX, const chm_sparse& U_eZU_b,
-                const chm_dense& tmp1, const chm_dense& M_bB,
-                const chm_dense& M_BB, IntegerVector& groupsA) {
+List calculateA(chm_dense& U_eX, chm_sparse& U_eZU_b,
+                chm_dense& tmp1, chm_dense& M_bB,
+                chm_dense& M_BB, IntegerVector& groupsA) {
     const int ione(1), n(U_eX.m.nrow), p(U_eX.m.ncol),
         q(U_eZU_b.m.ncol), size_tmp3(n * p);
     const double one(1), zero(0);
+    double onea[] = { 1.0, 0.0 }, zeroa[] = { 0.0, 0.0 };
     if (U_eZU_b.m.nrow != (size_t) n) {
         throw std::invalid_argument("Number of row of U_eZU_b should be equal to number of rows in U_eX.");
     }
@@ -183,7 +183,7 @@ List calculateA(const chm_dense& U_eX, const chm_sparse& U_eZU_b,
     bool optimizedGroups = false;
     // tmp1 = U_eZU_b M_bb: passed in
     // tmp2 = U_eZU_b M_bB
-    M_cholmod_sdmult(&U_eZU_b.m, 0, &one, &zero, &M_bB.m, tmp2, &c);
+    M_cholmod_sdmult(&U_eZU_b.m, 0, onea, zeroa, &M_bB.m, tmp2, &c);
     // tmp3 = U_eX_ M_BB
     F77_CALL(dgemm)("N", "N", &n, &p, &p, &one, (const double*) U_eX.m.x, &n,
              (const double*) M_BB.m.x, &p, &zero, tmp3, &n FCONE FCONE);
@@ -208,7 +208,7 @@ List calculateA(const chm_dense& U_eX, const chm_sparse& U_eZU_b,
         for (int j = 0; j < q; ++j) {
             ((double*) tmp4->x)[j] = ((double*) tmp1.m.x)[i + j * n];
         }
-        M_cholmod_sdmult(&U_eZU_b.m, 0, &one, &one, tmp4, Arow, &c);
+        M_cholmod_sdmult(&U_eZU_b.m, 0, onea, onea, tmp4, Arow, &c);
         diagA(i) = ((double *) Arow->x)[i];
         diagAAt(i) = F77_CALL(ddot)(&n, (double *) Arow->x, &ione, (double *) Arow->x, &ione);
     }

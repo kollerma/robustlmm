@@ -26,7 +26,7 @@ namespace Rcpp {
 
     class chm_dense {
     public:
-        const cholmod_dense m;
+        cholmod_dense m;
 
         chm_dense(S4 mat);
 
@@ -39,7 +39,7 @@ namespace Rcpp {
 
     class chm_sparse {
     public:
-        const cholmod_sparse m;
+        cholmod_sparse m;
 
         chm_sparse(S4 mat);
 

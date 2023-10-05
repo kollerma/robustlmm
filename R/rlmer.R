@@ -517,20 +517,6 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
         ## cycle block types
         for(type in seq_along(lobj@blocks)) {
             bidx <- lobj@idx[[type]]
-            if (verbose > 5) {
-                cat("Tau for blocktype ", type, ":", as.vector(T[bidx[,1],bidx[,1]]), "\n")
-            }
-            ## catch dropped vc
-            if (all(abs(bs[bidx]) < 1e-7)) {
-                if (verbose > 1)
-                    cat("Block", type, "dropped (all = 0), stopping iterations.\n")
-                Ubtilde <- lobj@blocks[[type]]
-                pat <- Ubtilde != 0
-                Lind <- Ubtilde[pat]
-                thetatilde[Lind] <- 0
-                convBlks[type] <- TRUE
-                next
-            }
             s <- nrow(bidx)
             K <- ncol(bidx)
             Tend <- Tstart + s * s * K - 1

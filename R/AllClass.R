@@ -99,7 +99,7 @@ setRefClass("rlmerPredD",
                          v_e <<- if (is(v_e, "numeric")) v_e else diag(v_e)
                          U_e <<- Diagonal(x=sqrt(if (is(v_e, "numeric")) v_e else diag(v_e)))
                          beta <<- beta
-                         b.s <<- b.s
+                         b.s <<- as(b.s, "numeric")
                          b.r <<- as(U_b %*% b.s, "numeric")
                          sigma <<- sigma
                          lower <<- lower
@@ -120,12 +120,12 @@ setRefClass("rlmerPredD",
                          sigma <<- value
                      },
                      setU = function(value) {
-                         b.s <<- value
+                         b.s <<- as(value, "numeric")
                          b.r <<- as(U_b %*% value, "numeric")
                      },
                      setB.s = function(value) setU(value),
                      setB = function(value) {
-                         b.r <<- value
+                         b.r <<- as(value, "numeric")
                          b.s <<- stdB(value)
                      },
                      stdB = function(vector) {
@@ -138,7 +138,7 @@ setRefClass("rlmerPredD",
                          } else {
                              ret <- solve(U_b, vector)
                          }
-                         ret
+                         as(ret, "numeric")
                      },
                      setLambdat = function(value, Lind) {
                          .Lambdat <<- value
@@ -628,7 +628,7 @@ setClass("rlmerMod",
     if (is(from, "merMod")) {
         Lambdat <- getME(from, "Lambdat")
         Lind <- getME(from, "Lind")
-        u <- getME(from, "u")
+        u <- as(getME(from, "u"), "numeric")
         lower <- getME(from, "lower")
         devcomp <- getME(from, "devcomp")
         theta <- getME(from, "theta")

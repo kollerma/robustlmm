@@ -63,7 +63,7 @@ namespace Rcpp {
                 || !mat.hasSlot("factors")) {
             throw std::invalid_argument("Cannot construct dgeMatrix from this S4 object");
         }
-        M_as_cholmod_dense((cholmod_dense*) &m, mat);
+        M_sexp_as_cholmod_dense((cholmod_dense*) &m, mat);
     }
 
     chm_dense::~chm_dense() {
@@ -89,7 +89,7 @@ namespace Rcpp {
                 || !mat.hasSlot("factors")) {
             throw std::invalid_argument("Cannot construct dgeMatrix from this S4 object");
         }
-        M_as_cholmod_sparse((cholmod_sparse*) &m, mat, (Rboolean) FALSE, (Rboolean) FALSE);
+        M_sexp_as_cholmod_sparse((cholmod_sparse*) &m, mat, (Rboolean) FALSE, (Rboolean) FALSE);
     }
 
     chm_sparse::~chm_sparse() {

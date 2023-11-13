@@ -268,7 +268,7 @@ plot_coverageDiagonal <-
            aes(Generator, `coverage probability`, color = Method)) +
     geom_hline(yintercept = 0.95,
                color = "gray",
-               size = 0.5) +
+               linewidth = 0.5) +
     lemon::geom_pointline(aes(group = Method)) +
     xlab("") +
     facet_wrap( ~ variable)

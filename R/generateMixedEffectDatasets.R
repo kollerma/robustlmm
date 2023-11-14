@@ -16,7 +16,7 @@
 ##' @param ... all additional arguments are added to the returned list.
 ##' @author Manuel Koller
 ##' @return List that can be passed to
-##'   \code{\link{generateMixedEffectDatasets}}. \describe{ \item{\code{data}:
+##'   \code{\link{generateMixedEffectDatasets}}. \item{\code{data}:
 ##'   }{the original dataset} \item{\code{X}: }{the X matrix as returned by
 ##'   \code{\link{getME}}} \item{\code{Z}: }{the Z matrix as returned by
 ##'   \code{\link{getME}}} \item{\code{Lambda}: }{the Lambda matrix as returned
@@ -27,7 +27,7 @@
 ##'   \item{\code{trueSigma}: }{true value used for sigma}
 ##'   \item{\code{trueTheta}: }{true values used for theta}
 ##'   \item{\code{formula}: }{formula to fit the model using \code{lmer}}
-##'   \item{\code{...}: }{additional arguments passed via \code{...}} }
+##'   \item{\code{...}: }{additional arguments passed via \code{...}}
 ##' @examples
 ##'   preparedDataset <- prepareMixedEffectDataset(Reaction ~ Days + (Days|Subject), sleepstudy)
 ##'   str(preparedDataset)

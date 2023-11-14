@@ -37,7 +37,7 @@ fitted model returned by \code{\link{lmer}}.}
 }
 \value{
 List that can be passed to
-  \code{\link{generateMixedEffectDatasets}}. \describe{ \item{\code{data}:
+  \code{\link{generateMixedEffectDatasets}}. \item{\code{data}:
   }{the original dataset} \item{\code{X}: }{the X matrix as returned by
   \code{\link{getME}}} \item{\code{Z}: }{the Z matrix as returned by
   \code{\link{getME}}} \item{\code{Lambda}: }{the Lambda matrix as returned
@@ -48,7 +48,7 @@ List that can be passed to
   \item{\code{trueSigma}: }{true value used for sigma}
   \item{\code{trueTheta}: }{true values used for theta}
   \item{\code{formula}: }{formula to fit the model using \code{lmer}}
-  \item{\code{...}: }{additional arguments passed via \code{...}} }
+  \item{\code{...}: }{additional arguments passed via \code{...}}
 }
 \description{
 This function runs \code{\link{lmer}} and extracts all information needed to

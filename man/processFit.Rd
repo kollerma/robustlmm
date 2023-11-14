@@ -183,27 +183,25 @@ interpreted as having intercept, correlation and slope.}
 \value{
 List with extracted values, most items can be suppressed
   to save disk space.
-\describe{
-\item{label}{Name of fitting method used to create the fit}
-\item{datasetIndex}{Index of the dataset in the dataset list}
-\item{coefficients}{Vector of estimated fixed-effects coefficients of the fitted model}
-\item{standardErrors}{Vector of estimated standard errors of the fixed-effects coefficients}
-\item{tValues}{Vector of t-Values (or z-Values depending on fitting method)
+\item{\code{label}: }{Name of fitting method used to create the fit}
+\item{\code{datasetIndex}: }{Index of the dataset in the dataset list}
+\item{\code{coefficients}: }{Vector of estimated fixed-effects coefficients of the fitted model}
+\item{\code{standardErrors}: }{Vector of estimated standard errors of the fixed-effects coefficients}
+\item{\code{tValues}: }{Vector of t-Values (or z-Values depending on fitting method)
   of the fixed-effects coefficients}
-\item{sigma}{Estimated residual standard error}
-\item{thetas}{Vector of random-effects parameter estimates. As parameterized as by
+\item{\code{sigma}: }{Estimated residual standard error}
+\item{\code{thetas}: }{Vector of random-effects parameter estimates. As parameterized as by
   \code{\link{lmer}} and \code{\link{rlmer}}.}
-\item{b}{Vector of requested predicted random-effects.}
-\item{meanB}{Vector of means of the predicted random-effects.}
-\item{meanAbsB}{Vector of means of the absolute values of the  predicted random-effects.}
-\item{residuals}{Vector of requested residuals.}
-\item{converged}{Convergence status as reported by the fitting method. \code{0} means converged.
+\item{\code{b}: }{Vector of requested predicted random-effects.}
+\item{\code{meanB}: }{Vector of means of the predicted random-effects.}
+\item{\code{meanAbsB}: }{Vector of means of the absolute values of the  predicted random-effects.}
+\item{\code{residuals}: }{Vector of requested residuals.}
+\item{\code{converged}: }{Convergence status as reported by the fitting method. \code{0} means converged.
   If not available, \code{NA} is used. Other values are to be interpreted carefully as codes
   vary from method to method.}
-\item{numberOfWarnings}{the number of warnings generated during the fitting process.}
-\item{proc.time}{Vector of times (user, system, elapsed) as reported by \code{\link{proc.time}}
+\item{\code{numberOfWarnings}: }{the number of warnings generated during the fitting process.}
+\item{\code{proc.time}: }{Vector of times (user, system, elapsed) as reported by \code{\link{proc.time}}
   required to fit the model.}
-}
 }
 \description{
 Methods to process fitted objects and convert into a data structure that is

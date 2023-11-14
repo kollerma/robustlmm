@@ -13,10 +13,10 @@ splitDatasets(datasets, chunkSize = 50)
 }
 \value{
 list of dataset lists with generators and the contents of the
-  original dataset. See `\code{\link{prepareMixedEffectDataset}} and
+  original dataset. See \code{\link{prepareMixedEffectDataset}} and
   \code{\link{generateAnovaDatasets}} for a description of the contents.
-  There is one additional entry in the list: \itemize{
-  \item{\code{"chunkIndex"}: }{index of the chunk} }
+  There is one additional entry in the list:
+  \item{\code{chunkIndex}: }{index of the chunk}
 }
 \description{
 Method that splits up dataset objects into smaller chunks, so that they can

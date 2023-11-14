@@ -28,8 +28,15 @@ emm_basis.rlmerMod <- function(object, trms, xlev, grid, vcov., ...) {
          dfargs=dfargs, model.matrix = mm)
 }
 
+#' @importFrom Matrix Matrix.Version
+.Matrix.Version.abi.on.build <- Matrix.Version()$abi
 .onLoad <- function(libname, pkgname) {
     if (requireNamespace("emmeans", quietly = TRUE)) {
         emmeans::.emm_register("rlmerMod", pkgname)
+    }
+    if (.Matrix.Version.abi.on.build != Matrix.Version()$abi) {
+        warning("Package robustlmm was built for another version of ",
+                "the Matrix package. Please re-install robustlmm.",
+                call. = FALSE, immediate. = TRUE)
     }
 }

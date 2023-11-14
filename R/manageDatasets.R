@@ -98,10 +98,10 @@ setEnvironment <- function(f, environmentClone) {
 ##' @param chunkSize number of datasets to keep in one chunk
 ##' @author Manuel Koller
 ##' @return list of dataset lists with generators and the contents of the
-##'   original dataset. See `\code{\link{prepareMixedEffectDataset}} and
+##'   original dataset. See \code{\link{prepareMixedEffectDataset}} and
 ##'   \code{\link{generateAnovaDatasets}} for a description of the contents.
-##'   There is one additional entry in the list: \itemize{
-##'   \item{\code{"chunkIndex"}: }{index of the chunk} }
+##'   There is one additional entry in the list:
+##'   \item{\code{chunkIndex}: }{index of the chunk}
 ##' @seealso \code{\link{bindDatasets}}
 ##' @examples
 ##'   oneWay <- generateAnovaDatasets(18, 1, 5, 4)

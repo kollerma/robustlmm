@@ -52,7 +52,6 @@
 ##'   group relationship. This requires package dplyr to be installed.
 ##' @author Manuel Koller
 ##' @return list with generators and the original arguments
-##' \describe{
 ##' \item{\code{generateData}: }{function to generate data taking one argument, the dataset index.}
 ##' \item{\code{createXMatrix}: }{function to generate X matrix taking one argument,
 ##'   the result of \code{generateData}.}
@@ -80,7 +79,6 @@
 ##' \item{\code{trueTheta}: }{true values used for theta}
 ##' \item{\code{formula}: }{formula to fit the model using \code{lmer}}
 ##' \item{\code{...}: }{additional arguments passed via \code{...}}
-##' }
 ##' @seealso \code{\link{generateMixedEffectDatasets}} and
 ##'   \code{\link{createDatasetsFromList}}
 ##' @examples

@@ -54,7 +54,6 @@ group relationship. This requires package dplyr to be installed.}
 }
 \value{
 list with generators and the original arguments
-\describe{
 \item{\code{generateData}: }{function to generate data taking one argument, the dataset index.}
 \item{\code{createXMatrix}: }{function to generate X matrix taking one argument,
   the result of \code{generateData}.}
@@ -82,7 +81,6 @@ list with generators and the original arguments
 \item{\code{trueTheta}: }{true values used for theta}
 \item{\code{formula}: }{formula to fit the model using \code{lmer}}
 \item{\code{...}: }{additional arguments passed via \code{...}}
-}
 }
 \description{
 Generate balanced datasets with multiple factors. All combinations of all

@@ -1,5 +1,5 @@
 
-R Under development (unstable) (2023-08-12 r84939) -- "Unsuffered Consequences"
+R Under development (unstable) (2023-10-30 r85440) -- "Unsuffered Consequences"
 Copyright (C) 2023 The R Foundation for Statistical Computing
 Platform: aarch64-apple-darwin20
 
@@ -36,15 +36,18 @@ boundary (singular) fit: see help('isSingular')
 > 
 > (nmME <- eval(formals(robustlmm:::getME.rlmerMod)$name))
  [1] "X"                "Z"                "Zt"               "Ztlist"          
- [5] "y"                "mu"               "u"                "b.s"             
- [9] "b"                "Gp"               "Tp"               "Lambda"          
-[13] "Lambdat"          "A"                "U_b"              "Lind"            
-[17] "sigma"            "flist"            "beta"             "theta"           
-[21] "n_rtrms"          "n_rfacs"          "cnms"             "devcomp"         
-[25] "offset"           "lower"            "rho_e"            "rho_b"           
-[29] "rho_sigma_e"      "rho_sigma_b"      "M"                "w_e"             
-[33] "w_b"              "w_b_vector"       "w_sigma_e"        "w_sigma_b"       
-[37] "w_sigma_b_vector" "is_REML"         
+ [5] "mmList"           "y"                "mu"               "u"               
+ [9] "b.s"              "b"                "Gp"               "Tp"              
+[13] "Lambda"           "Lambdat"          "Tlist"            "A"               
+[17] "U_b"              "Lind"             "sigma"            "flist"           
+[21] "fixef"            "beta"             "theta"            "ST"              
+[25] "is_REML"          "n_rtrms"          "n_rfacs"          "N"               
+[29] "n"                "p"                "q"                "p_i"             
+[33] "l_i"              "q_i"              "k"                "m_i"             
+[37] "m"                "cnms"             "devcomp"          "offset"          
+[41] "lower"            "rho_e"            "rho_b"            "rho_sigma_e"     
+[45] "rho_sigma_b"      "M"                "w_e"              "w_b"             
+[49] "w_b_vector"       "w_sigma_e"        "w_sigma_b"        "w_sigma_b_vector"
 > for (nm in nmME) {
 +     cat("\nName:", nm, "\n")
 +     value <- getME(rfm, name=nm)
@@ -120,6 +123,19 @@ List of 3
   .. ..@ x       : num [1:180] 1 1 1 1 1 1 1 1 1 1 ...
   .. ..@ factors : list()
 
+Name: mmList 
+List of 2
+ $ Days | Subject: num [1:180, 1:2] 1 1 1 1 1 1 1 1 1 1 ...
+  ..- attr(*, "dimnames")=List of 2
+  .. ..$ : chr [1:180] "1" "2" "3" "4" ...
+  .. ..$ : chr [1:2] "(Intercept)" "Days"
+  ..- attr(*, "assign")= int [1:2] 0 1
+ $ 1 | Group     : num [1:180, 1] 1 1 1 1 1 1 1 1 1 1 ...
+  ..- attr(*, "dimnames")=List of 2
+  .. ..$ : chr [1:180] "1" "2" "3" "4" ...
+  .. ..$ : chr "(Intercept)"
+  ..- attr(*, "assign")= int 0
+
 Name: y 
  num [1:180] 250 259 251 321 357 ...
 
@@ -166,6 +182,11 @@ Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
   ..@ x       : num [1:58] 0.9667 0.0152 0.2309 0.9667 0.0152 ...
   ..@ factors : list()
 
+Name: Tlist 
+List of 2
+ $ Subject: num [1:2, 1:2] 0.9667 0.0152 0 0.2309
+ $ Group  : num [1, 1] 0
+
 Name: A 
 Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
   ..@ i       : int [1:522] 0 36 0 1 37 0 1 38 0 1 ...
@@ -201,6 +222,10 @@ List of 2
  $ Group  : Factor w/ 4 levels "a","b","c","d": 1 2 3 4 1 2 3 4 1 2 ...
  - attr(*, "assign")= int [1:2] 1 2
 
+Name: fixef 
+ Named num [1:2] 251.4 10.5
+ - attr(*, "names")= chr [1:2] "(Intercept)" "Days"
+
 Name: beta 
  num [1:2] 251.4 10.5
 
@@ -208,11 +233,53 @@ Name: theta
  Named num [1:4] 1.97 1.02 1.23 1
  - attr(*, "names")= chr [1:4] "Subject.(Intercept)" "Subject.Days.(Intercept)" "Subject.Days" "Group.(Intercept)"
 
+Name: ST 
+List of 2
+ $ Subject: num [1:2, 1:2] 0.9667 0.0157 0 0.2309
+ $ Group  : num [1, 1] 0
+
+Name: is_REML 
+ logi 1
+
 Name: n_rtrms 
  int 2
 
 Name: n_rfacs 
  int 2
+
+Name: N 
+ int 180
+
+Name: n 
+ int 180
+
+Name: p 
+ int 2
+
+Name: q 
+ int 40
+
+Name: p_i 
+ Named int [1:2] 2 1
+ - attr(*, "names")= chr [1:2] "Days | Subject" "1 | Group"
+
+Name: l_i 
+ Named int [1:2] 18 4
+ - attr(*, "names")= chr [1:2] "Subject" "Group"
+
+Name: q_i 
+ Named int [1:2] 36 4
+ - attr(*, "names")= chr [1:2] "Days | Subject" "1 | Group"
+
+Name: k 
+ int 2
+
+Name: m_i 
+ Named num [1:2] 3 1
+ - attr(*, "names")= chr [1:2] "Days | Subject" "1 | Group"
+
+Name: m 
+ int 4
 
 Name: cnms 
 List of 2
@@ -327,14 +394,11 @@ List of 2
 
 Name: w_sigma_b_vector 
  num [1:40] 0.878 0.878 0.258 0.258 0.524 ...
-
-Name: is_REML 
- logi 1
 > g.all <- getME(rfm, "ALL")
 > g.all[grepl("^rho", names(g.all))] <- NULL
 > g.all[["theta"]] <- g.all[["theta"]] + 1
 > str(g.all, max.level = 2)
-List of 34
+List of 48
  $ X               : num [1:180, 1:2] 1 1 1 1 1 1 1 1 1 1 ...
   ..- attr(*, "dimnames")=List of 2
   ..- attr(*, "assign")= int [1:2] 0 1
@@ -345,6 +409,13 @@ List of 34
   ..$ Subject.(Intercept):Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
   ..$ Subject.Days       :Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
   ..$ Group.(Intercept)  :Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
+ $ mmList          :List of 2
+  ..$ Days | Subject: num [1:180, 1:2] 1 1 1 1 1 1 1 1 1 1 ...
+  .. ..- attr(*, "dimnames")=List of 2
+  .. ..- attr(*, "assign")= int [1:2] 0 1
+  ..$ 1 | Group     : num [1:180, 1] 1 1 1 1 1 1 1 1 1 1 ...
+  .. ..- attr(*, "dimnames")=List of 2
+  .. ..- attr(*, "assign")= int 0
  $ y               : num [1:180] 250 259 251 321 357 ...
  $ mu              : num [1:180] 254 273 293 313 332 ...
  $ u               : num [1:40] 2.34 39.68 -41.79 -34.58 -40.3 ...
@@ -356,6 +427,9 @@ List of 34
   ..- attr(*, "names")= chr [1:3] "beg__" "Subject" "Group"
  $ Lambda          :Formal class 'dtCMatrix' [package "Matrix"] with 7 slots
  $ Lambdat         :Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
+ $ Tlist           :List of 2
+  ..$ Subject: num [1:2, 1:2] 0.9667 0.0152 0 0.2309
+  ..$ Group  : num [1, 1] 0
  $ A               :Formal class 'dgCMatrix' [package "Matrix"] with 6 slots
  $ U_b             :Formal class 'dtCMatrix' [package "Matrix"] with 7 slots
  $ Lind            : int [1:58] 1 2 3 1 2 3 1 2 3 1 ...
@@ -364,11 +438,31 @@ List of 34
   ..$ Subject: Factor w/ 18 levels "308","309","310",..: 1 1 1 1 1 1 1 1 1 1 ...
   ..$ Group  : Factor w/ 4 levels "a","b","c","d": 1 2 3 4 1 2 3 4 1 2 ...
   ..- attr(*, "assign")= int [1:2] 1 2
+ $ fixef           : Named num [1:2] 251.4 10.5
+  ..- attr(*, "names")= chr [1:2] "(Intercept)" "Days"
  $ beta            : num [1:2] 251.4 10.5
  $ theta           : Named num [1:4] 1.97 1.02 1.23 1
   ..- attr(*, "names")= chr [1:4] "Subject.(Intercept)" "Subject.Days.(Intercept)" "Subject.Days" "Group.(Intercept)"
+ $ ST              :List of 2
+  ..$ Subject: num [1:2, 1:2] 0.9667 0.0157 0 0.2309
+  ..$ Group  : num [1, 1] 0
+ $ is_REML         : logi 1
  $ n_rtrms         : int 2
  $ n_rfacs         : int 2
+ $ N               : int 180
+ $ n               : int 180
+ $ p               : int 2
+ $ q               : int 40
+ $ p_i             : Named int [1:2] 2 1
+  ..- attr(*, "names")= chr [1:2] "Days | Subject" "1 | Group"
+ $ l_i             : Named int [1:2] 18 4
+  ..- attr(*, "names")= chr [1:2] "Subject" "Group"
+ $ q_i             : Named int [1:2] 36 4
+  ..- attr(*, "names")= chr [1:2] "Days | Subject" "1 | Group"
+ $ k               : int 2
+ $ m_i             : Named num [1:2] 3 1
+  ..- attr(*, "names")= chr [1:2] "Days | Subject" "1 | Group"
+ $ m               : int 4
  $ cnms            :List of 2
   ..$ Subject: chr [1:2] "(Intercept)" "Days"
   ..$ Group  : chr "(Intercept)"
@@ -396,8 +490,7 @@ List of 34
   ..$ Subject:'data.frame':	18 obs. of  2 variables:
   ..$ Group  :'data.frame':	4 obs. of  1 variable:
  $ w_sigma_b_vector: num [1:40] 0.878 0.878 0.258 0.258 0.524 ...
- $ is_REML         : logi 1
 > 
 > proc.time()
    user  system elapsed 
-  1.142   0.069   1.211 
+  1.028   0.050   1.077 

@@ -177,7 +177,7 @@ setMethod("show", "rlmerMod", function(object) print.rlmerMod(object))
 
 ## can import tnames if required
 
-## getME is in helpers.R
+## getME is in accessors.R
 
 globalVariables("forceSymmetric", add=TRUE)
 
@@ -445,3 +445,31 @@ predict.rlmerMod <- function(object, newdata=NULL,
 }
 
 forceCopy <- function(x) deepcopy(x)
+
+# these functions pick up where findbars leaves off, in terms of sugar
+# @param REtrm an element of the result of findbars
+# @param REtrms the result of findbars
+# @return \code{reexpr} gives a one-sided formula with the linear
+# model formula for the raw model matrix. \code{grpfact} gives an
+# expression with the name of the grouping factor associated with
+# the raw model matrix. \code{termnms} gives a character vector with
+# the names of the random effects terms.
+reexpr <- function(REtrm) substitute( ~ foo, list(foo = REtrm[[2]]))
+grpfact <- function(REtrm) substitute(factor(fac), list(fac = REtrm[[3]]))
+termnms <- function(REtrms) vapply(REtrms, deparse1, "")
+
+# mmList(): list of model matrices
+# ------    called from getME()
+mmList <- function(object, ...) UseMethod("mmList")
+mmList.rlmerMod <- function(object, ...) mmList(formula(object), model.frame(object))
+mmList.formula <- function(object, frame, ...) {
+    bars <- findbars(object)
+    mm <- setNames(lapply(bars, function(b) model.matrix(eval(reexpr(b), frame), frame)),
+                   termnms(bars))
+    grp <- lapply(lapply(bars, grpfact), eval, frame)
+    nl <- vapply(grp, nlevels, 1L)
+    if (any(diff(nl) > 0))
+        mm[order(nl, decreasing=TRUE)]
+    else
+        mm
+}

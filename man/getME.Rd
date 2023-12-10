@@ -92,7 +92,7 @@ theta(object)
             \item{drsum}{always NA, for consistency with lme4 output}
             \item{REML}{always NA, for consistency with lme4 output}
             \item{dev}{always NA, for consistency with lme4 output}
-            \item{sigmaML}{ML estimate of residual standard deviation}
+            \item{sigmaML}{always NA, for consistency with lme4 output}
             \item{sigmaREML}{REML estimate of residual standard deviation}
         } The elements of \code{dims} are:\cr
         \describe{

@@ -715,6 +715,7 @@ updateWeights <- function(object) {
     dd <- object@devcomp$dims
     object@devcomp$cmp[ifelse(dd["REML"], "sigmaREML", "sigmaML")] <- .sigma(object)
     ## Set slots to NA
+    object@devcomp$cmp[ifelse(dd["REML"], "sigmaML", "sigmaREML")] <- NA
     object@devcomp$cmp[c("ldL2", "ldRX2", "wrss", "ussq", "pwrss", "drsum", "REML", "dev")] <- NA
 
     object

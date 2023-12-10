@@ -12,7 +12,7 @@
   title = c("Fitted Values vs. Residuals", "Normal Q-Q vs. Residuals",
     "Normal Q-Q vs. Random Effects", "Scatterplot of Random Effects for Group \\"\%s\\""),
   multiply.weights = FALSE,
-  add.line = TRUE,
+  add.line = c("above", "below", "none"),
   ...
 )
 
@@ -33,7 +33,9 @@ string passed to \code{sprintf} to add the name of the current group.}
 \item{multiply.weights}{multiply the residuals / random effects with the
 robustness weights when producing the Q-Q plots.}
 
-\item{add.line}{add reference line to plots}
+\item{add.line}{add reference line to plots, use \code{"above"} or
+\code{"below"} to show the line above or below the points. Hide the line
+with \code{"none"}.}
 
 \item{...}{passed on to \code{\link[ggplot2]{geom_hline}} and
 \code{\link[ggplot2]{geom_qq_line}}, to customize how the line is drawn.}

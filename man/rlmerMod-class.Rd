@@ -51,39 +51,39 @@ A robust mixed-effects model as returned by \code{\link{rlmer}}.
 
 \section{Methods}{
  Almost all methods available from objects returned from
-  \code{\link{lmer}} are also available for objects returned by
+  \code{\link[lme4]{lmer}} are also available for objects returned by
   \code{\link{rlmer}}. They usage is the same.
 
   It follows a list of some the methods that are exported by this package:
 
 \itemize{
-\item \code{\link{coef}}
-\item \code{\link{deviance}} (disabled, see below)
-\item \code{\link{extractAIC}} (disabled, see below)
-\item \code{\link{family}}
-\item \code{\link{fitted}}
-\item \code{\link[=fixef.merMod]{fixef}}
-\item \code{\link{formula}}
+\item \code{\link[stats]{coef}}
+\item \code{\link[stats]{deviance}} (disabled, see below)
+\item \code{\link[stats]{extractAIC}} (disabled, see below)
+\item \code{\link[stats]{family}}
+\item \code{\link[stats]{fitted}}
+\item \code{\link[lme4:fixef.merMod]{fixef}}
+\item \code{\link[stats]{formula}}
 \item \code{\link{getInfo}}
-\item \code{\link{isGLMM}}
-\item \code{\link{isLMM}}
-\item \code{\link{isNLMM}}
-\item \code{\link{isREML}}
-\item \code{\link{logLik}} (disabled, see below)
-\item \code{\link{model.frame}}
-\item \code{\link{model.matrix}}
-\item \code{\link{nobs}}
+\item \code{\link[lme4]{isGLMM}}
+\item \code{\link[lme4]{isLMM}}
+\item \code{\link[lme4]{isNLMM}}
+\item \code{\link[lme4]{isREML}}
+\item \code{\link[stats]{logLik}} (disabled, see below)
+\item \code{\link[stats]{model.frame}}
+\item \code{\link[stats]{model.matrix}}
+\item \code{\link[lme4]{nobs}}
 \item \code{\link[=plot.rlmerMod]{plot}}
-\item \code{\link[=predict.merMod]{predict}}
-\item \code{\link[=ranef.merMod]{ranef}} (only partially implemented)
+\item \code{\link[lme4:predict.merMod]{predict}}
+\item \code{\link[lme4:ranef.merMod]{ranef}} (only partially implemented)
 \item \code{\link[=residuals.rlmerMod]{residuals}}
-\item \code{\link{sigma}}
-\item \code{\link{summary}}
-\item \code{\link{terms}}
-\item \code{\link{update}}
-\item \code{\link[=VarCorr.merMod]{VarCorr}}
-\item \code{\link{vcov}}
-\item \code{\link{weights}}
+\item \code{\link[lme4]{sigma}}
+\item \code{\link[base]{summary}}
+\item \code{\link[stats]{terms}}
+\item \code{\link[stats]{update}}
+\item \code{\link[lme4:VarCorr.merMod]{VarCorr}}
+\item \code{\link[lme4:vcov.merMod]{vcov}}
+\item \code{\link[stats]{weights}}
 }
 }
 
@@ -108,6 +108,6 @@ compare(fm, rfm)
 }
 \seealso{
 \code{\link{rlmer}}; corresponding class in package \code{lme4}:
-  \code{\link{merMod}}
+  \code{\link[lme4:merMod-class]{merMod}}
 }
 \keyword{classes}

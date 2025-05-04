@@ -14,7 +14,7 @@ viewCopyOfSimulationStudy(
 }
 \arguments{
 \item{study}{Name of the script file, partial matching is supported via
-\code{\link{match.arg}}.}
+\code{\link[base]{match.arg}}.}
 
 \item{destinationPath}{optional path to directory in which the copy of the
 script should be created. By default the current working directory is

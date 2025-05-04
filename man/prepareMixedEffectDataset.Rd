@@ -15,23 +15,23 @@ prepareMixedEffectDataset(
 )
 }
 \arguments{
-\item{formula}{passed on to \code{\link{lmer}}}
+\item{formula}{passed on to \code{\link[lme4]{lmer}}}
 
-\item{data}{passed on to \code{\link{lmer}}}
+\item{data}{passed on to \code{\link[lme4]{lmer}}}
 
-\item{REML}{passed on to \code{\link{lmer}}}
+\item{REML}{passed on to \code{\link[lme4]{lmer}}}
 
 \item{overrideBeta}{use to override beta used to simulate new datasets, by
 default \code{\link{getME}}\code{(fm, "beta")} where \code{fm} is the
-fitted model returned by \code{\link{lmer}}.}
+fitted model returned by \code{\link[lme4]{lmer}}.}
 
 \item{overrideSigma}{use to override sigma used to simulate new datasets, by
 default \code{\link{getME}}\code{(fm, "sigma")} where \code{fm} is the
-fitted model returned by \code{\link{lmer}}.}
+fitted model returned by \code{\link[lme4]{lmer}}.}
 
 \item{overrideTheta}{use to override theta used to simulate new datasets, by
 default \code{\link{getME}}\code{(fm, "theta")} where \code{fm} is the
-fitted model returned by \code{\link{lmer}}.}
+fitted model returned by \code{\link[lme4]{lmer}}.}
 
 \item{...}{all additional arguments are added to the returned list.}
 }
@@ -51,7 +51,7 @@ List that can be passed to
   \item{\code{...}: }{additional arguments passed via \code{...}}
 }
 \description{
-This function runs \code{\link{lmer}} and extracts all information needed to
+This function runs \code{\link[lme4]{lmer}} and extracts all information needed to
 generate new datasets using parametric bootstrap later.
 }
 \examples{

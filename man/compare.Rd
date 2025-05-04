@@ -36,8 +36,8 @@ compare(..., digits = 3, dnames = NULL, show.rho.functions = TRUE)
 getInfo(object, ...)
 }
 \arguments{
-\item{...}{objects to compare, or, for the \code{\link{xtable}} functions:
-passed to the respective \code{\link{xtable}} function.}
+\item{...}{objects to compare, or, for the \code{\link[xtable]{xtable}}
+functions: passed to the respective \code{\link[xtable]{xtable}} function.}
 
 \item{digits}{number of digits to show in output}
 
@@ -49,13 +49,13 @@ passed to the respective \code{\link{xtable}} function.}
 
 \item{x}{object of class "comparison.table" or "xtable.comparison.table"}
 
-\item{caption}{see \code{\link{xtable}}.}
+\item{caption}{see \code{\link[xtable]{xtable}}.}
 
-\item{label}{see \code{\link{xtable}}.}
+\item{label}{see \code{\link[xtable]{xtable}}.}
 
-\item{align}{see \code{\link{xtable}}.}
+\item{align}{see \code{\link[xtable]{xtable}}.}
 
-\item{display}{see \code{\link{xtable}}.}
+\item{display}{see \code{\link[xtable]{xtable}}.}
 
 \item{add.hlines}{replace empty lines in comparison table by hlines.
 Supersedes \code{hline.after} argument of \code{print.xtable}.}
@@ -78,7 +78,8 @@ of multiple lmerMod or rlmerMod objects.
 \details{
 The functions \code{xtable.comparison.table} and
 \code{print.xtable.comparison.table} are wrapper functions for the
-respective \code{\link{xtable}} and \code{\link{print.xtable}} functions.
+respective \code{\link[xtable]{xtable}} and
+\code{\link[xtable]{print.xtable}} functions.
 
 The function \code{getInfo} is internally used to prepare object for
 producing a comparison chart in \code{compare}.
@@ -94,9 +95,9 @@ producing a comparison chart in \code{compare}.
 }
 }
 \seealso{
-\code{\link{xtable}}
+\code{\link[xtable]{xtable}}
 
-\code{\link{print.xtable}}
+\code{\link[xtable]{print.xtable}}
 }
 \keyword{models}
 \keyword{utilities}

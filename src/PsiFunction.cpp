@@ -458,7 +458,7 @@ void RobustbasePsi::initialiseTuningParametersFromDefaults() {
   if (tuningParameters_ != NULL)
     return;
   const NumericVector defaults = this->getDefaults();
-  tuningParameters_ = new double(defaults.size());
+  tuningParameters_ = new double[defaults.size()];
   std::copy(defaults.begin(), defaults.end(), tuningParameters_);
 }
 

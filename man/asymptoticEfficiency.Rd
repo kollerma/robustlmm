@@ -42,9 +42,9 @@ and \code{"mu"} for the location.}
 efficiency, needs to be between 0 and 1.}
 
 \item{interval}{interval in which to do the root search, passed on to
-\code{\link{uniroot}}.}
+\code{\link[stats]{uniroot}}.}
 
-\item{...}{passed on to \code{\link{uniroot}}.}
+\item{...}{passed on to \code{\link[stats]{uniroot}}.}
 }
 \description{
 \code{asymptoticEfficiency} computes the theoretical asymptotic efficiency

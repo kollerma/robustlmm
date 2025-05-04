@@ -5,7 +5,7 @@
 ##' without changing the original file.
 ##' @title Access Simulation Study Code
 ##' @param study Name of the script file, partial matching is supported via
-##'   \code{\link{match.arg}}.
+##'   \code{\link[base]{match.arg}}.
 ##' @param destinationPath optional path to directory in which the copy of the
 ##'   script should be created. By default the current working directory is
 ##'   used.

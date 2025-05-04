@@ -218,7 +218,7 @@ as.data.frame.VarCorr.rlmerMod <-
 ## print()ing and show()ing
 ##
 ## @title Format the 'VarCorr' Matrix of Random Effects
-## @param varc a \code{\link{VarCorr}} (-like) matrix with attributes.
+## @param varc a \code{\link[lme4]{VarCorr}} (-like) matrix with attributes.
 ## @param digits the number of significant digits.
 ## @param comp character vector of length one or two indicating which
 ## columns out of "Variance" and "Std.Dev." should be shown in the

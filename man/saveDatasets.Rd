@@ -26,7 +26,7 @@ Saves dataset to one or more files.
 The file will be saved to \code{path/filename.Rdata}.
 
 If \code{chunkSize} is not missing, the filename is interpreted as format
-specifier and passed onto \code{\link{sprintf}}. One argument is given, the
+specifier and passed onto \code{\link[base]{sprintf}}. One argument is given, the
 index of the chunk.
 }
 \author{

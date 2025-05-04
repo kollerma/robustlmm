@@ -34,7 +34,7 @@
 ##'   of the fixed-effects coefficients}
 ##' \item{\code{sigma}: }{Estimated residual standard error}
 ##' \item{\code{thetas}: }{Vector of random-effects parameter estimates. As parameterized as by
-##'   \code{\link{lmer}} and \code{\link{rlmer}}.}
+##'   \code{\link[lme4]{lmer}} and \code{\link{rlmer}}.}
 ##' \item{\code{b}: }{Vector of requested predicted random-effects.}
 ##' \item{\code{meanB}: }{Vector of means of the predicted random-effects.}
 ##' \item{\code{meanAbsB}: }{Vector of means of the absolute values of the  predicted random-effects.}
@@ -43,7 +43,7 @@
 ##'   If not available, \code{NA} is used. Other values are to be interpreted carefully as codes
 ##'   vary from method to method.}
 ##' \item{\code{numberOfWarnings}: }{the number of warnings generated during the fitting process.}
-##' \item{\code{proc.time}: }{Vector of times (user, system, elapsed) as reported by \code{\link{proc.time}}
+##' \item{\code{proc.time}: }{Vector of times (user, system, elapsed) as reported by \code{\link[base]{proc.time}}
 ##'   required to fit the model.}
 ##' @examples
 ##'   set.seed(1)
@@ -442,7 +442,7 @@ processFit.rlme <- function(obj,
 ##'   interpreted as having intercept, correlation and slope.
 ##' @details Warning. \code{processFit.varComprob} uses simplistic logic to
 ##'   convert from the parameterisation used in the robustvarComp package to
-##'   \code{theta} as used in \code{\link{lmer}} and \code{\link{rlmer}}. If
+##'   \code{theta} as used in \code{\link[lme4]{lmer}} and \code{\link{rlmer}}. If
 ##'   there are three variance components, the code assumes that they are
 ##'   intercept, correlation and slope. Otherwise the code assumes that the
 ##'   variance components are independent. Exports \code{b} and \code{residuals}

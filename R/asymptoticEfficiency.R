@@ -273,8 +273,8 @@ asymptoticEfficiency <-
 ##' @param desiredEfficiency scalar, specifying the desired asymptotic
 ##'   efficiency, needs to be between 0 and 1.
 ##' @param interval interval in which to do the root search, passed on to
-##'   \code{\link{uniroot}}.
-##' @param ... passed on to \code{\link{uniroot}}.
+##'   \code{\link[stats]{uniroot}}.
+##' @param ... passed on to \code{\link[stats]{uniroot}}.
 ##' @rdname asymptoticEfficiency
 ##' @export
 findTuningParameter <-

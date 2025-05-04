@@ -1,9 +1,10 @@
 Package: robustlmm
 Type: Package
 Title: Robust Linear Mixed Effects Models
-Version: 3.3-1
-Date: 2023-12-10
-Author: Manuel Koller
+Version: 3.3-2
+Date: 2025-05-04
+Author: Manuel Koller [aut, cre]
+Authors@R: person(given = "Manuel", family = "Koller", role = c("aut", "cre"), email = "kollerma@proton.me")
 Maintainer: Manuel Koller <kollerma@proton.me>
 Description: Implements the Robust Scoring Equations estimator to fit linear
     mixed effects models robustly.
@@ -71,5 +72,5 @@ Collate:
 LinkingTo: Rcpp, robustbase, Matrix
 Encoding: UTF-8
 RcppModules: psi_function_module
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.2
 Config/build/clean-inst-doc: false

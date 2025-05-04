@@ -1,18 +1,18 @@
-##' This function runs \code{\link{lmer}} and extracts all information needed to
+##' This function runs \code{\link[lme4]{lmer}} and extracts all information needed to
 ##' generate new datasets using parametric bootstrap later.
 ##' @title Prepare Dataset for Parametric Bootstrap
-##' @param formula passed on to \code{\link{lmer}}
-##' @param data passed on to \code{\link{lmer}}
-##' @param REML passed on to \code{\link{lmer}}
+##' @param formula passed on to \code{\link[lme4]{lmer}}
+##' @param data passed on to \code{\link[lme4]{lmer}}
+##' @param REML passed on to \code{\link[lme4]{lmer}}
 ##' @param overrideBeta use to override beta used to simulate new datasets, by
 ##'   default \code{\link{getME}}\code{(fm, "beta")} where \code{fm} is the
-##'   fitted model returned by \code{\link{lmer}}.
+##'   fitted model returned by \code{\link[lme4]{lmer}}.
 ##' @param overrideSigma use to override sigma used to simulate new datasets, by
 ##'   default \code{\link{getME}}\code{(fm, "sigma")} where \code{fm} is the
-##'   fitted model returned by \code{\link{lmer}}.
+##'   fitted model returned by \code{\link[lme4]{lmer}}.
 ##' @param overrideTheta use to override theta used to simulate new datasets, by
 ##'   default \code{\link{getME}}\code{(fm, "theta")} where \code{fm} is the
-##'   fitted model returned by \code{\link{lmer}}.
+##'   fitted model returned by \code{\link[lme4]{lmer}}.
 ##' @param ... all additional arguments are added to the returned list.
 ##' @author Manuel Koller
 ##' @return List that can be passed to

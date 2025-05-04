@@ -57,7 +57,7 @@ theta(object)
     \item{\code{"sigma"}:}{residual standard error}
     \item{\code{"flist"}:}{a list of the grouping variables (factors) involved in the random effect terms}
     \item{\code{"fixef"}:}{fixed-effects parameter estimates}
-    \item{\code{"beta"}:}{fixed-effects parameter estimates (identical to the result of \code{\link{fixef}}, but without names)}
+    \item{\code{"beta"}:}{fixed-effects parameter estimates (identical to the result of \code{\link[lme4:fixef.merMod]{fixef}}, but without names)}
     \item{\code{"theta"}:}{random-effects parameter estimates: these are parameterized as the relative Cholesky factors of each random effect term}
     \item{\code{"ST"}:}{A list of S and T factors in the TSST' Cholesky
               factorization of the relative variance matrices of the random
@@ -102,8 +102,8 @@ theta(object)
             \item{nmp}{\code{n-p}}
             \item{nth}{length of \code{theta}}
             \item{q}{number of columns of \code{Z}}
-            \item{nAGQ}{see \code{\link{glmer}}}
-            \item{compDev}{see \code{\link{glmerControl}}}
+            \item{nAGQ}{see \code{\link[lme4]{glmer}}}
+            \item{compDev}{see \code{\link[lme4]{glmerControl}}}
             \item{useSc}{\code{TRUE} if model has a scale parameter}
             \item{reTrms}{number of random effects terms}
             \item{REML}{\code{0} indicates the model was fitted by maximum
@@ -129,32 +129,32 @@ theta(object)
     \item{\code{"rho_sigma_b"}:}{list of rho functions used for the random effects when estimating the covariance parameters}
     \item{\code{"M"}:}{list of matrices, blocks of the Henderson's equations and the matrices used for computing the linear approximations of the estimates of beta and spherical random effects.}
     \item{\code{"w_e"}:}{robustness weights associated with the observations}
-    \item{\code{"w_b"}:}{robustness weights associated with the spherical random effects, returned in the same format as \code{\link{ranef}()}}
+    \item{\code{"w_b"}:}{robustness weights associated with the spherical random effects, returned in the same format as \code{\link[lme4:ranef.merMod]{ranef}()}}
     \item{\code{"w_b_vector"}:}{robustness weights associated with the spherical random effects, returned as one long vector}
     \item{\code{"w_sigma_e"}:}{robustness weights associated with the observations when estimating sigma}
-    \item{\code{"w_sigma_b"}:}{robustness weights associated with the spherical random effects when estimating the covariance parameters, returned in the same format as \code{\link{ranef}()}}
+    \item{\code{"w_sigma_b"}:}{robustness weights associated with the spherical random effects when estimating the covariance parameters, returned in the same format as \code{\link[lme4:ranef.merMod]{ranef}()}}
     \item{\code{"w_sigma_b_vector"}:}{robustness weights associated with the spherical random effects when estimating the covariance parameters, returned as one long vector}
 
      %% -- keep at the very end:
-     \item{\code{"ALL"}:}{get all of the above as a \code{\link{list}}.}
+     \item{\code{"ALL"}:}{get all of the above as a \code{\link[base]{list}}.}
 }}
 
 \item{...}{potentially further arguments; not here.}
 }
 \value{
-Unspecified, as very much depending on the \code{\link{name}}.
+Unspecified, as very much depending on the \code{\link[base]{name}}.
 }
 \description{
 Extract (or \dQuote{get}) \dQuote{components} -- in a generalized
 sense -- from a fitted mixed-effects model, i.e. from an object
-of class \code{\linkS4class{rlmerMod}} or \code{\linkS4class{merMod}}.
+of class \code{\linkS4class{rlmerMod}} or \code{\link[lme4:merMod-class]{merMod}}.
 }
 \details{
 The function \code{theta} is short for \code{getME(, "theta")}.
 
 The goal is to provide \dQuote{everything a user may want} from a fitted
 \code{rlmerMod} object \emph{as far} as it is not available by methods, such
-as \code{\link{fixef}}, \code{\link{ranef}}, \code{\link{vcov}}, etc.
+as \code{\link[lme4:fixef.merMod]{fixef}}, \code{\link[lme4:ranef.merMod]{ranef}}, \code{\link[lme4:vcov.merMod]{vcov}}, etc.
 }
 \examples{
 ## shows many methods you should consider *before* using getME():
@@ -178,9 +178,9 @@ stopifnot(identical(Z,  parts $ Z),
 stopifnot(all.equal(theta(fm1), getME(fm1, "theta")))
 }
 \seealso{
-\code{\link{getCall}()};
-more standard methods for rlmerMod objects, such as \code{\link{ranef}},
-\code{\link{fixef}}, \code{\link{vcov}}, etc.:
+\code{\link[stats]{getCall}()};
+more standard methods for rlmerMod objects, such as \code{\link[lme4:ranef.merMod]{ranef}},
+\code{\link[lme4:fixef.merMod]{fixef}}, \code{\link[lme4:vcov.merMod]{vcov}}, etc.:
 see \code{methods(class="rlmerMod")}
 }
 \keyword{utilities}

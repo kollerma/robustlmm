@@ -219,7 +219,7 @@ of correlated random effects count as just one group. }
 
 The \code{lmerNoFit} function can be used to get trivial starting values.
 This is mainly used to verify the algorithms to reproduce the fit by
-\code{\link{lmer}} when starting from trivial initial values. } }
+\code{\link[lme4]{lmer}} when starting from trivial initial values. } }
 }
 \examples{
 ## dropping of VC

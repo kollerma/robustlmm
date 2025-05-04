@@ -101,7 +101,7 @@ checkDatasetIndices <- function(datasetIndices, datasets) {
 ##'                                   lower = 0)
 ##'   fitDatasets_lmer(oneWay)
 ##' @aliases fitDatasets
-##' @details \code{fitDatasets_lmer}: Fits datasets using \code{\link{lmer}}
+##' @details \code{fitDatasets_lmer}: Fits datasets using \code{\link[lme4]{lmer}}
 ##'   using its default options.
 ##' @rdname fitDatasets
 ##' @export
@@ -135,7 +135,7 @@ fitDatasets_lmer <-
         )
     }
 
-##' @details \code{fitDatasets_lmer_bobyqa}: Fits datasets using \code{\link{lmer}} using
+##' @details \code{fitDatasets_lmer_bobyqa}: Fits datasets using \code{\link[lme4]{lmer}} using
 ##'   the \code{bobyqa} optimizer.
 ##' @rdname fitDatasets
 ##' @export
@@ -153,7 +153,7 @@ fitDatasets_lmer_bobyqa <-
     }
 
 ##' @details \code{fitDatasets_lmer_Nelder_Mead}: Fits datasets using
-##'   \code{\link{lmer}} using the \code{Nelder Mead} optimizer.
+##'   \code{\link[lme4]{lmer}} using the \code{Nelder Mead} optimizer.
 ##' @rdname fitDatasets
 ##' @export
 fitDatasets_lmer_Nelder_Mead <-

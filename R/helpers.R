@@ -340,14 +340,15 @@ summary.rlmerMod <- function(object, ...) {
 ##'
 ##' The functions \code{xtable.comparison.table} and
 ##' \code{print.xtable.comparison.table} are wrapper functions for the
-##' respective \code{\link{xtable}} and \code{\link{print.xtable}} functions.
+##' respective \code{\link[xtable]{xtable}} and
+##' \code{\link[xtable]{print.xtable}} functions.
 ##'
 ##' The function \code{getInfo} is internally used to prepare object for
 ##' producing a comparison chart in \code{compare}.
 ##'
 ##' @title Create comparison charts for multiple fits
-##' @param ... objects to compare, or, for the \code{\link{xtable}} functions:
-##'   passed to the respective \code{\link{xtable}} function.
+##' @param ... objects to compare, or, for the \code{\link[xtable]{xtable}}
+##'   functions: passed to the respective \code{\link[xtable]{xtable}} function.
 ##' @param digits number of digits to show in output
 ##' @param dnames names of objects given as arguments (optional)
 ##' @param show.rho.functions whether to show rho functions in output.
@@ -520,15 +521,16 @@ getInfo.rlmerMod <- function(object, ...) {
 
 ##' The functions \code{xtable.comparison.table} and
 ##' \code{print.xtable.comparison.table} are wrapper functions for the
-##' respective \code{\link{xtable}} and \code{\link{print.xtable}} functions.
+##' respective \code{\link[xtable]{xtable}} and
+##' \code{\link[xtable]{print.xtable}} functions.
 ##'
 ##' @rdname compare
 ##' @param x object of class "comparison.table" or "xtable.comparison.table"
-##' @param caption see \code{\link{xtable}}.
-##' @param label see \code{\link{xtable}}.
-##' @param align see \code{\link{xtable}}.
-##' @param display see \code{\link{xtable}}.
-##' @seealso \code{\link{xtable}}
+##' @param caption see \code{\link[xtable]{xtable}}.
+##' @param label see \code{\link[xtable]{xtable}}.
+##' @param align see \code{\link[xtable]{xtable}}.
+##' @param display see \code{\link[xtable]{xtable}}.
+##' @seealso \code{\link[xtable]{xtable}}
 ##' @importFrom xtable xtable
 ##' @export
 ##' @method xtable comparison.table
@@ -558,7 +560,7 @@ xtable.comparison.table <- function(x, caption=NULL, label=NULL, align=NULL,
 ##' @param include.rownames include row numbers (the object returned by
 ##'   \code{xtable.comparison.table} includes names in the first column)
 ##' @importFrom xtable print.xtable
-##' @seealso \code{\link{print.xtable}}
+##' @seealso \code{\link[xtable]{print.xtable}}
 ##' @method print xtable.comparison.table
 ##' @export
 print.xtable.comparison.table <- function(x, add.hlines=TRUE,

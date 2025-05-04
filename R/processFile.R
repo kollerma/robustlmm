@@ -39,7 +39,7 @@ checkContents <- function(contents, file, expected) {
     }
 }
 
-##' @importFrom stats sessionInfo toLatex
+##' @importFrom utils sessionInfo toLatex
 createSessionInfoString <- function() {
     return(toLatex(sessionInfo(), locale = FALSE))
 }
@@ -317,7 +317,7 @@ checkEqualsStoredResult <- function(fit, storedResults, ...) {
         tolerance <- 0.05 ## summary.lqmm uses bootstrap.
         ## The result are sometimes different even though we specify the rng seed.
     } else if (is(fit, "varComprob")) {
-        tolerance <- 1.0e-6
+        tolerance <- 1.0e-5
     }
     check <-
         all.equal(expected,

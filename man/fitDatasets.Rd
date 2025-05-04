@@ -150,14 +150,14 @@ Methods to fit various mixed effects estimators to all generated datasets.
 \details{
 Existing fitting functions are:
 
-\code{fitDatasets_lmer}: Fits datasets using \code{\link{lmer}}
+\code{fitDatasets_lmer}: Fits datasets using \code{\link[lme4]{lmer}}
   using its default options.
 
-\code{fitDatasets_lmer_bobyqa}: Fits datasets using \code{\link{lmer}} using
+\code{fitDatasets_lmer_bobyqa}: Fits datasets using \code{\link[lme4]{lmer}} using
   the \code{bobyqa} optimizer.
 
 \code{fitDatasets_lmer_Nelder_Mead}: Fits datasets using
-  \code{\link{lmer}} using the \code{Nelder Mead} optimizer.
+  \code{\link[lme4]{lmer}} using the \code{Nelder Mead} optimizer.
 
 \code{fitDatasets_rlmer}: Fits datasets using \code{\link{rlmer}}
   using a custom configuration. The argument 'tuningParameter' is passed to

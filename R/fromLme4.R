@@ -63,7 +63,7 @@ fitted.rlmerMod <- getS3method("fitted", "merMod")
 fixef.rlmerMod <- function(object, ...)
     structure(object@beta, names = dimnames(.X(object))[[2]])
 
-##' @importFrom lme4 nobars
+##' @importFrom reformulas nobars
 getFixedFormula <- function(form) {
     form[[3]] <- if (is.null(nb <- nobars(form[[3]]))) 1 else nb
     form
@@ -309,7 +309,7 @@ reFormHack <- function(re.form,ReForm,REForm,REform) {
 }
 
 ##' @importFrom stats predict
-##' @importFrom lme4 mkReTrms findbars
+##' @importFrom reformulas mkReTrms findbars
 ##' @export
 ## FIXME: This is slightly modified from lme4 version 1.0-6.
 ##        Newer versions have an improved version.

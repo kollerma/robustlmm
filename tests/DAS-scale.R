@@ -23,7 +23,7 @@ b.lmerMod <- robustlmm:::b.lmerMod
 b.rlmerMod <- robustlmm:::b.rlmerMod
 rho.e <- robustlmm:::rho.e
 ## lme4
-nobars <- lme4:::nobars
+nobars <- reformulas:::nobars
 ## robustbase
 lmrob.hatmatrix <- robustbase:::lmrob.hatmatrix
 

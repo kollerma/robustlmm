@@ -1,8 +1,8 @@
 Package: robustlmm
 Type: Package
 Title: Robust Linear Mixed Effects Models
-Version: 3.3-2
-Date: 2025-05-04
+Version: 3.3-3
+Date: 2025-05-12
 Author: Manuel Koller [aut, cre]
 Authors@R: person(given = "Manuel", family = "Koller", role = c("aut", "cre"), email = "kollerma@proton.me")
 Maintainer: Manuel Koller <kollerma@proton.me>
@@ -44,7 +44,8 @@ Imports:
     fastGHQuad,
     parallel,
     rlang,
-    utils
+    utils,
+    reformulas
 Collate:
     'ghq.R'
     'psiFunc2.R'

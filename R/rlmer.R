@@ -232,6 +232,37 @@ rlmer <- function(formula, data, ..., method = c("DAStau", "DASvar"),
     return(.rlmer(lobj, rel.tol, max.iter, verbose, doFit))
 }
 
+## Check for structured covariance matrices (lme4 >= 2.0-0)
+## robustlmm supports unstructured and diag(), but not cs() or ar1()
+.checkStructuredCovariance <- function(object) {
+    if (!exists("anyStructured", where = asNamespace("lme4"), mode = "function")) {
+        return(invisible(NULL))  # Old lme4, nothing to check
+    }
+    anyStructured <- get("anyStructured", envir = asNamespace("lme4"))
+    if (!anyStructured(object)) {
+        return(invisible(NULL))  # No structured covariances
+    }
+
+    # Check each random effect's covariance structure
+    reCovs <- attr(object, "reCovs")
+    if (is.null(reCovs)) {
+        return(invisible(NULL))  # No reCovs attribute (shouldn't happen)
+    }
+
+    supportedClasses <- c("Covariance.us", "Covariance.diag")
+    for (i in seq_along(reCovs)) {
+        covClass <- class(reCovs[[i]])[1]
+        if (!covClass %in% supportedClasses) {
+            structName <- sub("Covariance\\.", "", covClass)
+            stop("robustlmm does not yet support '", structName,
+                 "()' covariance structure (from lme4 >= 2.0-0). ",
+                 "Supported: (f | g), (f || g), diag(f | g).",
+                 call. = FALSE)
+        }
+    }
+    invisible(NULL)
+}
+
 .rlmerInit <- function(lcall, pf, formula, data, method, rho.e, rho.b, rho.sigma.e,
                        rho.sigma.b, rel.tol, max.iter, verbose, init,
                        setting = c("RSEn", "RSEa"), ...) {
@@ -240,8 +271,9 @@ rlmer <- function(formula, data, ..., method = c("DAStau", "DASvar"),
         lcall2[setdiff(names(formals(rlmer)), names(formals(lmer)))] <- NULL
         lcall2$doFit <- NULL
         lcall2$REML <- TRUE
-        lcall2[[1]] <- as.name("lmer")
+        lcall2[[1]] <- substitute(lme4::lmer)
         linit <- eval(lcall2, pf)
+        .checkStructuredCovariance(linit)
         if (!missing(init) && is.list(init)) {
             ## check sanity of input
             stopifnot(length(init$fixef) == length(fixef(linit)),
@@ -262,6 +294,11 @@ rlmer <- function(formula, data, ..., method = c("DAStau", "DASvar"),
     } else if (!is(init, "merMod") && !is(init, "rlmerMod")) {
         stop("Unsuitable init object, aborting.",
                 "Expecting no, list (see ?rlmer), rlmerMod or merMod object")
+    }
+    ## Check for structured covariance matrices when init is a merMod
+    ## (the check for internally-fitted models is above)
+    if (is(init, "merMod") && !is(init, "rlmerMod")) {
+        .checkStructuredCovariance(init)
     }
     lobj <- as(init, "rlmerMod")
     lobj@call <- lcall

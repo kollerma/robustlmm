@@ -591,12 +591,28 @@ theta <- function(object) {
     if (is(object, "rlmerMod")) {
         ## add names like lme4
         tt <- object@pp$theta
-        nc <- c(unlist(mapply(function(g,e) {
-            mm <- outer(e,e,paste,sep=".")
-            diag(mm) <- e
-            mm <- mm[lower.tri(mm,diag=TRUE)]
-            paste(g,mm,sep=".")
-        }, names(object@cnms),object@cnms)))
+        ## Calculate expected theta length for each group assuming unstructured
+        expectedLens <- sapply(object@cnms, function(e) {
+            d <- length(e)
+            d * (d + 1) / 2
+        })
+        totalExpected <- sum(expectedLens)
+        actualLen <- length(tt)
+        ## If actual length < expected, we have a structured (likely diagonal) covariance
+        isDiagonal <- (actualLen < totalExpected)
+        nc <- c(unlist(mapply(function(g, e) {
+            d <- length(e)
+            if (isDiagonal && d > 1) {
+                ## Diagonal structure: only diagonal names
+                paste(g, e, sep = ".")
+            } else {
+                ## Unstructured: lower triangular names
+                mm <- outer(e, e, paste, sep = ".")
+                diag(mm) <- e
+                mm <- mm[lower.tri(mm, diag = TRUE)]
+                paste(g, mm, sep = ".")
+            }
+        }, names(object@cnms), object@cnms)))
         names(tt) <- nc
         tt
     } else getME(object, "theta")

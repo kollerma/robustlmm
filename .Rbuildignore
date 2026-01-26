@@ -16,3 +16,6 @@ tools
 \.vscode
 .*\.Rprof
 tests/.*\.pdf
+CLAUDE.md
+(^|/)\.claude$
+PLAN-*.md

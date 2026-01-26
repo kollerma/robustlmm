@@ -684,6 +684,13 @@ setClass("rlmerMod",
               q=b$q,
               k=b$k)
     to@pp$initMatrices(to)
+    ## Preserve lme4 2.0-0 attributes for structured covariances
+    if (!is.null(attr(from, "reCovs"))) {
+        attr(to, "reCovs") <- attr(from, "reCovs")
+    }
+    if (!is.null(attr(from, "upper"))) {
+        attr(to, "upper") <- attr(from, "upper")
+    }
     to
 }
 
@@ -718,6 +725,32 @@ updateWeights <- function(object) {
     object@devcomp$cmp[ifelse(dd["REML"], "sigmaML", "sigmaREML")] <- NA
     object@devcomp$cmp[c("ldL2", "ldRX2", "wrss", "ussq", "pwrss", "drsum", "REML", "dev")] <- NA
 
+    ## Update reCovs attribute with current theta (for lme4 >= 2.0-0 compatibility)
+    object <- .updateReCovs(object)
+
+    object
+}
+
+## Update reCovs attribute with current theta values
+## This is needed for lme4 >= 2.0-0 where VarCorr uses reCovs
+## @param object rlmerMod object
+## @return rlmerMod object with updated reCovs
+.updateReCovs <- function(object) {
+    reCovs <- attr(object, "reCovs")
+    if (is.null(reCovs)) {
+        return(object)
+    }
+    ## Update each Covariance object with current theta
+    ## Note: setTheta returns a new object, doesn't modify in place
+    currentTheta <- object@theta
+    thetaIdx <- 1
+    for (i in seq_along(reCovs)) {
+        ntheta <- lme4:::getThetaLength(reCovs[[i]])
+        reCovs[[i]] <- lme4:::setTheta(reCovs[[i]],
+                                        currentTheta[thetaIdx:(thetaIdx + ntheta - 1)])
+        thetaIdx <- thetaIdx + ntheta
+    }
+    attr(object, "reCovs") <- reCovs
     object
 }
 

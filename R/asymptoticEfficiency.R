@@ -217,7 +217,7 @@ asymptoticVariance_huber_proposal2 <-
 ##' @param n which moment to compute, needs to be >= 2.
 ##' @references Winkler, R. L., Roodman, G. M., & Britney, R. R. (1972). The
 ##' Determination of Partial Moments. Management Science, 19(3), 290–296.
-##' http://www.jstor.org/stable/2629511, equation (2.5)
+##' https://www.jstor.org/stable/2629511, equation (2.5)
 ##' @examples
 ##'   partialMoment_standardNormal(0, 2)
 ##' @export

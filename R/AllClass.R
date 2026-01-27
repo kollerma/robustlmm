@@ -741,13 +741,15 @@ updateWeights <- function(object) {
         return(object)
     }
     ## Update each Covariance object with current theta
-    ## Note: setTheta returns a new object, doesn't modify in place
+    ## For supported structures (us, diag), par == theta, so we can
+    ## directly access the 'par' slot instead of using unexported methods.
+    ## Note: initialize() returns a new object, doesn't modify in place
     currentTheta <- object@theta
     thetaIdx <- 1
     for (i in seq_along(reCovs)) {
-        ntheta <- lme4:::getThetaLength(reCovs[[i]])
-        reCovs[[i]] <- lme4:::setTheta(reCovs[[i]],
-                                        currentTheta[thetaIdx:(thetaIdx + ntheta - 1)])
+        ntheta <- length(slot(reCovs[[i]], "par"))
+        reCovs[[i]] <- initialize(reCovs[[i]],
+                                  par = currentTheta[thetaIdx:(thetaIdx + ntheta - 1)])
         thetaIdx <- thetaIdx + ntheta
     }
     attr(object, "reCovs") <- reCovs

@@ -67,7 +67,7 @@
   Universit\"at Bern\\
   3012 Bern, Switzerland\\
   E-mail: \email{kollermal@proton.me}\\
-  URL: \url{http://www.ispm.unibe.ch/}
+  URL: \url{https://www.ispm.unibe.ch/}
 }
 
 %% end of declarations %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -137,7 +137,7 @@ Classic estimation of linear mixed-effects models is mainly provided by two func
 
 For robust estimation of linear mixed-effects models, there exists a variety of specialized implementations in \Rpns, all using different approaches to the robustness problem. Most of them are available on the Comprehensive R Archive Network (CRAN) as \Rp packages. Except the method presented in this paper, all other methods are applicable only for certain grouping structures, see Table~\ref{tab:functions} for an overview. The function \code{heavyLme} in the \pkg{heavy} package \citep{heavy} implements mixed-effects models using t distributions. However, it allows for a single grouping factor only, which limits the method to two-level data. As both, the residual errors and the random effects are modeled with a t distribution, the method can capture outliers on both the subject and the observational level. The degrees of freedom for the two t distributions are fixed to be the same. Hence, it is not possible to have a differing treatment of outliers on the two levels. Multiple random effects are fitted with a correlation parameter, uncorrelated random effects are not supported. The function \code{lmeRob} implements the method by \citet{copt2006high}. It is not available on CRAN but from the authors upon request. They reformulate the mixed-effects problem as multivariate problem and apply multivariate MM-estimation. This approach requires the grouping structure to be nested and the data to be balanced. Observations are down-weighted at the highest group level, so the high breakdown point of $50\%$ applies to the number of groups that can be contaminated, not to the number of observations. The implementation only supports uncorrelated random effects within levels. The function \code{rlme} in the \pkg{rlme} \Rp package implements nested hierarchical mixed-effects models using a rank-based approach \citep{rlme}. The function supports only simple random intercepts, and solutions might not be unique.
 
-This article is a tutorial for \pkg{robustlmm}, an implementation of the Robust Scoring Equations estimator to fit mixed-effects models for the statistical computing environment \Rp  \citep{R}. The \Rp package \pkg{robustlmm} is available on CRAN at \url{http://cran.r-project.org/package=robustlmm} under the GPL-v2 license.
+This article is a tutorial for \pkg{robustlmm}, an implementation of the Robust Scoring Equations estimator to fit mixed-effects models for the statistical computing environment \Rp  \citep{R}. The \Rp package \pkg{robustlmm} is available on CRAN at \url{https://cran.r-project.org/package=robustlmm} under the GPL-v2 license.
 
 In the next section we provide background on \pkg{robustlmm}'s underlying estimating equations and algorithms. In Section~\ref{implementation}, we describe how \pkg{robustlmm} is implemented. In Section~\ref{usage}, we work an example and demonstrate how to do a full statistical analysis. Pointers to further information are given in Section~\ref{furtherInformation}. Details, tables of tuning parameters and formulas are contained in the Appendix.
 
@@ -364,9 +364,9 @@ To shorten fitting times at the beginning of an analysis, use the argument \code
 
 Detailed information on the properties of the robust method and validation using simulation studies can be found in compact form in \citet{koller2014roblmm} and more detailed in \citet{koller2013diss}. \citet{bates2011lme4} is a general introduction to mixed modeling using the \Rp package \pkg{lme4} \citep{lme4}. Because \pkg{lme4} and \pkg{robustlmm} are similar, this is also a good starting point for using \pkg{robustlmm}.
 
-We avoided the topic of robust testing for linear mixed-effects models in this tutorial. The usual caveats of testing in mixed models apply for the methods presented here.  The wiki at \url{http://glmm.wikidot.com} is a good resource. Bootstrap presents itself as a simple (but data structure dependent) way to get $p$~values. One has to be careful, though, since the ordinary bootstrap quantiles are not robust \citep{ salibian2008fast, singh1998breakdown}.
+We avoided the topic of robust testing for linear mixed-effects models in this tutorial. The usual caveats of testing in mixed models apply for the methods presented here. Bootstrap presents itself as a simple (but data structure dependent) way to get $p$~values. One has to be careful, though, since the ordinary bootstrap quantiles are not robust \citep{salibian2008fast, singh1998breakdown}.
 
-Development of \pkg{robustlmm} is hosted on GitHub at \url{http://www.github.com/kollerma/robustlmm}. Any issues with the package can also be reported there.
+Development of \pkg{robustlmm} is hosted on GitHub at \url{https://www.github.com/kollerma/robustlmm}. Any issues with the package can also be reported there.
 
 \section*{Acknowledgments}
 

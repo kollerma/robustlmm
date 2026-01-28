@@ -18,4 +18,4 @@ tools
 tests/.*\.pdf
 CLAUDE.md
 (^|/)\.claude$
-PLAN-*.md
+PLAN-.*.md

@@ -366,7 +366,7 @@ Detailed information on the properties of the robust method and validation using
 
 We avoided the topic of robust testing for linear mixed-effects models in this tutorial. The usual caveats of testing in mixed models apply for the methods presented here. Bootstrap presents itself as a simple (but data structure dependent) way to get $p$~values. One has to be careful, though, since the ordinary bootstrap quantiles are not robust \citep{salibian2008fast, singh1998breakdown}.
 
-Development of \pkg{robustlmm} is hosted on GitHub at \url{https://www.github.com/kollerma/robustlmm}. Any issues with the package can also be reported there.
+Development of \pkg{robustlmm} is hosted on GitHub at \url{https://github.com/kollerma/robustlmm}. Any issues with the package can also be reported there.
 
 \section*{Acknowledgments}
 

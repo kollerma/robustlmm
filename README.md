@@ -38,7 +38,7 @@ directly in R with the command
 
     install.packages("robustlmm")
 
-This package requires `lme4` version at least `1.1` and other
+This package requires `lme4` version at least `2.0-1` and other
 packages. Make sure to install them as well.
 
 You can also install the package directly from github:

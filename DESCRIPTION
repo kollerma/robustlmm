@@ -1,8 +1,8 @@
 Package: robustlmm
 Type: Package
 Title: Robust Linear Mixed Effects Models
-Version: 3.4-2
-Date: 2026-01-28
+Version: 3.4-3
+Date: 2026-04-20
 Author: Manuel Koller [aut, cre]
 Authors@R: person(given = "Manuel", family = "Koller", role = c("aut", "cre"), email = "kollerma@proton.me")
 Maintainer: Manuel Koller <kollerma@proton.me>
@@ -14,7 +14,7 @@ License: GPL-2
 URL: https://github.com/kollerma/robustlmm
 LazyLoad: yes
 Depends:
-    lme4 (>= 1.1-9),
+    lme4 (>= 2.0-1),
     Matrix (>= 1.6-2),
     R (>= 3.5.0)
 Suggests:

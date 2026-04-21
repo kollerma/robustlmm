@@ -1,11 +1,11 @@
 #if !defined  ROBUSTLMM_MISC_H__
 #define  ROBUSTLMM_MISC_H__
 
+#include <Rcpp.h>
 #include <memory>
 #include <R.h>
 #include <Rmath.h>
 #include <R_ext/Applic.h>
-#include <Rcpp.h>
 #include <sstream>
 #include <string>
 #include <iostream>

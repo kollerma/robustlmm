@@ -464,7 +464,8 @@ void RobustbasePsi::initialiseTuningParametersFromDefaults() {
 
 void RobustbasePsi::chgDefaultsUsingNamedVector(const NumericVector &tuningParameters) {
   const NumericVector defaults = this->getDefaults();
-  const std::vector<std::string> names(tuningParameters.attributeNames());
+  const CharacterVector namesCV(tuningParameters.names());
+  const std::vector<std::string> names(namesCV.begin(), namesCV.end());
   unsigned npar = tuningParameters.size();
   R_ASSERT(names.size() == npar);
   for (unsigned i = 0; i < npar; ++i) {
@@ -486,7 +487,8 @@ NumericVector RobustbasePsi::tDefs() const {
 }
 
 const std::string RobustbasePsi::showDefaults() const {
-  std::vector<std::string> names = this->getDefaults().attributeNames();
+  const CharacterVector namesCV(this->getDefaults().names());
+  std::vector<std::string> names(namesCV.begin(), namesCV.end());
   std::stringstream ss;
   ss << " (";
   std::string sep = "";

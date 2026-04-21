@@ -235,11 +235,7 @@ rlmer <- function(formula, data, ..., method = c("DAStau", "DASvar"),
 ## Check for structured covariance matrices (lme4 >= 2.0-0)
 ## robustlmm supports unstructured and diag(), but not cs() or ar1()
 .checkStructuredCovariance <- function(object) {
-    if (!exists("anyStructured", where = asNamespace("lme4"), mode = "function")) {
-        return(invisible(NULL))  # Old lme4, nothing to check
-    }
-    anyStructured <- get("anyStructured", envir = asNamespace("lme4"))
-    if (!anyStructured(object)) {
+    if (!lme4::anyStructured(object)) {
         return(invisible(NULL))  # No structured covariances
     }
 

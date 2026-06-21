@@ -92,9 +92,9 @@ stopifnot(all.equal(expected, actual, check.attributes = FALSE))
 test(fitDatasets_lmer(oneWay3, datasetIndices = 2:3), expectedLength = 2)
 
 ## test rlme implementation
-if (require(rlme)) {
+if (isPackageInstalled("rlme")) {
 
-    data(schools)
+    data(schools, package = "rlme")
     datasets <- createDatasetsFromList(list(schools),
                                        formula = y ~ 1 + sex + age + (1 | region) + (1 | region:school),
                                        trueBeta = rep(NA_real_, 3),

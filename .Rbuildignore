@@ -19,3 +19,4 @@ tests/.*\.pdf
 CLAUDE.md
 (^|/)\.claude$
 PLAN-.*.md
+^\.claude$

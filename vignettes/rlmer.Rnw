@@ -43,7 +43,7 @@
   using \pkg{robustlmm}, how to assess the model fit, how to detect
   outliers, and how to compare different fits. If you use the software,
   please cite this article as published in the Journal of Statistic
-  Software \citep{vignette}.}
+  Software.}
 
 \Keywords{robust statistics, mixed-effects model, hierarchical model,
   ANOVA, \proglang{R}, crossed, random effect}
@@ -78,7 +78,7 @@
 
 We introduce an \Rp package, \pkg{robustlmm}, to robustly fit linear mixed-effects models using the Robust Scoring Equations estimator. The package's functions and methods are designed to closely equal those offered by \pkg{lme4}, the \Rp package that implements classic linear mixed-effects model estimation in \Rpns. The robust estimation method in \pkg{robustlmm} is based on the random effects contamination model and the central contamination model. Contamination can be detected at all levels of the data. The estimation method does not make any assumption on the data's grouping structure except that the model parameters are estimable. \pkg{robustlmm} supports hierarchical and non-hierarchical (e.g., crossed) grouping structures. The robustness of the estimates and their asymptotic efficiency is fully controlled through the function interface. Individual parts (e.g., fixed effects and variance components) can be tuned independently.
 
-In this tutorial, we show how to fit robust linear mixed-effects models using \pkg{robustlmm}, how to assess the model fit, how to detect outliers, and how to compare different fits. If you use the software, please cite this article as published in the Journal of Statistic Software \citep{vignette}.}
+In this tutorial, we show how to fit robust linear mixed-effects models using \pkg{robustlmm}, how to assess the model fit, how to detect outliers, and how to compare different fits. If you use the software, please cite this article as published in the Journal of Statistic Software.}
 
 %\usepackage{Sweave}
 
@@ -131,7 +131,7 @@ Classic estimation of linear mixed-effects models is mainly provided by two func
 		correlated and uncorrelated random effects within levels
 		\\\hline
 \end{tabular}
-\caption{Overview of classic and robust estimation methods available in \Rpns. See also the CRAN Task View on robust statistical methods \citep{robustTaskView}.}
+\caption[Overview of classic and robust estimation methods available in R.]{Overview of classic and robust estimation methods available in \Rpns. See also the CRAN Task View on robust statistical methods \citep{robustTaskView}.}
 \label{tab:functions}
 \end{table}
 
@@ -358,6 +358,26 @@ To specify starting values for the fitting procedure, use the \code{init} argume
 
 To shorten fitting times at the beginning of an analysis, use the argument \code{method = "DASvar"}. This method is faster as it uses simple direct approximations instead of  numerical integrals to compute the scale and covariance parameters using the Design Adaptive Scale approach (see \citet{ks2011} and Appendix~\ref{sec:eeq}). The \code{DASvar} method yields approximate results only.  For covariance matrices of the random effects $\Vbth$ with unstructured blocks of size three and larger, the method \code{DASvar} is the only method currently available.
 
+\subsection{Finite-sample inference}\label{sec:finiteSample}
+
+For confidence intervals on the fixed-effect coefficients the package exposes \code{confint.rlmerMod}.  The default \code{method = "Wald"} returns the standard per-coefficient interval $\hat\beta_k \pm z_{1-\alpha/2}\sqrt{\hat V_{kk}}$ from \code{vcov(fit, type = vcov\_type)}---the same closed form \code{summary} reports, with the option to substitute the robust cluster sandwich (\code{vcov\_type = "sandwich"}).  This is what \code{summary} already exposes; \code{confint.rlmerMod} simply gives the matrix shape \code{stats::confint} users expect.
+
+When the asymptotic $\chi^2_p$ limit is suspect---typically for small numbers of groups $J$---bootstrap inference is preferable.  \code{confint.rlmerMod} delegates \code{method = "boot"} and \code{method = "BCa"} to the \pkg{confintROB} package \citep{mason2021confintrob, mason2024confintrob}, which implements both the parametric and the wild bootstrap (option \code{boot.type}), with optional bias-correction-and-acceleration on the bootstrap quantile (\code{method = "BCa"}).  \pkg{confintROB} is the published, peer-reviewed implementation for \code{rlmer} fits and should be the default route for any bootstrap CI.  Practical guidance from those papers: the $\chi^2_p$ Wald limit is adequate for $J \gtrsim 20$ groups, so the bootstrap mainly earns its (substantial) cost at smaller $J$; the wild bootstrap is robust to misspecification of the response covariance while the parametric bootstrap is exact under the fitted central LMM; and BCa is preferable when the bootstrap distribution is skewed.
+
+\pkg{confintROB} is in \code{Suggests}, so the bootstrap paths require it to be installed; \code{method = "Wald"} works without it.  Example:
+
+<<finite-sample-confint, eval=FALSE>>=
+fit  <- rlmer(Yield ~ (1 | Batch), Dyestuff)
+confint(fit)                              # Wald, vcov_type = "default"
+confint(fit, vcov_type = "sandwich")      # Wald with robust V
+
+## requires the 'confintROB' package (Suggests):
+confint(fit, method = "BCa", nsim = 1000, # parametric BCa bootstrap
+        seed = 20260601)
+confint(fit, method = "boot",             # wild bootstrap
+        boot.type = "wild", nsim = 1000)
+@
+
 \section{Further information}
 
 \label{furtherInformation}
@@ -373,6 +393,10 @@ Development of \pkg{robustlmm} is hosted on GitHub at \url{https://github.com/ko
 The author would like to thank Kali Tal for providing editorial help with the manuscript. The author would also like to thank two anonymous reviewers for their helpful comments and suggestions on how to improve the paper. Finally, the author would like to thank Niels Hagenbuch for his comments and proof-reading.
 
 \clearpage
+%% Self-reference kept in the bibliography via \nocite; an in-text \citep
+%% inside \Abstract{} breaks the JSS class with recent hyperref/natbib
+%% ("Undefined control sequence cite.\@citeb \@extra@b@citeb").
+\nocite{vignette}
 \bibliography{rlmer}
 
 \clearpage

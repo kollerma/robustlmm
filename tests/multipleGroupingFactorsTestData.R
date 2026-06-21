@@ -34,13 +34,13 @@ data <- within(data, {
   resp7 <- resp6 + as.logical(treat1) * as.logical(treat2) * (1 + treatsInter[interaction(group1, group2)])
 })
 
-testFormula <- function(formula, data) {
+testFormula <- function(formula, data, tol.ranef = 1e-1) {
     print(summary(fm <- lmer(formula, data, control=lmerControl(optimizer="bobyqa"))))
     print(summary(rm <- rlmer(formula, data, rho.e = cPsi, rho.b = cPsi, init = lmerNoFit)))
     ranef.fm <- ranef(fm, condVar=FALSE)
     stopifnot(all.equal(coef(fm), coef(rm), tolerance = 1e-1, check.attributes = FALSE),
               all.equal(fixef(fm), fixef(rm), tolerance = 1e-2, check.attributes = FALSE),
-              all.equal(ranef.fm , ranef(rm), tolerance = 1e-1, check.attributes = FALSE))
+              all.equal(ranef.fm , ranef(rm), tolerance = tol.ranef, check.attributes = FALSE))
     invisible(list(fm, rm))
 }
 
@@ -50,4 +50,10 @@ testFormula(resp3 ~ treat1 + (1 + treat1|group1) + (1|group2), data)
 testFormula(resp4 ~ treat1 + treat2 + (1 + treat1|group1) + (1 + treat2|group2), data)
 testFormula(resp5 ~ treat1 + treat2 + (1 + treat1 + treat2|group1) + (1 + treat2|group2), data)
 testFormula(resp6 ~ treat1 + treat2 + (1 + treat1 + treat2|group1) + (1 + treat1 + treat2|group2), data)
-testFormula(resp7 ~ treat1*treat2 + (1 + treat1*treat2|group1) + (1 + treat1*treat2|group2), data)
+## resp7 has size-4 blocks (1 + treat1*treat2 | g): DAStau falls back to DASvar,
+## whose DAS-scale variance components differ from lmer's REML estimates. The
+## 4-way treat1:treat2 random effect is only weakly identified, so its BLUPs
+## differ enough between lmer and rlmer (up to ~30% on some BLAS/platforms,
+## e.g. macOS) to exceed the 10% ranef tolerance used for the other cases.
+testFormula(resp7 ~ treat1*treat2 + (1 + treat1*treat2|group1) + (1 + treat1*treat2|group2), data,
+            tol.ranef = 0.5)

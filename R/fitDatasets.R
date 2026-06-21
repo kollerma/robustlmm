@@ -180,6 +180,13 @@ isDiagonalDataset <- function(datasets) {
 ##' @param tuningParameter argument passed on to
 ##'   \code{\link{extractTuningParameter}}.
 ##' @param init optional argument passed on to \code{\link{rlmer}}.
+##' @param K number of random subsamples used by the RANSAC initial
+##'   estimator (\code{\link{ransac_lme4}}). Only used by
+##'   \code{fitDatasets_rlmer_ransac} and
+##'   \code{fitDatasets_rlmer_ransac_bisq}.
+##' @param sub_frac fraction of the data per RANSAC subsample. Only used by
+##'   \code{fitDatasets_rlmer_ransac} and
+##'   \code{fitDatasets_rlmer_ransac_bisq}.
 ##' @param ... argument passed on to \code{\link{createRhoFunction}}.
 ##' @details \code{fitDatasets_rlmer}: Fits datasets using \code{\link{rlmer}}
 ##'   using a custom configuration. The argument 'tuningParameter' is passed to
@@ -685,6 +692,170 @@ fitDatasets_rlmer_DAStau_k_5_noAdj <-
         )
     }
 
+predefinedTuningParameter[["fitDatasets_rlmer_DAStau_bisq"]] <-
+    c(NA_real_, 2.28, 1.345, 2.28, 5.14, 5.14)
+
+##' @details \code{fitDatasets_rlmer_DAStau_bisq}: Fits datasets using
+##'   \code{\link{rlmer}} with method DAStau, replacing \code{rho.e} with
+##'   the redescending bisquare psi (\code{\link{bisquarePsi}}, c = 4.685).
+##'   The other rho-functions use the same smoothed Huber psi and tuning
+##'   parameters as \code{fitDatasets_rlmer_DAStau}.
+##' @rdname fitDatasets
+##' @export
+fitDatasets_rlmer_DAStau_bisq <-
+    function(datasets, postFit, datasetIndices = "all") {
+        label <- "fitDatasets_rlmer_DAStau_bisq"
+        rho.e       <- bisquarePsi
+        rho.sigma.e <- psi2propII(smoothPsi, k = 2.28)
+        if (isDiagonalDataset(datasets)) {
+            rho.b       <- chgDefaults(smoothPsi, k = 1.345)
+            rho.sigma.b <- chgDefaults(smoothPsi, k = 2.28)
+        } else {
+            rho.b       <- chgDefaults(smoothPsi, k = 5.14)
+            rho.sigma.b <- chgDefaults(smoothPsi, k = 5.14)
+        }
+        fun <- function(data) {
+            eval(substitute(
+                rlmer(formula, data = data, method = "DAStau",
+                      rho.e = rho.e, rho.b = rho.b,
+                      rho.sigma.e = rho.sigma.e,
+                      rho.sigma.b = rho.sigma.b),
+                list(formula = datasets[["formula"]])
+            ))
+        }
+        return(
+            lapplyDatasets(datasets, fun, label = label,
+                           POST_FUN = postFit,
+                           datasetIndices = datasetIndices)
+        )
+    }
+
+predefinedTuningParameter[["fitDatasets_rlmer_DAStau_sizeOBR"]] <-
+    c(1.345, 2.28, 1.345, 2.28, 5.14, 5.14)
+
+##' @details \code{fitDatasets_rlmer_DAStau_sizeOBR}: Fits datasets using
+##'   \code{\link{rlmer}} with method DAStau and \code{size_obr = TRUE},
+##'   which replaces the finite-difference size weight in the
+##'   block-diagonal V_b score equation with the Hampel-OBR form. The
+##'   same rho-functions and tuning parameters are used as for
+##'   \code{fitDatasets_rlmer_DAStau}. For diagonal V_b the
+##'   \code{size_obr} argument is silently ignored.
+##' @rdname fitDatasets
+##' @export
+fitDatasets_rlmer_DAStau_sizeOBR <-
+    function(datasets, postFit, datasetIndices = "all") {
+        label <- "fitDatasets_rlmer_DAStau_sizeOBR"
+        tp <- predefinedTuningParameter[[label]]
+        rho.e       <- createRhoFunction(tp, "rho.e")
+        rho.sigma.e <- createRhoFunction(tp, "rho.sigma.e")
+        if (isDiagonalDataset(datasets)) {
+            rho.b       <- createRhoFunction(tp, "rho.b.diagonal")
+            rho.sigma.b <- createRhoFunction(tp, "rho.sigma.b.diagonal")
+        } else {
+            rho.b       <- createRhoFunction(tp, "rho.b.blockDiagonal")
+            rho.sigma.b <- createRhoFunction(tp, "rho.sigma.b.blockDiagonal")
+        }
+        fun <- function(data) {
+            eval(substitute(
+                rlmer(formula, data = data, method = "DAStau",
+                      rho.e = rho.e, rho.b = rho.b,
+                      rho.sigma.e = rho.sigma.e,
+                      rho.sigma.b = rho.sigma.b,
+                      size_obr = TRUE),
+                list(formula = datasets[["formula"]])
+            ))
+        }
+        return(
+            lapplyDatasets(datasets, fun, label = label,
+                           POST_FUN = postFit,
+                           datasetIndices = datasetIndices)
+        )
+    }
+
+predefinedTuningParameter[["fitDatasets_rlmer_ransac"]] <-
+    c(1.345, 2.28, 1.345, 2.28, 5.14, 5.14)
+
+##' @details \code{fitDatasets_rlmer_ransac}: Fits datasets using
+##'   \code{\link{rlmer}} with method DAStau and a RANSAC-derived initial
+##'   estimator (\code{\link{ransac_lme4}}). The number of random
+##'   subsamples is \code{K = 50} with subsample fraction
+##'   \code{sub_frac = 0.5}. Same rho-functions and tuning parameters
+##'   as \code{fitDatasets_rlmer_DAStau}.
+##' @rdname fitDatasets
+##' @export
+fitDatasets_rlmer_ransac <-
+    function(datasets, postFit, datasetIndices = "all",
+             K = 50L, sub_frac = 0.5) {
+        label <- "fitDatasets_rlmer_ransac"
+        tp <- predefinedTuningParameter[[label]]
+        rho.e       <- createRhoFunction(tp, "rho.e")
+        rho.sigma.e <- createRhoFunction(tp, "rho.sigma.e")
+        if (isDiagonalDataset(datasets)) {
+            rho.b       <- createRhoFunction(tp, "rho.b.diagonal")
+            rho.sigma.b <- createRhoFunction(tp, "rho.sigma.b.diagonal")
+        } else {
+            rho.b       <- createRhoFunction(tp, "rho.b.blockDiagonal")
+            rho.sigma.b <- createRhoFunction(tp, "rho.sigma.b.blockDiagonal")
+        }
+        fun <- function(data) {
+            init <- ransac_lme4(datasets[["formula"]], data,
+                                K = K, sub_frac = sub_frac)
+            if (is.null(init$fit))
+                stop("ransac_lme4: no successful lmer fit across ",
+                     K, " subsamples")
+            rlmer(formula = datasets[["formula"]], data = data,
+                  method = "DAStau", init = init$fit,
+                  rho.e = rho.e, rho.b = rho.b,
+                  rho.sigma.e = rho.sigma.e, rho.sigma.b = rho.sigma.b)
+        }
+        return(
+            lapplyDatasets(datasets, fun, label = label,
+                           POST_FUN = postFit,
+                           datasetIndices = datasetIndices)
+        )
+    }
+
+predefinedTuningParameter[["fitDatasets_rlmer_ransac_bisq"]] <-
+    c(NA_real_, 2.28, 1.345, 2.28, 5.14, 5.14)
+
+##' @details \code{fitDatasets_rlmer_ransac_bisq}: Combines
+##'   \code{fitDatasets_rlmer_ransac} (RANSAC init) with
+##'   \code{fitDatasets_rlmer_DAStau_bisq} (\code{\link{bisquarePsi}}
+##'   for \code{rho.e}). Designed to give redescending psi a starting
+##'   value safely away from phony local minima.
+##' @rdname fitDatasets
+##' @export
+fitDatasets_rlmer_ransac_bisq <-
+    function(datasets, postFit, datasetIndices = "all",
+             K = 50L, sub_frac = 0.5) {
+        label <- "fitDatasets_rlmer_ransac_bisq"
+        rho.e       <- bisquarePsi
+        rho.sigma.e <- psi2propII(smoothPsi, k = 2.28)
+        if (isDiagonalDataset(datasets)) {
+            rho.b       <- chgDefaults(smoothPsi, k = 1.345)
+            rho.sigma.b <- chgDefaults(smoothPsi, k = 2.28)
+        } else {
+            rho.b       <- chgDefaults(smoothPsi, k = 5.14)
+            rho.sigma.b <- chgDefaults(smoothPsi, k = 5.14)
+        }
+        fun <- function(data) {
+            init <- ransac_lme4(datasets[["formula"]], data,
+                                K = K, sub_frac = sub_frac)
+            if (is.null(init$fit))
+                stop("ransac_lme4: no successful lmer fit across ",
+                     K, " subsamples")
+            rlmer(formula = datasets[["formula"]], data = data,
+                  method = "DAStau", init = init$fit,
+                  rho.e = rho.e, rho.b = rho.b,
+                  rho.sigma.e = rho.sigma.e, rho.sigma.b = rho.sigma.b)
+        }
+        return(
+            lapplyDatasets(datasets, fun, label = label,
+                           POST_FUN = postFit,
+                           datasetIndices = datasetIndices)
+        )
+    }
+
 ##' @details \code{fitDatasets_heavyLme}: Fits datasets using
 ##'   \code{heavyLme} from package \code{heavy}. Additional
 ##'   required arguments are: \code{lmeFormula}, \code{heavyLmeRandom} and
@@ -789,7 +960,7 @@ fitDatasets_lqmm <-
     }
 
 ##' @details \code{fitDatasets_rlme}: Fits datasets using
-##'   \code{\link[rlme]{rlme}} from package \code{rlme}.
+##'   \code{rlme} from package \code{rlme}.
 ##' @rdname fitDatasets
 ##' @export
 fitDatasets_rlme <-
@@ -799,7 +970,8 @@ fitDatasets_rlme <-
             if (!packageInstalled) {
                 return(createPackageMissingReturnValue("rlme", "fitDatasets_rlme"))
             }
-            return(rlme::rlme(datasets[["formula"]], data))
+            rlmeFun <- eval(parse(text = "rlme::rlme"))
+            return(rlmeFun(datasets[["formula"]], data))
         }
         return(
             lapplyDatasets(

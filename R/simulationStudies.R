@@ -21,6 +21,7 @@ viewCopyOfSimulationStudy <-
         "consistencyAndEfficiencyDiagonal.R",
         "consistencyAndEfficiencyBlockDiagonal.R",
         "breakdown.R",
+        "breakdownMC.R",
         "convergence.R",
         "robustnessDiagonal.R",
         "robustnessBlockDiagonal.R"

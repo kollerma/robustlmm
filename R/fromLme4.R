@@ -181,9 +181,48 @@ setMethod("show", "rlmerMod", function(object) print.rlmerMod(object))
 
 globalVariables("forceSymmetric", add=TRUE)
 
+##' Variance-covariance matrix of the fixed effects of an rlmerMod fit.
+##'
+##' By default returns the same object as lme4's \code{vcov.merMod} (the
+##' linearised model-based covariance). With \code{type = "sandwich"},
+##' returns the robust cluster-sandwich \code{\link{vcov_sandwich}}.
+##'
+##' The cluster sandwich is exact for a single (nested) grouping factor;
+##' for crossed factors it is approximate (a warning is issued, see
+##' \code{\link{vcov_sandwich}}).
+##'
+##' @param object An \code{rlmerMod} object.
+##' @param type \code{"default"} (the lme4-inherited linearised vcov; the
+##'   pre-existing behaviour) or \code{"sandwich"} (the robust
+##'   cluster-sandwich).
+##' @param cluster When \code{type = "sandwich"}, passed to
+##'   \code{\link{vcov_sandwich}}: \code{NULL} (auto-detect for a single
+##'   grouping factor), a character string naming a grouping factor of the
+##'   model, or a length-\code{n} vector of cluster memberships.
+##' @param correction When \code{type = "sandwich"}, \code{"G1"} (default,
+##'   applies the \eqn{J/(J-1)} small-sample scaling) or \code{"none"}.
+##' @param ... Additional arguments passed to the default \code{vcov}
+##'   method (only used when \code{type = "default"}).
+##' @return A \eqn{p \times p} covariance matrix for \eqn{\hat{\beta}}.
+##' @seealso \code{\link{vcov_sandwich}}
 ##' @importFrom stats vcov
 ##' @export
-vcov.rlmerMod <- getS3method("vcov", "merMod")
+vcov.rlmerMod <- function(object,
+                          type = c("default", "sandwich"),
+                          cluster = NULL,
+                          correction = c("G1", "none"),
+                          ...) {
+    type <- match.arg(type)
+    if (type == "default") {
+        return(.vcov_merMod_default(object, ...))
+    }
+    correction <- match.arg(correction)
+    vcov_sandwich(object, cluster = cluster, correction = correction)
+}
+
+## Cached lme4 merMod vcov method, used for type = "default" so the
+## byte-for-byte pre-existing behaviour is preserved.
+.vcov_merMod_default <- getS3method("vcov", "merMod")
 
 ##' @importFrom stats vcov
 ##' @export
@@ -308,18 +347,114 @@ reFormHack <- function(re.form,ReForm,REForm,REform) {
     re.form
 }
 
-##' @importFrom stats predict
+##' Predictions and confidence/prediction intervals for an rlmerMod fit.
+##'
+##' By default (\code{interval = "none"}) returns the same numeric vector
+##' as the lme4-style point prediction (preserved byte-for-byte from the
+##' pre-existing predict method). With \code{interval = "confidence"} or
+##' \code{"prediction"}, returns a data frame with columns \code{fit},
+##' \code{lwr}, \code{upr}, \code{se}.
+##'
+##' The fixed-effect contribution to the SE uses the robust cluster
+##' sandwich \code{vcov(object, type = "sandwich")}; the random-effects
+##' contribution (when REs are part of the prediction) is computed from
+##' the partial influence function of \eqn{\hat{u}} (the local-shift
+##' sensitivity). For \code{interval = "prediction"} the additional
+##' residual variance \eqn{\hat{\sigma}^2} is added. Intervals are
+##' \code{fit +/- z * se} with \eqn{z = \Phi^{-1}((1 + level)/2)}; for
+##' small numbers of clusters the normal approximation may under-cover,
+##' and a bootstrap CI (via \code{confint(..., method = "boot")}) is
+##' preferable.
+##'
+##' @param object An \code{rlmerMod} object.
+##' @param newdata,re.form,ReForm,REForm,REform,terms,type,allow.new.levels,na.action,...
+##'   See the lme4 \code{\link[lme4]{predict.merMod}} documentation; these
+##'   arguments are forwarded unchanged to the point-prediction code path.
+##' @param interval One of \code{"none"} (default, returns a numeric
+##'   vector for backwards compatibility), \code{"confidence"}
+##'   (fit-uncertainty interval for \eqn{X\hat{\beta} + Z\hat{b}}), or
+##'   \code{"prediction"} (adds residual variance \eqn{\hat{\sigma}^2}).
+##' @param level Coverage level for the interval; default 0.95.
+##' @return A numeric vector (when \code{interval = "none"}) or a data
+##'   frame with columns \code{fit}, \code{lwr}, \code{upr}, \code{se}.
+##' @seealso \code{\link[=vcov.rlmerMod]{vcov}}
+##' @importFrom stats predict qnorm
 ##' @importFrom reformulas mkReTrms findbars
 ##' @export
-## FIXME: This is slightly modified from lme4 version 1.0-6.
-##        Newer versions have an improved version.
+## FIXME: the point-prediction path .predictRlmerPoint is slightly
+##        modified from lme4 version 1.0-6. Newer versions have an
+##        improved version.
 predict.rlmerMod <- function(object, newdata=NULL,
                              re.form=NULL,
                              ReForm,
                              REForm,
                              REform,
                              terms=NULL, type=c("link","response"),
-                             allow.new.levels=FALSE, na.action=na.pass, ...) {
+                             allow.new.levels=FALSE, na.action=na.pass,
+                             interval = c("none", "confidence", "prediction"),
+                             level = 0.95,
+                             ...) {
+    interval <- match.arg(interval)
+    ## Forward to .predictRlmerPoint preserving the user's missingness
+    ## pattern -- otherwise unconditionally passing type = type would
+    ## trigger the "type argument ignored" warning even when the caller
+    ## did not supply type. Only forward args the caller actually
+    ## supplied.
+    mc <- match.call(expand.dots = TRUE)
+    user_args <- as.list(mc)[-1L]
+    user_args[c("interval", "level")] <- NULL
+    if (interval == "none")
+        return(do.call(.predictRlmerPoint, user_args, envir = parent.frame()))
+    pred <- do.call(.predictRlmerPoint, user_args, envir = parent.frame())
+    REform_eff <- reFormHack(re.form, ReForm, REForm, REform)
+    re_included <- is.null(REform_eff) ||
+                   (is.language(REform_eff) && length(all.vars(REform_eff)) > 0L)
+    if (is.null(newdata)) {
+        X_new <- getME(object, "X")
+        Z_new <- if (re_included) as.matrix(t(object@pp$Zt)) else NULL
+    } else {
+        RHS   <- formula(object, fixed.only = TRUE)[-2]
+        Terms <- terms(object, fixed.only = TRUE)
+        X_new <- model.matrix(RHS,
+                              model.frame(delete.response(Terms), newdata,
+                                          na.action = na.action),
+                              contrasts.arg = attr(getME(object, "X"),
+                                                    "contrasts"))
+        Z_new <- if (re_included) .reconstruct_Z_new(object, newdata) else NULL
+    }
+    se <- .predictSE(object, X_new = X_new, Z_new = Z_new,
+                     prediction = (interval == "prediction"))
+    if (length(se) != length(pred)) {
+        ## NA handling in the point path may have dropped rows; align by
+        ## recycling SE = NA where pred is NA, otherwise abort.
+        if (sum(!is.na(pred)) == length(se)) {
+            se_full <- rep(NA_real_, length(pred))
+            se_full[!is.na(pred)] <- se
+            se <- se_full
+        } else {
+            stop("predict.rlmerMod: cannot align SE with point predictions ",
+                 "(length ", length(se), " vs ", length(pred), ").")
+        }
+    }
+    z <- stats::qnorm(0.5 + level / 2)
+    data.frame(fit = as.numeric(pred),
+               lwr = as.numeric(pred) - z * se,
+               upr = as.numeric(pred) + z * se,
+               se  = se,
+               row.names = if (!is.null(names(pred))) names(pred) else NULL)
+}
+
+## The original lme4-style point-prediction body, unchanged. interval =
+## "none" delegates straight to this so the byte-for-byte vector return
+## is preserved.
+.predictRlmerPoint <- function(object, newdata=NULL,
+                               re.form=NULL,
+                               ReForm,
+                               REForm,
+                               REform,
+                               terms=NULL, type=c("link","response"),
+                               allow.new.levels=FALSE, na.action=na.pass,
+                               ...) {
     ## FIXME: appropriate names for result vector?
     ## FIXME: make sure behaviour is entirely well-defined for NA in grouping factors
 

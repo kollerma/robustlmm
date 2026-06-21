@@ -164,6 +164,40 @@ calcKappaTauB <- function(object) {
     object@pp$btapply(object@rho.sigma.b, calcKappaTau)
 }
 
+## Hampel-OBR helpers for the size_obr option in
+## rlmer.fit.DAS.nondiag. .obrBTau extracts the bound b_tau from the
+## rho.sigma.b tuning constant (interpreted as the gross-error-
+## sensitivity bound on the size estimating equation). .stahelObrA
+## iterates for the Fisher-consistency centering constant a so that
+##   E_{chi^2_s}[(d - s*kappa - a) * min(1, b_tau / |d - s*kappa - a|)] = 0.
+.obrBTau <- function(rho) {
+    tDefs <- rho@tDefs
+    if (length(tDefs) >= 1L && !is.null(names(tDefs)) && "k" %in% names(tDefs))
+        return(unname(tDefs["k"]))
+    if (length(tDefs) >= 1L) return(unname(tDefs[1L]))
+    stop("Cannot infer Hampel-OBR b_tau from rho.sigma.b tuning constants.")
+}
+
+
+##' @importFrom stats qchisq
+.stahelObrA <- function(s, kappa, b_tau,
+                        max.iter = 200, rel.tol = 1e-10) {
+    upper <- qchisq(1 - 1e-12, s) * 3
+    a <- 0
+    centre <- s * kappa
+    for (iter in seq_len(max.iter)) {
+        wt <- function(d) pmin(1, b_tau / abs(d - centre - a))
+        num <- integrate(function(d) (d - centre) * wt(d) * dchisq(d, s),
+                         0, upper, rel.tol = 1e-9)$value
+        den <- integrate(function(d) wt(d) * dchisq(d, s),
+                         0, upper, rel.tol = 1e-9)$value
+        a_new <- num / den
+        if (abs(a_new - a) < rel.tol) break
+        a <- a_new
+    }
+    a
+}
+
 ## Calculate tau for DAS estimate
 ##
 ## @title DAS-estimate

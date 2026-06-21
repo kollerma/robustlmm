@@ -1,8 +1,8 @@
 Package: robustlmm
 Type: Package
 Title: Robust Linear Mixed Effects Models
-Version: 3.4-3
-Date: 2026-04-20
+Version: 3.4-4
+Date: 2026-06-21
 Author: Manuel Koller [aut, cre]
 Authors@R: person(given = "Manuel", family = "Koller", role = c("aut", "cre"), email = "kollerma@proton.me")
 Maintainer: Manuel Koller <kollerma@proton.me>
@@ -24,7 +24,6 @@ Suggests:
     emmeans (>= 1.4),
     estimability,
     lqmm,
-    rlme,
     MASS,
     lemon,
     RColorBrewer,
@@ -43,6 +42,7 @@ Imports:
     xtable,
     Rcpp (>= 0.12.2),
     fastGHQuad,
+    numDeriv,
     parallel,
     rlang,
     utils,
@@ -50,6 +50,7 @@ Imports:
 Collate:
     'ghq.R'
     'psiFunc2.R'
+    'redescendingPsi.R'
     'AllClass.R'
     'rlmer.R'
     'accessors.R'
@@ -67,6 +68,10 @@ Collate:
     'generateMixedEffectDatasets.R'
     'generateSensitivityCurveDatasets.R'
     'manageDatasets.R'
+    'ransac.R'
+    'influence.R'
+    'influence_full.R'
+    'bootstrapWald.R'
     'fitDatasets.R'
     'processFit.R'
     'processFile.R'

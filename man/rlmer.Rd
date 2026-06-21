@@ -19,7 +19,8 @@ rlmer(
   max.iter = 40 * (r + 1)^2,
   verbose = 0,
   doFit = TRUE,
-  init
+  init,
+  size_obr = FALSE
 )
 
 lmerNoFit(formula, data = NULL, ..., initTheta)
@@ -92,7 +93,30 @@ default, the model is fit immediately.}
 
 \item{init}{optional lmerMod- or rlmerMod-object to use for starting values,
 a list with elements \sQuote{fixef}, \sQuote{u}, \sQuote{sigma},
-\sQuote{theta}, or a function producing an lmerMod object.}
+\sQuote{theta}, the string \code{"ransac"}, or a function producing an
+lmerMod object. When \code{init = "ransac"}, the high-breakdown RANSAC
+start is obtained by calling \code{\link{ransac_lme4}(formula, data)} with
+its default \code{K = 200} subsamples and \code{sub_frac = 0.5}; this is
+useful to dodge phony local minima (e.g. random-effect correlations pinned
+at \eqn{\pm 1}) with redescending psi-functions. The string form is random
+(not reproducible without an outer \code{set.seed}); for fine control of
+\code{K}, \code{sub_frac}, or \code{seed}, use \code{\link{rlmer_ransac}}
+or pass \code{init = ransac_lme4(formula, data, ...)$fit} explicitly.}
+
+\item{size_obr}{logical scalar; if \code{TRUE} (default \code{FALSE}),
+the size-controlling weight \code{w_delta} in the block-diagonal
+variance-components scoring equation is replaced by the
+Hampel-OBR (Stahel 1987 / Hampel et al. 1986) form
+\eqn{w_\tau(d) = \min(1, b_\tau / |d - s\kappa - a|)}, with
+\eqn{b_\tau} taken from the tuning constant of
+\code{rho.sigma.b} and \eqn{a} determined by Fisher consistency
+under \eqn{\chi^2_s}. The default finite-difference form
+\eqn{w_\delta(d) = (\psi(d) - \psi(d-s\kappa))/s} is not
+Hampel-OBR-optimal at the central model; this option recovers
+asymptotic Hampel-OBR efficiency for the variance-component
+magnitudes (a typically modest 1-2 percentage-point gain at
+matched gross-error sensitivity). Has no effect for diagonal
+\eqn{V_b} (block size 1).}
 
 \item{initTheta}{parameter to initialize theta with (optional)}
 }

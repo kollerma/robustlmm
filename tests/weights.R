@@ -45,6 +45,10 @@ testBattery <- function(formula, data, tolerance) {
     nobs <- nrow(data)
 
     test <- function(weights) {
+        ## lme4 (>= upcoming release) looks up `weights` in the formula's
+        ## environment rather than the calling frame; make it visible
+        ## there (GitHub issue #36, Ben Bolker).
+        assign("weights", weights, environment(formula))
         cW <- lmer(formula, data, weights = weights)
         rW <-
             rlmer(

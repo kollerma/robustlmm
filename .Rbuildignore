@@ -11,6 +11,7 @@ vignettes/Sweave\.sty
 vignettes/jss\.bst
 vignettes/.*\.cls
 vignettes/.*\.log
+^\.git$
 ^\.github$
 tools
 \.vscode

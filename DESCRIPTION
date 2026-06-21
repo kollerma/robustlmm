@@ -1,7 +1,7 @@
 Package: robustlmm
 Type: Package
 Title: Robust Linear Mixed Effects Models
-Version: 3.4-4
+Version: 3.4-5
 Date: 2026-06-21
 Author: Manuel Koller [aut, cre]
 Authors@R: person(given = "Manuel", family = "Koller", role = c("aut", "cre"), email = "kollerma@proton.me")

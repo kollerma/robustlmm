@@ -485,11 +485,11 @@ setRefClass("rlmerResp",
 ##'   family.rlmerMod fitted.rlmerMod fixef.rlmerMod formula.rlmerMod
 ##'   isGLMM.rlmerMod isLMM.rlmerMod isNLMM.rlmerMod isREML.rlmerMod
 ##'   logLik.rlmerMod model.frame.rlmerMod model.matrix.rlmerMod nobs.rlmerMod
-##'   predict.rlmerMod print.rlmerMod print.summary.rlmer print.VarCorr.rlmerMod
+##'   print.rlmerMod print.summary.rlmer print.VarCorr.rlmerMod
 ##'   ranef.rlmerMod resid.rlmerMod rlmerMod-class sigma.rlmerMod show.rlmerMod
 ##'   show,rlmerMod-method show.summary.rlmerMod summary.rlmerMod
 ##'   summary.summary.rlmerMod terms.rlmerMod update.rlmerMod VarCorr.rlmerMod
-##'   VarCorr.summary.rlmerMod vcov.rlmerMod vcov.summary.rlmerMod
+##'   VarCorr.summary.rlmerMod vcov.summary.rlmerMod
 ##'   weights.rlmerMod
 ##' @docType class
 ##' @section Objects from the Class: Objects are created by calls to

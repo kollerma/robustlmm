@@ -16,6 +16,10 @@
 \alias{fitDatasets_rlmer_DAStau_k_2_noAdj}
 \alias{fitDatasets_rlmer_DAStau_k_5}
 \alias{fitDatasets_rlmer_DAStau_k_5_noAdj}
+\alias{fitDatasets_rlmer_DAStau_bisq}
+\alias{fitDatasets_rlmer_DAStau_sizeOBR}
+\alias{fitDatasets_rlmer_ransac}
+\alias{fitDatasets_rlmer_ransac_bisq}
 \alias{fitDatasets_heavyLme}
 \alias{fitDatasets_lqmm}
 \alias{fitDatasets_rlme}
@@ -67,6 +71,26 @@ fitDatasets_rlmer_DAStau_k_2_noAdj(datasets, postFit, datasetIndices = "all")
 fitDatasets_rlmer_DAStau_k_5(datasets, postFit, datasetIndices = "all")
 
 fitDatasets_rlmer_DAStau_k_5_noAdj(datasets, postFit, datasetIndices = "all")
+
+fitDatasets_rlmer_DAStau_bisq(datasets, postFit, datasetIndices = "all")
+
+fitDatasets_rlmer_DAStau_sizeOBR(datasets, postFit, datasetIndices = "all")
+
+fitDatasets_rlmer_ransac(
+  datasets,
+  postFit,
+  datasetIndices = "all",
+  K = 50L,
+  sub_frac = 0.5
+)
+
+fitDatasets_rlmer_ransac_bisq(
+  datasets,
+  postFit,
+  datasetIndices = "all",
+  K = 50L,
+  sub_frac = 0.5
+)
 
 fitDatasets_heavyLme(datasets, postFit, datasetIndices = "all")
 
@@ -139,6 +163,15 @@ try only a few datasets instead of all of them.}
 \item{...}{argument passed on to \code{\link{createRhoFunction}}.}
 
 \item{init}{optional argument passed on to \code{\link{rlmer}}.}
+
+\item{K}{number of random subsamples used by the RANSAC initial
+estimator (\code{\link{ransac_lme4}}). Only used by
+\code{fitDatasets_rlmer_ransac} and
+\code{fitDatasets_rlmer_ransac_bisq}.}
+
+\item{sub_frac}{fraction of the data per RANSAC subsample. Only used by
+\code{fitDatasets_rlmer_ransac} and
+\code{fitDatasets_rlmer_ransac_bisq}.}
 }
 \value{
 list of fitted models. See also \code{\link{lapplyDatasets}} which
@@ -246,6 +279,33 @@ Existing fitting functions are:
   \code{rho.sigma.b}. The tuning parameter is chosen to reach about the same
   asymptotic efficiency for theta as for the fixed effects.
 
+\code{fitDatasets_rlmer_DAStau_bisq}: Fits datasets using
+  \code{\link{rlmer}} with method DAStau, replacing \code{rho.e} with
+  the redescending bisquare psi (\code{\link{bisquarePsi}}, c = 4.685).
+  The other rho-functions use the same smoothed Huber psi and tuning
+  parameters as \code{fitDatasets_rlmer_DAStau}.
+
+\code{fitDatasets_rlmer_DAStau_sizeOBR}: Fits datasets using
+  \code{\link{rlmer}} with method DAStau and \code{size_obr = TRUE},
+  which replaces the finite-difference size weight in the
+  block-diagonal V_b score equation with the Hampel-OBR form. The
+  same rho-functions and tuning parameters are used as for
+  \code{fitDatasets_rlmer_DAStau}. For diagonal V_b the
+  \code{size_obr} argument is silently ignored.
+
+\code{fitDatasets_rlmer_ransac}: Fits datasets using
+  \code{\link{rlmer}} with method DAStau and a RANSAC-derived initial
+  estimator (\code{\link{ransac_lme4}}). The number of random
+  subsamples is \code{K = 50} with subsample fraction
+  \code{sub_frac = 0.5}. Same rho-functions and tuning parameters
+  as \code{fitDatasets_rlmer_DAStau}.
+
+\code{fitDatasets_rlmer_ransac_bisq}: Combines
+  \code{fitDatasets_rlmer_ransac} (RANSAC init) with
+  \code{fitDatasets_rlmer_DAStau_bisq} (\code{\link{bisquarePsi}}
+  for \code{rho.e}). Designed to give redescending psi a starting
+  value safely away from phony local minima.
+
 \code{fitDatasets_heavyLme}: Fits datasets using
   \code{heavyLme} from package \code{heavy}. Additional
   required arguments are: \code{lmeFormula}, \code{heavyLmeRandom} and
@@ -261,7 +321,7 @@ Existing fitting functions are:
   is used.
 
 \code{fitDatasets_rlme}: Fits datasets using
-  \code{\link[rlme]{rlme}} from package \code{rlme}.
+  \code{rlme} from package \code{rlme}.
 
 \code{fitDatasets_varComprob}: Prototype method to fit datasets
   using \code{varComprob} from package

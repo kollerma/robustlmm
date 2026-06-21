@@ -18,7 +18,6 @@
 \alias{model.frame.rlmerMod}
 \alias{model.matrix.rlmerMod}
 \alias{nobs.rlmerMod}
-\alias{predict.rlmerMod}
 \alias{print.rlmerMod}
 \alias{print.summary.rlmer}
 \alias{print.VarCorr.rlmerMod}
@@ -34,7 +33,6 @@
 \alias{update.rlmerMod}
 \alias{VarCorr.rlmerMod}
 \alias{VarCorr.summary.rlmerMod}
-\alias{vcov.rlmerMod}
 \alias{vcov.summary.rlmerMod}
 \alias{weights.rlmerMod}
 \title{rlmerMod Class}

@@ -173,7 +173,29 @@
 ##'   default, the model is fit immediately.
 ##' @param init optional lmerMod- or rlmerMod-object to use for starting values,
 ##'   a list with elements \sQuote{fixef}, \sQuote{u}, \sQuote{sigma},
-##'   \sQuote{theta}, or a function producing an lmerMod object.
+##'   \sQuote{theta}, the string \code{"ransac"}, or a function producing an
+##'   lmerMod object. When \code{init = "ransac"}, the high-breakdown RANSAC
+##'   start is obtained by calling \code{\link{ransac_lme4}(formula, data)} with
+##'   its default \code{K = 200} subsamples and \code{sub_frac = 0.5}; this is
+##'   useful to dodge phony local minima (e.g. random-effect correlations pinned
+##'   at \eqn{\pm 1}) with redescending psi-functions. The string form is random
+##'   (not reproducible without an outer \code{set.seed}); for fine control of
+##'   \code{K}, \code{sub_frac}, or \code{seed}, use \code{\link{rlmer_ransac}}
+##'   or pass \code{init = ransac_lme4(formula, data, ...)$fit} explicitly.
+##' @param size_obr logical scalar; if \code{TRUE} (default \code{FALSE}),
+##'   the size-controlling weight \code{w_delta} in the block-diagonal
+##'   variance-components scoring equation is replaced by the
+##'   Hampel-OBR (Stahel 1987 / Hampel et al. 1986) form
+##'   \eqn{w_\tau(d) = \min(1, b_\tau / |d - s\kappa - a|)}, with
+##'   \eqn{b_\tau} taken from the tuning constant of
+##'   \code{rho.sigma.b} and \eqn{a} determined by Fisher consistency
+##'   under \eqn{\chi^2_s}. The default finite-difference form
+##'   \eqn{w_\delta(d) = (\psi(d) - \psi(d-s\kappa))/s} is not
+##'   Hampel-OBR-optimal at the central model; this option recovers
+##'   asymptotic Hampel-OBR efficiency for the variance-component
+##'   magnitudes (a typically modest 1-2 percentage-point gain at
+##'   matched gross-error sensitivity). Has no effect for diagonal
+##'   \eqn{V_b} (block size 1).
 ##' @return object of class rlmerMod.
 ##' @seealso \code{\link[lme4]{lmer}}, \code{vignette("rlmer")}
 ##' @author Manuel Koller, with thanks to Vanda Lourenço for improvements.
@@ -214,7 +236,7 @@
 rlmer <- function(formula, data, ..., method = c("DAStau", "DASvar"),
                   setting, rho.e, rho.b, rho.sigma.e, rho.sigma.b,
                   rel.tol = 1e-8, max.iter = 40 * (r + 1)^2, verbose = 0,
-                  doFit = TRUE, init)
+                  doFit = TRUE, init, size_obr = FALSE)
 {
     lcall <- match.call()
     pf <- parent.frame()
@@ -229,7 +251,8 @@ rlmer <- function(formula, data, ..., method = c("DAStau", "DASvar"),
     ## required for max.iter:
     r <- len(lobj, "theta")
 
-    return(.rlmer(lobj, rel.tol, max.iter, verbose, doFit))
+    return(.rlmer(lobj, rel.tol, max.iter, verbose, doFit,
+                  size_obr = isTRUE(size_obr)))
 }
 
 ## Check for structured covariance matrices (lme4 >= 2.0-0)
@@ -285,6 +308,11 @@ rlmer <- function(formula, data, ..., method = c("DAStau", "DASvar"),
             setU(linit, init$u)
         }
         init <- linit
+    } else if (identical(init, "ransac")) {
+        rr <- ransac_lme4(formula, data)
+        if (is.null(rr$fit))
+            stop("init = \"ransac\": no successful lmer fit across the RANSAC subsamples")
+        init <- rr$fit
     } else if (is.function(init)) {
         init <- do.call(init,list(formula=formula, data=data, REML=TRUE, ...))
     } else if (!is(init, "merMod") && !is(init, "rlmerMod")) {
@@ -399,7 +427,8 @@ getDefaultRhoB <- function(dimension, rho) {
     return(chgDefaults(rho, k = k))
 }
 
-.rlmer <- function(lobj, rel.tol, max.iter, verbose, doFit) {
+.rlmer <- function(lobj, rel.tol, max.iter, verbose, doFit,
+                   size_obr = FALSE) {
     if (!doFit) {
         lobj@pp$updateMatrices()
         return(updateWeights(lobj))
@@ -426,12 +455,14 @@ getDefaultRhoB <- function(dimension, rho) {
     }
 
     curWarnings <- list()
-    lobj <- withCallingHandlers(.rlmer.fit(lobj, rel.tol, max.iter, verbose),
-                                warning = function(w) {
-                                    curWarnings <<- append(curWarnings,list(conditionMessage(w)))
-                                    invokeRestart("muffleWarning")
-                                })
+    lobj <- withCallingHandlers(
+        .rlmer.fit(lobj, rel.tol, max.iter, verbose, size_obr = size_obr),
+        warning = function(w) {
+            curWarnings <<- append(curWarnings, list(conditionMessage(w)))
+            invokeRestart("muffleWarning")
+        })
     lobj@optinfo$warnings <- curWarnings
+    lobj@optinfo$size_obr <- size_obr
 
     if (verbose > 0) {
         cat("sigma, theta: ", .sigma(lobj), ", ", theta(lobj), "\n")
@@ -443,10 +474,12 @@ getDefaultRhoB <- function(dimension, rho) {
     return(updateWeights(lobj))
 }
 
-.rlmer.fit <- function(lobj, rel.tol, max.iter, verbose) {
+.rlmer.fit <- function(lobj, rel.tol, max.iter, verbose,
+                       size_obr = FALSE) {
     ## do fit: non diagonal case differently
     if (!isDiagonal(.U_b(lobj))) {
-        lobj <- rlmer.fit.DAS.nondiag(lobj, verbose, max.iter, rel.tol)
+        lobj <- rlmer.fit.DAS.nondiag(lobj, verbose, max.iter, rel.tol,
+                                      size_obr = size_obr)
     } else {
         lobj <- rlmer.fit.DAS(lobj, verbose, max.iter, rel.tol)
     }
@@ -455,7 +488,8 @@ getDefaultRhoB <- function(dimension, rho) {
 
 ## DAS method
 rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@method,
-                                  checkFalseConvergence = TRUE) {
+                                  checkFalseConvergence = TRUE,
+                                  size_obr = FALSE) {
     if (!.isREML(lobj))
         stop("can only do REML when using averaged DAS-estimate for sigma")
 
@@ -534,8 +568,20 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
                 ## for eta, we would actually need a little smaller
                 ## tuning constants than for delta to get the same efficiency
                 wbsEta[lidx] <- lobj@rho.sigma.b[[type]]@wgt(db[lidx])
-                wbsDelta[lidx] <- (lobj@rho.sigma.b[[type]]@psi(db[lidx]) -
-                                       lobj@rho.sigma.b[[type]]@psi(db[lidx] - s*kappas[type]))/s
+                if (size_obr) {
+                    ## Hampel-OBR size weight (Stahel 1987 / Hampel et al
+                    ## 1986): w_tau(d) = min(1, b_tau / |d - s*kappa - a|).
+                    ## b_tau comes from the rho.sigma.b tuning constant; a
+                    ## is solved for Fisher consistency under chi^2_s.
+                    b_tau <- .obrBTau(lobj@rho.sigma.b[[type]])
+                    a_obr <- .stahelObrA(s, kappas[type], b_tau)
+                    wbsDelta[lidx] <- pmin(
+                        1, b_tau / pmax(abs(db[lidx] - s * kappas[type] - a_obr),
+                                        .Machine$double.eps))
+                } else {
+                    wbsDelta[lidx] <- (lobj@rho.sigma.b[[type]]@psi(db[lidx]) -
+                                           lobj@rho.sigma.b[[type]]@psi(db[lidx] - s*kappas[type]))/s
+                }
             } else {
                 lw <- lobj@rho.sigma.b[[type]]@wgt(db[lidx])
                 wbsEta[lidx] <- lw

@@ -228,12 +228,19 @@ setGeneric("psi2propII", function(object, ..., adjust = FALSE) standardGeneric("
 .psi2propII <- function(object, ..., adjust = FALSE) {
   if (identical(object, cPsi))
     return(cPsi)
-  if (object@getRcppClass()[1] == "PsiFunctionToPropIIPsiFunctionWrapper") {
+  rcc <- tryCatch(object@getRcppClass(), error = function(e) character(0))
+  if (length(rcc) >= 1L && !is.na(rcc[1]) &&
+      rcc[1] == "PsiFunctionToPropIIPsiFunctionWrapper") {
     stop("Cannot apply psi2propII multiple times.")
+  }
+  if (length(rcc) == 0L) {
+    stop("psi2propII requires a psi_func_rcpp object with a defined ",
+         "Rcpp class. Pass `rho.sigma.e` explicitly when supplying a ",
+         "custom rho function constructed without a backing Rcpp class.")
   }
   func <- do.call(psiFuncRcpp,
                   c(list(c("PsiFunctionToPropIIPsiFunctionWrapper",
-                           object@getRcppClass()),
+                           rcc),
                          fixTDefs(..., defaultTDefs = object@tDefs))))
   if (adjust) {
       if (isDefaultHuberOrSmoothPsi(object)) {

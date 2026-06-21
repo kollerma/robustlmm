@@ -6,8 +6,8 @@
 \usage{
 viewCopyOfSimulationStudy(
   study = c("sensitivityCurves.R", "consistencyAndEfficiencyDiagonal.R",
-    "consistencyAndEfficiencyBlockDiagonal.R", "breakdown.R", "convergence.R",
-    "robustnessDiagonal.R", "robustnessBlockDiagonal.R"),
+    "consistencyAndEfficiencyBlockDiagonal.R", "breakdown.R", "breakdownMC.R",
+    "convergence.R", "robustnessDiagonal.R", "robustnessBlockDiagonal.R"),
   destinationPath = getwd(),
   overwrite = FALSE
 )

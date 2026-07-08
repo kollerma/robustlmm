@@ -28,6 +28,31 @@ etc. are provided as long as they are applicable for this type of models
 (see `rlmerMod-class` for a full list). The functions are designed to be as
 similar as possible to the ones in the `lme4` package to make switching
 between the two packages easy.
+
+Inference is supported via:
+
+- `vcov(fit)` (linearised, the lme4-inherited default) and
+  `vcov(fit, type = "sandwich")` (robust cluster sandwich;
+  see `?vcov_sandwich`).
+- `confint(fit)` returns the closed-form Wald interval, optionally with
+  `vcov_type = "sandwich"`. `confint(fit, method = "boot")` and
+  `method = "BCa"` delegate to the peer-reviewed `confintROB` package
+  (Mason, Cantoni & Ghisletta 2021, 2024), which is in `Suggests`.
+- `anova(fit)` for a per-term Wald table; `anova(fit0, fit1)` for nested
+  model comparison (Wald restriction for fixed effects, parametric-bootstrap
+  quasi-deviance for variance-component tests on the PSD-cone boundary).
+- `predict(fit, interval = "confidence" / "prediction")` with confidence
+  / prediction intervals.
+- `cooks.distance(fit)` for per-observation joint influence on
+  $(\hat\beta, \hat\sigma, \hat\theta)$; `caseweightIF(fit)` for the
+  case-weight influence function.
+- `rlmer(formula, data, init = "ransac")` for a high-breakdown
+  RANSAC start, useful when redescending psi-functions risk a phony
+  local minimum.
+
+An empirical evaluation of the inference methods (CI coverage, Type-I,
+power, under contamination) lives in
+`inst/simulationStudy/inferenceStudy_results/` on the development branch.
   
 Installation
 ------------

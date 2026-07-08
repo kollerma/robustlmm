@@ -1,11 +1,13 @@
 
-R Under development (unstable) (2023-08-12 r84939) -- "Unsuffered Consequences"
-Copyright (C) 2023 The R Foundation for Statistical Computing
-Platform: aarch64-apple-darwin20
+R version 4.6.0 Patched (2026-05-01 r89994) -- "Because it was There"
+Copyright (C) 2026 The R Foundation for Statistical Computing
+Platform: aarch64-apple-darwin23
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
 You are welcome to redistribute it under certain conditions.
 Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
 
 R is a collaborative project with many contributors.
 Type 'contributors()' for more information and
@@ -36,7 +38,10 @@ Loading required package: Matrix
 +                                         rho.e = rho.e, rho.b = rho.b, ...)),
 +                  "\n")
 +              fits[[method]][["IRWLS"]] <- m
-+              print(summary(m))
++              ## df = "none": this is an estimation-equality regression
++              ## (constant golden output); keep the historic 3-column
++              ## table, not the WS16 default Satterthwaite df.
++              print(summary(m, df = "none"))
 +              print(robustlmm:::u.rlmerMod(m), 4)
 +              if (classic) {
 +                  ## compare with lmer fit
@@ -69,46 +74,1422 @@ Loading required package: Matrix
 > 
 > Dyestuff$Yield <- Dyestuff$Yield - 0.5
 > 
-> if (FALSE) {
-+     ## classic (REML)
-+     fit(Yield ~ (1 | Batch), Dyestuff)
-+     fit(Yield ~ (1 | Batch), Dyestuff2)
-+     fit(diameter ~ (1|plate) + (1|sample), Penicillin)
-+ 
-+     ## classic (no init)
-+     fit(Yield ~ (1 | Batch), Dyestuff, init = lmerNoFit)
-+     fit(Yield ~ (1 | Batch), Dyestuff2, init = lmerNoFit)
-+     fit(diameter ~ (1|plate) + (1|sample), Penicillin, init = lmerNoFit)
-+ 
-+     ## smoothPsi, wExp = 1
-+     fit(Yield ~ (1 | Batch), Dyestuff,
-+         rho.e = smoothPsi, rho.b = smoothPsi,
-+         rho.sigma.b = smoothPsi, rho.sigma.e = smoothPsi)
-+     fit(Yield ~ (1 | Batch), Dyestuff2,
-+         rho.e = smoothPsi, rho.b = smoothPsi,
-+         rho.sigma.b = smoothPsi, rho.sigma.e = smoothPsi)
-+     fit(diameter ~ (1|plate) + (1|sample), Penicillin,
-+         rho.e = smoothPsi, rho.b = smoothPsi,
-+         rho.sigma.b = smoothPsi, rho.sigma.e = smoothPsi)
-+ 
-+     ## smoothPsi Proposal 2 for estimating sigma only
-+     fit(Yield ~ (1 | Batch), Dyestuff,
-+         rho.e = smoothPsi, rho.b = smoothPsi,
-+         rho.sigma.b = smoothPsi)
-+     fit(Yield ~ (1 | Batch), Dyestuff2,
-+         rho.e = smoothPsi, rho.b = smoothPsi,
-+         rho.sigma.b = smoothPsi)
-+     fit(diameter ~ (1|plate) + (1|sample), Penicillin,
-+         rho.e = smoothPsi, rho.b = smoothPsi,
-+         rho.sigma.b = smoothPsi)
-+ }
+> ## classic (REML)
+> fit(Yield ~ (1 | Batch), Dyestuff)
+
+######## DASvar ########
+Time elapsed: 0.092 0.003 0.097 0 0 
+Robust linear mixed model fit by DASvar 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-1.4117 -0.7634  0.1418  0.7792  1.8296 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept) 1764     42.00   
+ Residual             2451     49.51   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  1527.00      19.38   78.78
+
+Robustness weights for the residuals: 
+ All 30 weights are ~= 1.
+
+Robustness weights for the random effects: 
+[1] 1 1 1 1 1 1
+
+Rho functions used for fitting:
+  Residuals:
+    eff: classic 
+    sig: classic 
+  Random Effects, variance component 1 (Batch):
+    eff: classic 
+    vcp: classic 
+       A        B        C        D        E        F 
+-20.7549   0.4612  33.6690 -27.2119  66.8768 -53.0402 
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+
+######## DAStau ########
+Time elapsed: 0.032 0 0.032 0 0 
+Robust linear mixed model fit by DAStau 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-1.4117 -0.7634  0.1418  0.7792  1.8296 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept) 1764     42.00   
+ Residual             2451     49.51   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  1527.00      19.38   78.78
+
+Robustness weights for the residuals: 
+ All 30 weights are ~= 1.
+
+Robustness weights for the random effects: 
+[1] 1 1 1 1 1 1
+
+Rho functions used for fitting:
+  Residuals:
+    eff: classic 
+    sig: classic 
+  Random Effects, variance component 1 (Batch):
+    eff: classic 
+    vcp: classic 
+       A        B        C        D        E        F 
+-20.7549   0.4612  33.6690 -27.2119  66.8768 -53.0402 
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+
+################################################
+################################################
+################################################
+
+################ results for DASvar  ##############
+                    lmer        IRWLS      
+Coef                                       
+(Intercept)         1527 (19.4) 1527 (19.4)
+                                           
+VarComp                                    
+(Intercept) | Batch 42          42         
+                                           
+sigma               49.5        49.5       
+                                           
+REML                320                    
+
+################ results for DAStau  ##############
+                    lmer        IRWLS      
+Coef                                       
+(Intercept)         1527 (19.4) 1527 (19.4)
+                                           
+VarComp                                    
+(Intercept) | Batch 42          42         
+                                           
+sigma               49.5        49.5       
+                                           
+REML                320                    
+> fit(Yield ~ (1 | Batch), Dyestuff2)
+boundary (singular) fit: see help('isSingular')
+
+######## DASvar ########
+boundary (singular) fit: see help('isSingular')
+Time elapsed: 0.396 0.001 0.397 0 0 
+Robust linear mixed model fit by DASvar 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-1.7648 -0.7806 -0.0809  0.6689  2.0907 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept)  0.00    0.000   
+ Residual             13.81    3.716   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)   5.6656     0.6784   8.352
+
+Robustness weights for the residuals: 
+ All 30 weights are ~= 1.
+
+Robustness weights for the random effects: 
+[1] 1 1 1 1 1 1
+
+Rho functions used for fitting:
+  Residuals:
+    eff: classic 
+    sig: classic 
+  Random Effects, variance component 1 (Batch):
+    eff: classic 
+    vcp: classic 
+A B C D E F 
+0 0 0 0 0 0 
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+
+######## DAStau ########
+boundary (singular) fit: see help('isSingular')
+Time elapsed: 0.366 0.001 0.368 0 0 
+Robust linear mixed model fit by DAStau 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-1.7648 -0.7806 -0.0809  0.6689  2.0907 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept)  0.00    0.000   
+ Residual             13.81    3.716   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)   5.6656     0.6784   8.352
+
+Robustness weights for the residuals: 
+ All 30 weights are ~= 1.
+
+Robustness weights for the random effects: 
+[1] 1 1 1 1 1 1
+
+Rho functions used for fitting:
+  Residuals:
+    eff: classic 
+    sig: classic 
+  Random Effects, variance component 1 (Batch):
+    eff: classic 
+    vcp: classic 
+A B C D E F 
+0 0 0 0 0 0 
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+
+################################################
+################################################
+################################################
+
+################ results for DASvar  ##############
+                    lmer         IRWLS       
+Coef                                         
+(Intercept)         5.67 (0.678) 5.67 (0.678)
+                                             
+VarComp                                      
+(Intercept) | Batch 0            0           
+                                             
+sigma               3.72         3.72        
+                                             
+REML                162                      
+
+################ results for DAStau  ##############
+                    lmer         IRWLS       
+Coef                                         
+(Intercept)         5.67 (0.678) 5.67 (0.678)
+                                             
+VarComp                                      
+(Intercept) | Batch 0            0           
+                                             
+sigma               3.72         3.72        
+                                             
+REML                162                      
+> fit(diameter ~ (1|plate) + (1|sample), Penicillin)
+
+######## DASvar ########
+Time elapsed: 0.115 0.001 0.116 0 0 
+Robust linear mixed model fit by DASvar 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+     Min       1Q   Median       3Q      Max 
+-2.07923 -0.67140  0.06292  0.58377  2.97958 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ plate    (Intercept) 0.7169   0.8467  
+ sample   (Intercept) 3.7309   1.9316  
+ Residual             0.3024   0.5499  
+Number of obs: 144, groups: plate, 24; sample, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  22.9722     0.8086   28.41
+
+Robustness weights for the residuals: 
+ All 144 weights are ~= 1.
+
+Robustness weights for the random effects: 
+ All 30 weights are ~= 1.
+
+Rho functions used for fitting:
+  Residuals:
+    eff: classic 
+    sig: classic 
+  Random Effects, variance component 1 (plate):
+    eff: classic 
+    vcp: classic 
+  Random Effects, variance component 2 (sample):
+    eff: classic 
+    vcp: classic 
+        a         b         c         d         e         f         g         h 
+ 0.522543  0.522543  0.117993  0.219131  0.016856 -0.286556 -0.893379  0.522543 
+        i         j         k         l         m         n         o         p 
+-0.488830 -0.488830  0.623680  0.320268  0.927092  0.320268  0.623680  0.016856 
+        q         r         s         t         u         v         w         x 
+-0.185418 -0.185418 -0.893379  0.623680 -0.589967 -0.185418 -0.387693 -0.792242 
+        A         B         C         D         E         F 
+ 0.622665 -0.287687  0.551728 -0.027586 -0.003941 -0.855179 
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+
+######## DAStau ########
+Time elapsed: 0.116 0 0.117 0 0 
+Robust linear mixed model fit by DAStau 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+     Min       1Q   Median       3Q      Max 
+-2.07923 -0.67140  0.06292  0.58377  2.97958 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ plate    (Intercept) 0.7169   0.8467  
+ sample   (Intercept) 3.7309   1.9316  
+ Residual             0.3024   0.5499  
+Number of obs: 144, groups: plate, 24; sample, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  22.9722     0.8086   28.41
+
+Robustness weights for the residuals: 
+ All 144 weights are ~= 1.
+
+Robustness weights for the random effects: 
+ All 30 weights are ~= 1.
+
+Rho functions used for fitting:
+  Residuals:
+    eff: classic 
+    sig: classic 
+  Random Effects, variance component 1 (plate):
+    eff: classic 
+    vcp: classic 
+  Random Effects, variance component 2 (sample):
+    eff: classic 
+    vcp: classic 
+        a         b         c         d         e         f         g         h 
+ 0.522543  0.522543  0.117993  0.219131  0.016856 -0.286556 -0.893379  0.522543 
+        i         j         k         l         m         n         o         p 
+-0.488830 -0.488830  0.623680  0.320268  0.927092  0.320268  0.623680  0.016856 
+        q         r         s         t         u         v         w         x 
+-0.185418 -0.185418 -0.893379  0.623680 -0.589967 -0.185418 -0.387693 -0.792242 
+        A         B         C         D         E         F 
+ 0.622665 -0.287687  0.551728 -0.027586 -0.003941 -0.855179 
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+
+################################################
+################################################
+################################################
+
+################ results for DASvar  ##############
+                     lmer       IRWLS     
+Coef                                      
+(Intercept)          23 (0.809) 23 (0.809)
+                                          
+VarComp                                   
+(Intercept) | plate  0.847      0.847     
+(Intercept) | sample 1.932      1.932     
+                                          
+sigma                0.55       0.55      
+                                          
+REML                 331                  
+
+################ results for DAStau  ##############
+                     lmer       IRWLS     
+Coef                                      
+(Intercept)          23 (0.809) 23 (0.809)
+                                          
+VarComp                                   
+(Intercept) | plate  0.847      0.847     
+(Intercept) | sample 1.932      1.932     
+                                          
+sigma                0.55       0.55      
+                                          
+REML                 331                  
+> 
+> ## classic (no init)
+> fit(Yield ~ (1 | Batch), Dyestuff, init = lmerNoFit)
+
+######## DASvar ########
+Time elapsed: 0.141 0.001 0.141 0 0 
+Robust linear mixed model fit by DASvar 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-1.4117 -0.7634  0.1418  0.7792  1.8296 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept) 1764     42.00   
+ Residual             2451     49.51   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  1527.00      19.38   78.78
+
+Robustness weights for the residuals: 
+ All 30 weights are ~= 1.
+
+Robustness weights for the random effects: 
+[1] 1 1 1 1 1 1
+
+Rho functions used for fitting:
+  Residuals:
+    eff: classic 
+    sig: classic 
+  Random Effects, variance component 1 (Batch):
+    eff: classic 
+    vcp: classic 
+       A        B        C        D        E        F 
+-20.7549   0.4612  33.6690 -27.2119  66.8768 -53.0402 
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+
+######## DAStau ########
+Time elapsed: 0.138 0.001 0.138 0 0 
+Robust linear mixed model fit by DAStau 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-1.4117 -0.7634  0.1418  0.7792  1.8296 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept) 1764     42.00   
+ Residual             2451     49.51   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  1527.00      19.38   78.78
+
+Robustness weights for the residuals: 
+ All 30 weights are ~= 1.
+
+Robustness weights for the random effects: 
+[1] 1 1 1 1 1 1
+
+Rho functions used for fitting:
+  Residuals:
+    eff: classic 
+    sig: classic 
+  Random Effects, variance component 1 (Batch):
+    eff: classic 
+    vcp: classic 
+       A        B        C        D        E        F 
+-20.7549   0.4612  33.6690 -27.2119  66.8768 -53.0402 
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+
+################################################
+################################################
+################################################
+
+################ results for DASvar  ##############
+                    lmer        IRWLS      
+Coef                                       
+(Intercept)         1527 (19.4) 1527 (19.4)
+                                           
+VarComp                                    
+(Intercept) | Batch 42          42         
+                                           
+sigma               49.5        49.5       
+                                           
+REML                320                    
+
+################ results for DAStau  ##############
+                    lmer        IRWLS      
+Coef                                       
+(Intercept)         1527 (19.4) 1527 (19.4)
+                                           
+VarComp                                    
+(Intercept) | Batch 42          42         
+                                           
+sigma               49.5        49.5       
+                                           
+REML                320                    
+> fit(Yield ~ (1 | Batch), Dyestuff2, init = lmerNoFit)
+boundary (singular) fit: see help('isSingular')
+
+######## DASvar ########
+boundary (singular) fit: see help('isSingular')
+Time elapsed: 0.372 0.001 0.373 0 0 
+Robust linear mixed model fit by DASvar 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-1.7648 -0.7806 -0.0809  0.6689  2.0907 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept)  0.00    0.000   
+ Residual             13.81    3.716   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)   5.6656     0.6784   8.352
+
+Robustness weights for the residuals: 
+ All 30 weights are ~= 1.
+
+Robustness weights for the random effects: 
+[1] 1 1 1 1 1 1
+
+Rho functions used for fitting:
+  Residuals:
+    eff: classic 
+    sig: classic 
+  Random Effects, variance component 1 (Batch):
+    eff: classic 
+    vcp: classic 
+A B C D E F 
+0 0 0 0 0 0 
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+
+######## DAStau ########
+boundary (singular) fit: see help('isSingular')
+Time elapsed: 0.376 0.001 0.379 0 0 
+Robust linear mixed model fit by DAStau 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-1.7648 -0.7806 -0.0809  0.6689  2.0907 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept)  0.00    0.000   
+ Residual             13.81    3.716   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)   5.6656     0.6784   8.352
+
+Robustness weights for the residuals: 
+ All 30 weights are ~= 1.
+
+Robustness weights for the random effects: 
+[1] 1 1 1 1 1 1
+
+Rho functions used for fitting:
+  Residuals:
+    eff: classic 
+    sig: classic 
+  Random Effects, variance component 1 (Batch):
+    eff: classic 
+    vcp: classic 
+A B C D E F 
+0 0 0 0 0 0 
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+
+################################################
+################################################
+################################################
+
+################ results for DASvar  ##############
+                    lmer         IRWLS       
+Coef                                         
+(Intercept)         5.67 (0.678) 5.67 (0.678)
+                                             
+VarComp                                      
+(Intercept) | Batch 0            0           
+                                             
+sigma               3.72         3.72        
+                                             
+REML                162                      
+
+################ results for DAStau  ##############
+                    lmer         IRWLS       
+Coef                                         
+(Intercept)         5.67 (0.678) 5.67 (0.678)
+                                             
+VarComp                                      
+(Intercept) | Batch 0            0           
+                                             
+sigma               3.72         3.72        
+                                             
+REML                162                      
+> fit(diameter ~ (1|plate) + (1|sample), Penicillin, init = lmerNoFit)
+
+######## DASvar ########
+Time elapsed: 0.159 0 0.159 0 0 
+Robust linear mixed model fit by DASvar 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+     Min       1Q   Median       3Q      Max 
+-2.07923 -0.67140  0.06292  0.58377  2.97958 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ plate    (Intercept) 0.7169   0.8467  
+ sample   (Intercept) 3.7309   1.9316  
+ Residual             0.3024   0.5499  
+Number of obs: 144, groups: plate, 24; sample, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  22.9722     0.8086   28.41
+
+Robustness weights for the residuals: 
+ All 144 weights are ~= 1.
+
+Robustness weights for the random effects: 
+ All 30 weights are ~= 1.
+
+Rho functions used for fitting:
+  Residuals:
+    eff: classic 
+    sig: classic 
+  Random Effects, variance component 1 (plate):
+    eff: classic 
+    vcp: classic 
+  Random Effects, variance component 2 (sample):
+    eff: classic 
+    vcp: classic 
+        a         b         c         d         e         f         g         h 
+ 0.522543  0.522543  0.117993  0.219131  0.016856 -0.286556 -0.893379  0.522543 
+        i         j         k         l         m         n         o         p 
+-0.488830 -0.488830  0.623680  0.320268  0.927092  0.320268  0.623680  0.016856 
+        q         r         s         t         u         v         w         x 
+-0.185418 -0.185418 -0.893379  0.623680 -0.589967 -0.185418 -0.387693 -0.792242 
+        A         B         C         D         E         F 
+ 0.622665 -0.287687  0.551728 -0.027586 -0.003941 -0.855179 
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+
+######## DAStau ########
+Time elapsed: 0.149 0.001 0.152 0 0 
+Robust linear mixed model fit by DAStau 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+     Min       1Q   Median       3Q      Max 
+-2.07923 -0.67140  0.06292  0.58377  2.97958 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ plate    (Intercept) 0.7169   0.8467  
+ sample   (Intercept) 3.7309   1.9316  
+ Residual             0.3024   0.5499  
+Number of obs: 144, groups: plate, 24; sample, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  22.9722     0.8086   28.41
+
+Robustness weights for the residuals: 
+ All 144 weights are ~= 1.
+
+Robustness weights for the random effects: 
+ All 30 weights are ~= 1.
+
+Rho functions used for fitting:
+  Residuals:
+    eff: classic 
+    sig: classic 
+  Random Effects, variance component 1 (plate):
+    eff: classic 
+    vcp: classic 
+  Random Effects, variance component 2 (sample):
+    eff: classic 
+    vcp: classic 
+        a         b         c         d         e         f         g         h 
+ 0.522543  0.522543  0.117993  0.219131  0.016856 -0.286556 -0.893379  0.522543 
+        i         j         k         l         m         n         o         p 
+-0.488830 -0.488830  0.623680  0.320268  0.927092  0.320268  0.623680  0.016856 
+        q         r         s         t         u         v         w         x 
+-0.185418 -0.185418 -0.893379  0.623680 -0.589967 -0.185418 -0.387693 -0.792242 
+        A         B         C         D         E         F 
+ 0.622665 -0.287687  0.551728 -0.027586 -0.003941 -0.855179 
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+
+################################################
+################################################
+################################################
+
+################ results for DASvar  ##############
+                     lmer       IRWLS     
+Coef                                      
+(Intercept)          23 (0.809) 23 (0.809)
+                                          
+VarComp                                   
+(Intercept) | plate  0.847      0.847     
+(Intercept) | sample 1.932      1.932     
+                                          
+sigma                0.55       0.55      
+                                          
+REML                 331                  
+
+################ results for DAStau  ##############
+                     lmer       IRWLS     
+Coef                                      
+(Intercept)          23 (0.809) 23 (0.809)
+                                          
+VarComp                                   
+(Intercept) | plate  0.847      0.847     
+(Intercept) | sample 1.932      1.932     
+                                          
+sigma                0.55       0.55      
+                                          
+REML                 331                  
+> 
+> ## smoothPsi, wExp = 1
+> fit(Yield ~ (1 | Batch), Dyestuff,
++     rho.e = smoothPsi, rho.b = smoothPsi,
++     rho.sigma.b = smoothPsi, rho.sigma.e = smoothPsi)
+
+######## DASvar ########
+Time elapsed: 0.173 0.001 0.174 0 0 
+Robust linear mixed model fit by DASvar 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-1.3644 -0.7055  0.1305  0.7495  1.8435 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept) 2005     44.78   
+ Residual             2660     51.58   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  1526.13      21.09   72.36
+
+Robustness weights for the residuals: 
+ 25 weights are ~= 1. The remaining 5 ones are
+    2     3     5    18    23 
+0.959 0.959 0.959 0.728 0.956 
+
+Robustness weights for the random effects: 
+[1] 1.000 1.000 1.000 1.000 0.979 1.000
+
+Rho functions used for fitting:
+  Residuals:
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    sig: smoothed Huber (k = 1.345, s = 10) 
+  Random Effects, variance component 1 (Batch):
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    vcp: smoothed Huber (k = 1.345, s = 10) 
+      A       B       C       D       E       F 
+-19.173   1.245  34.014 -30.762  67.650 -51.549 
+
+######## DAStau ########
+Time elapsed: 0.169 0.001 0.17 0 0 
+Robust linear mixed model fit by DAStau 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-1.3508 -0.6969  0.1281  0.7410  1.8238 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept) 2076     45.57   
+ Residual             2715     52.10   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  1526.20      21.43   71.22
+
+Robustness weights for the residuals: 
+ 25 weights are ~= 1. The remaining 5 ones are
+    2     3     5    18    23 
+0.967 0.967 0.964 0.736 0.962 
+
+Robustness weights for the random effects: 
+[1] 1.000 1.000 1.000 1.000 0.988 1.000
+
+Rho functions used for fitting:
+  Residuals:
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    sig: smoothed Huber (k = 1.345, s = 10) 
+  Random Effects, variance component 1 (Batch):
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    vcp: smoothed Huber (k = 1.345, s = 10) 
+      A       B       C       D       E       F 
+-19.291   1.176  33.807 -30.561  67.095 -51.396 
+
+################################################
+################################################
+################################################
+
+################ results for DASvar  ##############
+                    IRWLS      
+Coef                           
+(Intercept)         1526 (21.1)
+                               
+VarComp                        
+(Intercept) | Batch 44.8       
+                               
+sigma               51.6       
+                               
+
+################ results for DAStau  ##############
+                    IRWLS      
+Coef                           
+(Intercept)         1526 (21.4)
+                               
+VarComp                        
+(Intercept) | Batch 45.6       
+                               
+sigma               52.1       
+                               
+> fit(Yield ~ (1 | Batch), Dyestuff2,
++     rho.e = smoothPsi, rho.b = smoothPsi,
++     rho.sigma.b = smoothPsi, rho.sigma.e = smoothPsi)
+
+######## DASvar ########
+boundary (singular) fit: see help('isSingular')
+Time elapsed: 0.18 0 0.181 0 0 
+Robust linear mixed model fit by DASvar 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+     Min       1Q   Median       3Q      Max 
+-1.68594 -0.73844 -0.06479  0.65704  2.02584 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept)  0.0     0.00    
+ Residual             14.9     3.86    
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)   5.6151     0.7227   7.769
+
+Robustness weights for the residuals: 
+ 23 weights are ~= 1. The remaining 7 ones are
+    8     9    10    11    13    21    29 
+0.984 0.836 0.795 0.924 0.664 0.947 0.996 
+
+Robustness weights for the random effects: 
+[1] 1 1 1 1 1 1
+
+Rho functions used for fitting:
+  Residuals:
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    sig: smoothed Huber (k = 1.345, s = 10) 
+  Random Effects, variance component 1 (Batch):
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    vcp: smoothed Huber (k = 1.345, s = 10) 
+A B C D E F 
+0 0 0 0 0 0 
+
+######## DAStau ########
+boundary (singular) fit: see help('isSingular')
+Time elapsed: 0.19 0.001 0.191 0 0 
+Robust linear mixed model fit by DAStau 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+     Min       1Q   Median       3Q      Max 
+-1.67687 -0.73429 -0.06415  0.65394  2.01561 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept)  0.00    0.00    
+ Residual             15.05    3.88    
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)   5.6139     0.7265   7.727
+
+Robustness weights for the residuals: 
+ 23 weights are ~= 1. The remaining 7 ones are
+    8     9    10    11    13    21    29 
+0.987 0.840 0.799 0.928 0.667 0.951 0.997 
+
+Robustness weights for the random effects: 
+[1] 1 1 1 1 1 1
+
+Rho functions used for fitting:
+  Residuals:
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    sig: smoothed Huber (k = 1.345, s = 10) 
+  Random Effects, variance component 1 (Batch):
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    vcp: smoothed Huber (k = 1.345, s = 10) 
+A B C D E F 
+0 0 0 0 0 0 
+
+################################################
+################################################
+################################################
+
+################ results for DASvar  ##############
+                    IRWLS       
+Coef                            
+(Intercept)         5.62 (0.723)
+                                
+VarComp                         
+(Intercept) | Batch 0           
+                                
+sigma               3.86        
+                                
+
+################ results for DAStau  ##############
+                    IRWLS       
+Coef                            
+(Intercept)         5.61 (0.727)
+                                
+VarComp                         
+(Intercept) | Batch 0           
+                                
+sigma               3.88        
+                                
+> fit(diameter ~ (1|plate) + (1|sample), Penicillin,
++     rho.e = smoothPsi, rho.b = smoothPsi,
++     rho.sigma.b = smoothPsi, rho.sigma.e = smoothPsi)
+
+######## DASvar ########
+Time elapsed: 0.161 0.001 0.162 0 0 
+Robust linear mixed model fit by DASvar 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-2.2127 -0.6556  0.0606  0.5837  3.4215 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ plate    (Intercept) 0.7986   0.8936  
+ sample   (Intercept) 3.9814   1.9954  
+ Residual             0.2957   0.5437  
+Number of obs: 144, groups: plate, 24; sample, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  23.0340     0.8574   26.86
+
+Robustness weights for the residuals: 
+ 124 weights are ~= 1. The remaining 20 ones are summarized as
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  0.393   0.666   0.832   0.804   0.952   0.992 
+
+Robustness weights for the random effects: 
+ 25 weights are ~= 1. The remaining 5 ones are
+    7    13    19    24    30 
+0.855 0.820 0.855 0.955 0.869 
+
+Rho functions used for fitting:
+  Residuals:
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    sig: smoothed Huber (k = 1.345, s = 10) 
+  Random Effects, variance component 1 (plate):
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    vcp: smoothed Huber (k = 1.345, s = 10) 
+  Random Effects, variance component 2 (sample):
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    vcp: smoothed Huber (k = 1.345, s = 10) 
+        a         b         c         d         e         f         g         h 
+ 0.460588  0.460588  0.127109  0.209872 -0.002176 -0.266982 -0.847936  0.506219 
+        i         j         k         l         m         n         o         p 
+-0.465490 -0.475894  0.591940  0.305389  0.887803  0.305389  0.569009  0.018839 
+        q         r         s         t         u         v         w         x 
+-0.170739 -0.171646 -0.847936  0.591940 -0.518337 -0.172195 -0.471076 -0.742658 
+        A         B         C         D         E         F 
+ 0.572989 -0.283333  0.510894 -0.043516 -0.032751 -0.833557 
+
+######## DAStau ########
+Time elapsed: 0.152 0 0.154 0 0 
+Robust linear mixed model fit by DAStau 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-2.1879 -0.6531  0.0631  0.5774  3.3762 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ plate    (Intercept) 0.8090   0.8994  
+ sample   (Intercept) 4.0690   2.0172  
+ Residual             0.3027   0.5502  
+Number of obs: 144, groups: plate, 24; sample, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  23.0285     0.8666   26.57
+
+Robustness weights for the residuals: 
+ 124 weights are ~= 1. The remaining 20 ones are summarized as
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  0.398   0.674   0.842   0.813   0.960   0.996 
+
+Robustness weights for the random effects: 
+ 25 weights are ~= 1. The remaining 5 ones are
+    7    13    19    24    30 
+0.861 0.825 0.861 0.959 0.879 
+
+Rho functions used for fitting:
+  Residuals:
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    sig: smoothed Huber (k = 1.345, s = 10) 
+  Random Effects, variance component 1 (plate):
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    vcp: smoothed Huber (k = 1.345, s = 10) 
+  Random Effects, variance component 2 (sample):
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    vcp: smoothed Huber (k = 1.345, s = 10) 
+        a         b         c         d         e         f         g         h 
+ 0.463953  0.463953  0.129167  0.211087 -0.001876 -0.268289 -0.851476  0.507808 
+        i         j         k         l         m         n         o         p 
+-0.466662 -0.476890  0.594956  0.307054  0.892020  0.307054  0.571810  0.019153 
+        q         r         s         t         u         v         w         x 
+-0.171799 -0.172495 -0.851476  0.594956 -0.520991 -0.172782 -0.471967 -0.746648 
+        A         B         C         D         E         F 
+ 0.575102 -0.282535  0.512692 -0.042075 -0.031242 -0.833003 
+
+################################################
+################################################
+################################################
+
+################ results for DASvar  ##############
+                     IRWLS     
+Coef                           
+(Intercept)          23 (0.857)
+                               
+VarComp                        
+(Intercept) | plate  0.894     
+(Intercept) | sample 1.995     
+                               
+sigma                0.544     
+                               
+
+################ results for DAStau  ##############
+                     IRWLS     
+Coef                           
+(Intercept)          23 (0.867)
+                               
+VarComp                        
+(Intercept) | plate  0.899     
+(Intercept) | sample 2.017     
+                               
+sigma                0.55      
+                               
+> 
+> ## smoothPsi Proposal 2 for estimating sigma only
+> fit(Yield ~ (1 | Batch), Dyestuff,
++     rho.e = smoothPsi, rho.b = smoothPsi,
++     rho.sigma.b = smoothPsi)
+
+######## DASvar ########
+Time elapsed: 0.188 0.001 0.189 0 0 
+Robust linear mixed model fit by DASvar 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-1.2890 -0.6865  0.1328  0.7147  1.7062 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept) 1901     43.60   
+ Residual             2982     54.61   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  1526.28      20.93   72.94
+
+Robustness weights for the residuals: 
+ 25 weights are ~= 1. The remaining 5 ones are
+    2     3     5    18    23 
+0.987 0.987 0.992 0.786 0.999 
+
+Robustness weights for the random effects: 
+[1] 1.00 1.00 1.00 1.00 0.99 1.00
+
+Rho functions used for fitting:
+  Residuals:
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    sig: smoothed Huber, Proposal 2 (k = 1.345, s = 10) 
+  Random Effects, variance component 1 (Batch):
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    vcp: smoothed Huber (k = 1.345, s = 10) 
+      A       B       C       D       E       F 
+-20.532   1.163  35.482 -31.243  69.988 -54.128 
+
+######## DAStau ########
+Time elapsed: 0.182 0.001 0.182 0 0 
+Robust linear mixed model fit by DAStau 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-1.2592 -0.6731  0.1307  0.6986  1.6586 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept) 1953     44.20   
+ Residual             3124     55.89   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  1526.39      21.26    71.8
+
+Robustness weights for the residuals: 
+ 26 weights are ~= 1. The remaining 4 ones are
+    2     3     5    18 
+0.996 0.996 0.998 0.807 
+
+Robustness weights for the random effects: 
+[1] 1.000 1.000 1.000 1.000 0.997 1.000
+
+Rho functions used for fitting:
+  Residuals:
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    sig: smoothed Huber, Proposal 2 (k = 1.345, s = 10) 
+  Random Effects, variance component 1 (Batch):
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    vcp: smoothed Huber (k = 1.345, s = 10) 
+      A       B       C       D       E       F 
+-20.880   1.064  35.558 -31.104  70.111 -54.510 
+
+################################################
+################################################
+################################################
+
+################ results for DASvar  ##############
+                    IRWLS      
+Coef                           
+(Intercept)         1526 (20.9)
+                               
+VarComp                        
+(Intercept) | Batch 43.6       
+                               
+sigma               54.6       
+                               
+
+################ results for DAStau  ##############
+                    IRWLS      
+Coef                           
+(Intercept)         1526 (21.3)
+                               
+VarComp                        
+(Intercept) | Batch 44.2       
+                               
+sigma               55.9       
+                               
+> fit(Yield ~ (1 | Batch), Dyestuff2,
++     rho.e = smoothPsi, rho.b = smoothPsi,
++     rho.sigma.b = smoothPsi)
+
+######## DASvar ########
+boundary (singular) fit: see help('isSingular')
+Time elapsed: 0.196 0 0.198 0 0 
+Robust linear mixed model fit by DASvar 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+     Min       1Q   Median       3Q      Max 
+-1.62421 -0.71050 -0.06088  0.63520  1.95517 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept)  0.00    0.000   
+ Residual             16.02    4.002   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)   5.6087     0.7495   7.484
+
+Robustness weights for the residuals: 
+ 24 weights are ~= 1. The remaining 6 ones are
+    8     9    10    11    13    21 
+0.997 0.863 0.824 0.951 0.687 0.971 
+
+Robustness weights for the random effects: 
+[1] 1 1 1 1 1 1
+
+Rho functions used for fitting:
+  Residuals:
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    sig: smoothed Huber, Proposal 2 (k = 1.345, s = 10) 
+  Random Effects, variance component 1 (Batch):
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    vcp: smoothed Huber (k = 1.345, s = 10) 
+A B C D E F 
+0 0 0 0 0 0 
+
+######## DAStau ########
+boundary (singular) fit: see help('isSingular')
+Time elapsed: 0.202 0 0.203 0 0 
+Robust linear mixed model fit by DAStau 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+     Min       1Q   Median       3Q      Max 
+-1.60162 -0.70046 -0.05976  0.62677  1.92861 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ Batch    (Intercept)  0.00    0.000   
+ Residual             16.47    4.058   
+Number of obs: 30, groups: Batch, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)   5.6075     0.7599   7.379
+
+Robustness weights for the residuals: 
+ 25 weights are ~= 1. The remaining 5 ones are
+    9    10    11    13    21 
+0.874 0.835 0.960 0.697 0.979 
+
+Robustness weights for the random effects: 
+[1] 1 1 1 1 1 1
+
+Rho functions used for fitting:
+  Residuals:
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    sig: smoothed Huber, Proposal 2 (k = 1.345, s = 10) 
+  Random Effects, variance component 1 (Batch):
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    vcp: smoothed Huber (k = 1.345, s = 10) 
+A B C D E F 
+0 0 0 0 0 0 
+
+################################################
+################################################
+################################################
+
+################ results for DASvar  ##############
+                    IRWLS       
+Coef                            
+(Intercept)         5.61 (0.749)
+                                
+VarComp                         
+(Intercept) | Batch 0           
+                                
+sigma               4           
+                                
+
+################ results for DAStau  ##############
+                    IRWLS      
+Coef                           
+(Intercept)         5.61 (0.76)
+                               
+VarComp                        
+(Intercept) | Batch 0          
+                               
+sigma               4.06       
+                               
+> fit(diameter ~ (1|plate) + (1|sample), Penicillin,
++     rho.e = smoothPsi, rho.b = smoothPsi,
++     rho.sigma.b = smoothPsi)
+
+######## DASvar ########
+Time elapsed: 0.177 0.001 0.178 0 0 
+Robust linear mixed model fit by DASvar 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-2.2117 -0.6555  0.0607  0.5835  3.4196 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ plate    (Intercept) 0.7985   0.8936  
+ sample   (Intercept) 3.9815   1.9954  
+ Residual             0.2959   0.5440  
+Number of obs: 144, groups: plate, 24; sample, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  23.0340     0.8574   26.86
+
+Robustness weights for the residuals: 
+ 124 weights are ~= 1. The remaining 20 ones are summarized as
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  0.393   0.666   0.832   0.805   0.953   0.992 
+
+Robustness weights for the random effects: 
+ 25 weights are ~= 1. The remaining 5 ones are
+    7    13    19    24    30 
+0.855 0.820 0.855 0.955 0.869 
+
+Rho functions used for fitting:
+  Residuals:
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    sig: smoothed Huber, Proposal 2 (k = 1.345, s = 10) 
+  Random Effects, variance component 1 (plate):
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    vcp: smoothed Huber (k = 1.345, s = 10) 
+  Random Effects, variance component 2 (sample):
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    vcp: smoothed Huber (k = 1.345, s = 10) 
+        a         b         c         d         e         f         g         h 
+ 0.460822  0.460822  0.127209  0.209961 -0.002179 -0.267117 -0.848325  0.506397 
+        i         j         k         l         m         n         o         p 
+-0.465667 -0.476067  0.592199  0.305521  0.888202  0.305521  0.569246  0.018842 
+        q         r         s         t         u         v         w         x 
+-0.170839 -0.171739 -0.848325  0.592199 -0.518582 -0.172276 -0.471244 -0.743030 
+        A         B         C         D         E         F 
+ 0.573262 -0.283477  0.511128 -0.043531 -0.032759 -0.833945 
+
+######## DAStau ########
+Time elapsed: 0.164 0.001 0.165 0 0 
+Robust linear mixed model fit by DAStau 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-2.1559 -0.6484  0.0681  0.5682  3.3162 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ plate    (Intercept) 0.8073   0.8985  
+ sample   (Intercept) 4.0704   2.0175  
+ Residual             0.3121   0.5587  
+Number of obs: 144, groups: plate, 24; sample, 6
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  23.0287     0.8668   26.57
+
+Robustness weights for the residuals: 
+ 124 weights are ~= 1. The remaining 20 ones are summarized as
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  0.406   0.684   0.855   0.823   0.969   0.999 
+
+Robustness weights for the random effects: 
+ 25 weights are ~= 1. The remaining 5 ones are
+    7    13    19    24    30 
+0.862 0.826 0.862 0.959 0.879 
+
+Rho functions used for fitting:
+  Residuals:
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    sig: smoothed Huber, Proposal 2 (k = 1.345, s = 10) 
+  Random Effects, variance component 1 (plate):
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    vcp: smoothed Huber (k = 1.345, s = 10) 
+  Random Effects, variance component 2 (sample):
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    vcp: smoothed Huber (k = 1.345, s = 10) 
+        a         b         c         d         e         f         g         h 
+ 0.471695  0.471695  0.132393  0.213963 -0.001968 -0.272609 -0.864167  0.513583 
+        i         j         k         l         m         n         o         p 
+-0.472472 -0.482513  0.603382  0.311317  0.904997  0.311317  0.579530  0.019253 
+        q         r         s         t         u         v         w         x 
+-0.174948 -0.175380 -0.864167  0.603382 -0.529205 -0.175457 -0.477380 -0.758566 
+        A         B         C         D         E         F 
+ 0.584051 -0.287210  0.520363 -0.042559 -0.031457 -0.845653 
+
+################################################
+################################################
+################################################
+
+################ results for DASvar  ##############
+                     IRWLS     
+Coef                           
+(Intercept)          23 (0.857)
+                               
+VarComp                        
+(Intercept) | plate  0.894     
+(Intercept) | sample 1.995     
+                               
+sigma                0.544     
+                               
+
+################ results for DAStau  ##############
+                     IRWLS     
+Coef                           
+(Intercept)          23 (0.867)
+                               
+VarComp                        
+(Intercept) | plate  0.899     
+(Intercept) | sample 2.018     
+                               
+sigma                0.559     
+                               
 > 
 > ## smoothPsi Proposal 2 (default)
 > fit(Yield ~ (1 | Batch), Dyestuff,
 +     rho.e = smoothPsi, rho.b = smoothPsi)
 
 ######## DASvar ########
-Time elapsed: 0.283 0.01 0.294 0 0 
+Time elapsed: 0.181 0.001 0.183 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -146,7 +1527,7 @@ Rho functions used for fitting:
 -19.822   1.081  33.966 -30.283  67.013 -51.900 
 
 ######## DAStau ########
-Time elapsed: 0.183 0.002 0.185 0 0 
+Time elapsed: 0.178 0 0.179 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -213,7 +1594,7 @@ sigma               55.3
 
 ######## DASvar ########
 boundary (singular) fit: see help('isSingular')
-Time elapsed: 0.197 0.002 0.199 0 0 
+Time elapsed: 0.198 0.001 0.199 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -252,7 +1633,7 @@ A B C D E F
 
 ######## DAStau ########
 boundary (singular) fit: see help('isSingular')
-Time elapsed: 0.209 0.003 0.213 0 0 
+Time elapsed: 0.212 0.001 0.212 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -318,7 +1699,7 @@ sigma               4.06
 +     rho.e = smoothPsi, rho.b = smoothPsi)
 
 ######## DASvar ########
-Time elapsed: 0.167 0.003 0.169 0 0 
+Time elapsed: 0.175 0 0.175 0 0 
 Robust linear mixed model fit by DASvar 
 Formula: formula 
    Data: data 
@@ -370,7 +1751,7 @@ Rho functions used for fitting:
 -2.667e-02 -7.956e-01 
 
 ######## DAStau ########
-Time elapsed: 0.162 0.002 0.164 0 0 
+Time elapsed: 0.166 0.001 0.168 0 0 
 Robust linear mixed model fit by DAStau 
 Formula: formula 
    Data: data 
@@ -447,40 +1828,972 @@ VarComp
 sigma                0.558     
                                
 > 
-> if (FALSE) {
-+     ## correlated random effects
-+     fit(Reaction ~ Days + (Days|Subject), sleepstudy,
-+         methods = c("DASvar", "DAStau"))
-+     fit(Reaction ~ Days + (Days|Subject), sleepstudy,
-+         methods = c("DASvar", "DAStau"), init = lmerNoFit)
-+     ## robust
-+     fit(Reaction ~ Days + (Days|Subject), sleepstudy,
-+         rho.e = smoothPsi, rho.b = smoothPsi,
-+         methods = c("DASvar")) ##, "DAStau"))
-+     fit(Reaction ~ Days + (Days|Subject), sleepstudy,
-+         rho.e = smoothPsi, rho.b = smoothPsi,
-+         methods = c("DASvar"), ##, "DAStau"),
-+         init = lmerNoFit)
-+ 
-+     ## ## including a 0 variance compontent
-+     sleepstudy2 <- within(sleepstudy, Group <- letters[1:4])
-+     fit(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2,
-+         methods = c("DASvar", "DAStau"))
-+     fit(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2,
-+         methods = c("DASvar", "DAStau"), init = lmerNoFit)
-+     ## robust
-+     fit(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2,
-+         rho.e = smoothPsi, rho.b = smoothPsi,
-+         methods = c("DASvar")) ##, "DAStau"))
-+     fit(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2,
-+         rho.e = smoothPsi, rho.b = smoothPsi,
-+         methods = c("DASvar"), ##, "DAStau"),
-+         init = lmerNoFit)
-+ }
+> ## correlated random effects
+> fit(Reaction ~ Days + (Days|Subject), sleepstudy,
++     methods = c("DASvar", "DAStau"))
+
+######## DASvar ########
+Time elapsed: 0.177 0.002 0.179 0 0 
+Robust linear mixed model fit by DASvar 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-3.9536 -0.4634  0.0231  0.4634  5.1793 
+
+Random effects:
+ Groups   Name        Variance Std.Dev. Corr
+ Subject  (Intercept) 612.09   24.740       
+          Days         35.07    5.922   0.07
+ Residual             654.94   25.592       
+Number of obs: 180, groups: Subject, 18
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  251.405      6.825   36.84
+Days          10.467      1.546    6.77
+
+Correlation of Fixed Effects:
+     (Intr)
+Days -0.138
+
+Robustness weights for the residuals: 
+ All 180 weights are ~= 1.
+
+Robustness weights for the random effects: 
+ All 36 weights are ~= 1.
+
+Rho functions used for fitting:
+  Residuals:
+    eff: classic 
+    sig: classic 
+  Random Effects, variance component 1 (Subject):
+    eff: classic 
+    vcp: classic 
+     308      308      309      309      310      310      330      330 
+  2.3363  39.6845 -41.7888 -34.5841 -40.3009 -20.9500  24.5057 -22.4593 
+     331      331      332      332      333      333      334      334 
+ 23.0262 -14.8074   9.3506  -1.7930  17.4199  -2.1128  -7.4815   5.1451 
+     335      335      337      337      349      349      350      350 
+ -0.3452 -46.5417  36.0910  34.9956 -26.0776   6.7948 -13.5197  29.5323 
+     351      351      352      352      369      369      370      370 
+  4.7354 -13.3693  21.5815  13.8957   3.3882   3.5547 -26.4943  22.6251 
+     371      371      372      372 
+  0.8348  -4.3342  12.7383   4.7239 
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+
+######## DAStau ########
+Time elapsed: 0.225 0.004 0.229 0 0 
+Robust linear mixed model fit by DAStau 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-3.9536 -0.4634  0.0231  0.4634  5.1793 
+
+Random effects:
+ Groups   Name        Variance Std.Dev. Corr
+ Subject  (Intercept) 612.09   24.740       
+          Days         35.07    5.922   0.07
+ Residual             654.94   25.592       
+Number of obs: 180, groups: Subject, 18
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  251.405      6.825   36.84
+Days          10.467      1.546    6.77
+
+Correlation of Fixed Effects:
+     (Intr)
+Days -0.138
+
+Robustness weights for the residuals: 
+ All 180 weights are ~= 1.
+
+Robustness weights for the random effects: 
+ All 36 weights are ~= 1.
+
+Rho functions used for fitting:
+  Residuals:
+    eff: classic 
+    sig: classic 
+  Random Effects, variance component 1 (Subject):
+    eff: classic 
+    vcp: classic 
+     308      308      309      309      310      310      330      330 
+  2.3363  39.6845 -41.7888 -34.5841 -40.3009 -20.9500  24.5057 -22.4593 
+     331      331      332      332      333      333      334      334 
+ 23.0262 -14.8074   9.3506  -1.7930  17.4199  -2.1128  -7.4815   5.1451 
+     335      335      337      337      349      349      350      350 
+ -0.3452 -46.5417  36.0910  34.9956 -26.0776   6.7948 -13.5197  29.5323 
+     351      351      352      352      369      369      370      370 
+  4.7354 -13.3693  21.5815  13.8957   3.3882   3.5547 -26.4943  22.6251 
+     371      371      372      372 
+  0.8348  -4.3342  12.7383   4.7239 
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+
+################################################
+################################################
+################################################
+
+################ results for DASvar  ##############
+                             lmer         IRWLS       
+Coef                                                  
+(Intercept)                  251.4 (6.82) 251.4 (6.82)
+Days                          10.5 (1.55)  10.5 (1.55)
+                                                      
+VarComp                                               
+(Intercept) | Subject        24.74        24.74       
+Days | Subject                5.92         5.92       
+                                                      
+Correlations                                          
+(Intercept) x Days | Subject 0.0656       0.0656      
+                                                      
+sigma                        25.6         25.6        
+                                                      
+REML                         1744                     
+
+################ results for DAStau  ##############
+                             lmer         IRWLS       
+Coef                                                  
+(Intercept)                  251.4 (6.82) 251.4 (6.82)
+Days                          10.5 (1.55)  10.5 (1.55)
+                                                      
+VarComp                                               
+(Intercept) | Subject        24.74        24.74       
+Days | Subject                5.92         5.92       
+                                                      
+Correlations                                          
+(Intercept) x Days | Subject 0.0656       0.0656      
+                                                      
+sigma                        25.6         25.6        
+                                                      
+REML                         1744                     
+> fit(Reaction ~ Days + (Days|Subject), sleepstudy,
++     methods = c("DASvar", "DAStau"), init = lmerNoFit)
+
+######## DASvar ########
+Time elapsed: 0.249 0.002 0.25 0 0 
+Robust linear mixed model fit by DASvar 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-3.9536 -0.4634  0.0231  0.4634  5.1793 
+
+Random effects:
+ Groups   Name        Variance Std.Dev. Corr
+ Subject  (Intercept) 612.09   24.740       
+          Days         35.07    5.922   0.07
+ Residual             654.94   25.592       
+Number of obs: 180, groups: Subject, 18
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  251.405      6.825   36.84
+Days          10.467      1.546    6.77
+
+Correlation of Fixed Effects:
+     (Intr)
+Days -0.138
+
+Robustness weights for the residuals: 
+ All 180 weights are ~= 1.
+
+Robustness weights for the random effects: 
+ All 36 weights are ~= 1.
+
+Rho functions used for fitting:
+  Residuals:
+    eff: classic 
+    sig: classic 
+  Random Effects, variance component 1 (Subject):
+    eff: classic 
+    vcp: classic 
+     308      308      309      309      310      310      330      330 
+  2.3363  39.6845 -41.7888 -34.5841 -40.3009 -20.9500  24.5057 -22.4593 
+     331      331      332      332      333      333      334      334 
+ 23.0262 -14.8074   9.3506  -1.7930  17.4199  -2.1128  -7.4815   5.1451 
+     335      335      337      337      349      349      350      350 
+ -0.3452 -46.5417  36.0910  34.9956 -26.0776   6.7948 -13.5197  29.5323 
+     351      351      352      352      369      369      370      370 
+  4.7354 -13.3693  21.5815  13.8957   3.3882   3.5547 -26.4943  22.6251 
+     371      371      372      372 
+  0.8348  -4.3342  12.7383   4.7239 
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+
+######## DAStau ########
+Time elapsed: 0.383 0.006 0.391 0 0 
+Robust linear mixed model fit by DAStau 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-3.9536 -0.4634  0.0231  0.4634  5.1793 
+
+Random effects:
+ Groups   Name        Variance Std.Dev. Corr
+ Subject  (Intercept) 612.09   24.740       
+          Days         35.07    5.922   0.07
+ Residual             654.94   25.592       
+Number of obs: 180, groups: Subject, 18
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  251.405      6.825   36.84
+Days          10.467      1.546    6.77
+
+Correlation of Fixed Effects:
+     (Intr)
+Days -0.138
+
+Robustness weights for the residuals: 
+ All 180 weights are ~= 1.
+
+Robustness weights for the random effects: 
+ All 36 weights are ~= 1.
+
+Rho functions used for fitting:
+  Residuals:
+    eff: classic 
+    sig: classic 
+  Random Effects, variance component 1 (Subject):
+    eff: classic 
+    vcp: classic 
+     308      308      309      309      310      310      330      330 
+  2.3363  39.6845 -41.7888 -34.5841 -40.3009 -20.9500  24.5057 -22.4593 
+     331      331      332      332      333      333      334      334 
+ 23.0262 -14.8074   9.3506  -1.7930  17.4199  -2.1128  -7.4815   5.1451 
+     335      335      337      337      349      349      350      350 
+ -0.3452 -46.5417  36.0910  34.9956 -26.0776   6.7948 -13.5197  29.5323 
+     351      351      352      352      369      369      370      370 
+  4.7354 -13.3693  21.5815  13.8957   3.3882   3.5547 -26.4943  22.6251 
+     371      371      372      372 
+  0.8348  -4.3342  12.7383   4.7239 
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+
+################################################
+################################################
+################################################
+
+################ results for DASvar  ##############
+                             lmer         IRWLS       
+Coef                                                  
+(Intercept)                  251.4 (6.82) 251.4 (6.82)
+Days                          10.5 (1.55)  10.5 (1.55)
+                                                      
+VarComp                                               
+(Intercept) | Subject        24.74        24.74       
+Days | Subject                5.92         5.92       
+                                                      
+Correlations                                          
+(Intercept) x Days | Subject 0.0656       0.0656      
+                                                      
+sigma                        25.6         25.6        
+                                                      
+REML                         1744                     
+
+################ results for DAStau  ##############
+                             lmer         IRWLS       
+Coef                                                  
+(Intercept)                  251.4 (6.82) 251.4 (6.82)
+Days                          10.5 (1.55)  10.5 (1.55)
+                                                      
+VarComp                                               
+(Intercept) | Subject        24.74        24.74       
+Days | Subject                5.92         5.92       
+                                                      
+Correlations                                          
+(Intercept) x Days | Subject 0.0656       0.0656      
+                                                      
+sigma                        25.6         25.6        
+                                                      
+REML                         1744                     
+> ## robust
+> fit(Reaction ~ Days + (Days|Subject), sleepstudy,
++     rho.e = smoothPsi, rho.b = smoothPsi,
++     methods = c("DASvar")) ##, "DAStau"))
+
+######## DASvar ########
+Time elapsed: 0.5 0.004 0.506 0 0 
+Robust linear mixed model fit by DASvar 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-6.5115 -0.6087 -0.0211  0.5976  7.2831 
+
+Random effects:
+ Groups   Name        Variance Std.Dev. Corr 
+ Subject  (Intercept) 695.36   26.370        
+          Days         26.29    5.128   -0.33
+ Residual             329.83   18.161        
+Number of obs: 180, groups: Subject, 18
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  255.759      7.672   33.34
+Days          10.649      1.486    7.17
+
+Correlation of Fixed Effects:
+     (Intr)
+Days -0.390
+
+Robustness weights for the residuals: 
+ 150 weights are ~= 1. The remaining 30 ones are summarized as
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  0.185   0.549   0.661   0.682   0.856   0.998 
+
+Robustness weights for the random effects: 
+ 18 weights are ~= 1. The remaining 18 ones are summarized as
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  0.144   0.207   0.213   0.418   0.683   0.833 
+
+Rho functions used for fitting:
+  Residuals:
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    sig: smoothed Huber, Proposal 2 (k = 1.345, s = 10) 
+  Random Effects, variance component 1 (Subject):
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    vcp: smoothed Huber (k = 1.345, s = 10) 
+      308       308       309       309       310       310       330       330 
+ -7.27994  45.02252 -34.43548 -43.63598 -34.86356 -29.86900  12.96240 -14.17319 
+      331       331       332       332       333       333       334       334 
+ 15.01092  -7.79000  -2.34050   2.69974  10.45620   0.42985  -7.83544   0.07109 
+      335       335       337       337       349       349       350       350 
+  3.53196 -47.55048  25.57178  38.60405 -22.94681  -1.68308 -13.96637  21.31222 
+      351       351       352       352       369       369       370       370 
+ -0.54285  -9.82439  20.12126  12.11349  -0.18098   2.15850 -27.21225  14.03645 
+      371       371       372       372 
+ -0.99299  -4.14324   6.72405   5.32013 
+
+################################################
+################################################
+################################################
+
+################ results for DASvar  ##############
+                             IRWLS       
+Coef                                     
+(Intercept)                  255.8 (7.67)
+Days                          10.6 (1.49)
+                                         
+VarComp                                  
+(Intercept) | Subject        26.37       
+Days | Subject                5.13       
+                                         
+Correlations                             
+(Intercept) x Days | Subject -0.334      
+                                         
+sigma                        18.2        
+                                         
+> fit(Reaction ~ Days + (Days|Subject), sleepstudy,
++     rho.e = smoothPsi, rho.b = smoothPsi,
++     methods = c("DASvar"), ##, "DAStau"),
++     init = lmerNoFit)
+
+######## DASvar ########
+Time elapsed: 0.467 0.005 0.476 0 0 
+Robust linear mixed model fit by DASvar 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-6.5115 -0.6087 -0.0211  0.5976  7.2831 
+
+Random effects:
+ Groups   Name        Variance Std.Dev. Corr 
+ Subject  (Intercept) 695.36   26.370        
+          Days         26.29    5.128   -0.33
+ Residual             329.83   18.161        
+Number of obs: 180, groups: Subject, 18
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  255.759      7.672   33.34
+Days          10.649      1.486    7.17
+
+Correlation of Fixed Effects:
+     (Intr)
+Days -0.390
+
+Robustness weights for the residuals: 
+ 150 weights are ~= 1. The remaining 30 ones are summarized as
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  0.185   0.549   0.661   0.682   0.856   0.998 
+
+Robustness weights for the random effects: 
+ 18 weights are ~= 1. The remaining 18 ones are summarized as
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  0.144   0.207   0.213   0.418   0.683   0.833 
+
+Rho functions used for fitting:
+  Residuals:
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    sig: smoothed Huber, Proposal 2 (k = 1.345, s = 10) 
+  Random Effects, variance component 1 (Subject):
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    vcp: smoothed Huber (k = 1.345, s = 10) 
+      308       308       309       309       310       310       330       330 
+ -7.27994  45.02252 -34.43548 -43.63598 -34.86356 -29.86900  12.96240 -14.17319 
+      331       331       332       332       333       333       334       334 
+ 15.01092  -7.79000  -2.34050   2.69974  10.45620   0.42985  -7.83544   0.07109 
+      335       335       337       337       349       349       350       350 
+  3.53196 -47.55048  25.57178  38.60405 -22.94681  -1.68308 -13.96637  21.31222 
+      351       351       352       352       369       369       370       370 
+ -0.54285  -9.82439  20.12126  12.11349  -0.18098   2.15850 -27.21225  14.03645 
+      371       371       372       372 
+ -0.99299  -4.14324   6.72405   5.32013 
+
+################################################
+################################################
+################################################
+
+################ results for DASvar  ##############
+                             IRWLS       
+Coef                                     
+(Intercept)                  255.8 (7.67)
+Days                          10.6 (1.49)
+                                         
+VarComp                                  
+(Intercept) | Subject        26.37       
+Days | Subject                5.13       
+                                         
+Correlations                             
+(Intercept) x Days | Subject -0.334      
+                                         
+sigma                        18.2        
+                                         
+> 
+> ## ## including a 0 variance compontent
+> sleepstudy2 <- within(sleepstudy, Group <- letters[1:4])
+> fit(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2,
++     methods = c("DASvar", "DAStau"))
+boundary (singular) fit: see help('isSingular')
+
+######## DASvar ########
+boundary (singular) fit: see help('isSingular')
+Time elapsed: 1.012 0.009 1.022 0 0 
+Robust linear mixed model fit by DASvar 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-3.9536 -0.4634  0.0231  0.4634  5.1793 
+
+Random effects:
+ Groups   Name        Variance  Std.Dev. Corr
+ Subject  (Intercept) 6.121e+02 24.74045     
+          Days        3.507e+01  5.92213 0.07
+ Group    (Intercept) 1.639e-06  0.00128     
+ Residual             6.549e+02 25.59182     
+Number of obs: 180, groups: Subject, 18; Group, 4
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  251.405      6.825   36.84
+Days          10.467      1.546    6.77
+
+Correlation of Fixed Effects:
+     (Intr)
+Days -0.138
+
+Robustness weights for the residuals: 
+ All 180 weights are ~= 1.
+
+Robustness weights for the random effects: 
+ All 40 weights are ~= 1.
+
+Rho functions used for fitting:
+  Residuals:
+    eff: classic 
+    sig: classic 
+  Random Effects, variance component 1 (Subject):
+    eff: classic 
+    vcp: classic 
+  Random Effects, variance component 2 (Group):
+    eff: classic 
+    vcp: classic 
+       308        308        309        309        310        310        330 
+  2.336286  39.684502 -41.788767 -34.584124 -40.300941 -20.949982  24.505734 
+       330        331        331        332        332        333        333 
+-22.459268  23.026218 -14.807444   9.350593  -1.792955  17.419942  -2.112813 
+       334        334        335        335        337        337        349 
+ -7.481466   5.145143  -0.345178 -46.541690  36.090993  34.995587 -26.077638 
+       349        350        350        351        351        352        352 
+  6.794814 -13.519719  29.532278   4.735367 -13.369250  21.581548  13.895660 
+       369        369        370        370        371        371        372 
+  3.388167   3.554730 -26.494257  22.625122   0.834812  -4.334243  12.738306 
+       372          a          b          c          d 
+  4.723933   0.002444   0.009834  -0.008657  -0.003621 
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+
+######## DAStau ########
+boundary (singular) fit: see help('isSingular')
+Time elapsed: 1.649 0.014 1.68 0 0 
+Robust linear mixed model fit by DAStau 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-3.9536 -0.4634  0.0231  0.4634  5.1793 
+
+Random effects:
+ Groups   Name        Variance  Std.Dev. Corr
+ Subject  (Intercept) 6.121e+02 24.74045     
+          Days        3.507e+01  5.92213 0.07
+ Group    (Intercept) 1.639e-06  0.00128     
+ Residual             6.549e+02 25.59182     
+Number of obs: 180, groups: Subject, 18; Group, 4
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  251.405      6.825   36.84
+Days          10.467      1.546    6.77
+
+Correlation of Fixed Effects:
+     (Intr)
+Days -0.138
+
+Robustness weights for the residuals: 
+ All 180 weights are ~= 1.
+
+Robustness weights for the random effects: 
+ All 40 weights are ~= 1.
+
+Rho functions used for fitting:
+  Residuals:
+    eff: classic 
+    sig: classic 
+  Random Effects, variance component 1 (Subject):
+    eff: classic 
+    vcp: classic 
+  Random Effects, variance component 2 (Group):
+    eff: classic 
+    vcp: classic 
+       308        308        309        309        310        310        330 
+  2.336286  39.684502 -41.788767 -34.584124 -40.300941 -20.949982  24.505734 
+       330        331        331        332        332        333        333 
+-22.459268  23.026218 -14.807444   9.350593  -1.792955  17.419942  -2.112813 
+       334        334        335        335        337        337        349 
+ -7.481466   5.145143  -0.345178 -46.541690  36.090993  34.995587 -26.077638 
+       349        350        350        351        351        352        352 
+  6.794814 -13.519719  29.532278   4.735367 -13.369250  21.581548  13.895660 
+       369        369        370        370        371        371        372 
+  3.388167   3.554730 -26.494257  22.625122   0.834812  -4.334243  12.738306 
+       372          a          b          c          d 
+  4.723933   0.002444   0.009834  -0.008657  -0.003621 
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+
+################################################
+################################################
+################################################
+
+################ results for DASvar  ##############
+                             lmer         IRWLS       
+Coef                                                  
+(Intercept)                  251.4 (6.82) 251.4 (6.82)
+Days                          10.5 (1.55)  10.5 (1.55)
+                                                      
+VarComp                                               
+(Intercept) | Subject        24.74045     24.74045    
+Days | Subject                5.92213      5.92213    
+(Intercept) | Group           0.00000      0.00128    
+                                                      
+Correlations                                          
+(Intercept) x Days | Subject 0.0656       0.0656      
+                                                      
+sigma                        25.6         25.6        
+                                                      
+REML                         1744                     
+
+################ results for DAStau  ##############
+                             lmer         IRWLS       
+Coef                                                  
+(Intercept)                  251.4 (6.82) 251.4 (6.82)
+Days                          10.5 (1.55)  10.5 (1.55)
+                                                      
+VarComp                                               
+(Intercept) | Subject        24.74045     24.74045    
+Days | Subject                5.92213      5.92213    
+(Intercept) | Group           0.00000      0.00128    
+                                                      
+Correlations                                          
+(Intercept) x Days | Subject 0.0656       0.0656      
+                                                      
+sigma                        25.6         25.6        
+                                                      
+REML                         1744                     
+> fit(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2,
++     methods = c("DASvar", "DAStau"), init = lmerNoFit)
+boundary (singular) fit: see help('isSingular')
+
+######## DASvar ########
+boundary (singular) fit: see help('isSingular')
+Time elapsed: 1.03 0.007 1.041 0 0 
+Robust linear mixed model fit by DASvar 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-3.9536 -0.4634  0.0231  0.4634  5.1793 
+
+Random effects:
+ Groups   Name        Variance  Std.Dev.  Corr
+ Subject  (Intercept) 6.121e+02 24.740453     
+          Days        3.507e+01  5.922133 0.07
+ Group    (Intercept) 1.667e-06  0.001291     
+ Residual             6.549e+02 25.591816     
+Number of obs: 180, groups: Subject, 18; Group, 4
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  251.405      6.825   36.84
+Days          10.467      1.546    6.77
+
+Correlation of Fixed Effects:
+     (Intr)
+Days -0.138
+
+Robustness weights for the residuals: 
+ All 180 weights are ~= 1.
+
+Robustness weights for the random effects: 
+ All 40 weights are ~= 1.
+
+Rho functions used for fitting:
+  Residuals:
+    eff: classic 
+    sig: classic 
+  Random Effects, variance component 1 (Subject):
+    eff: classic 
+    vcp: classic 
+  Random Effects, variance component 2 (Group):
+    eff: classic 
+    vcp: classic 
+       308        308        309        309        310        310        330 
+  2.336286  39.684502 -41.788767 -34.584124 -40.300941 -20.949982  24.505733 
+       330        331        331        332        332        333        333 
+-22.459268  23.026218 -14.807444   9.350593  -1.792955  17.419942  -2.112813 
+       334        334        335        335        337        337        349 
+ -7.481466   5.145143  -0.345178 -46.541690  36.090993  34.995587 -26.077638 
+       349        350        350        351        351        352        352 
+  6.794814 -13.519719  29.532278   4.735367 -13.369250  21.581548  13.895660 
+       369        369        370        370        371        371        372 
+  3.388167   3.554730 -26.494257  22.625122   0.834812  -4.334243  12.738306 
+       372          a          b          c          d 
+  4.723933   0.002465   0.009918  -0.008731  -0.003652 
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+
+######## DAStau ########
+boundary (singular) fit: see help('isSingular')
+Time elapsed: 1.767 0.012 1.793 0 0 
+Robust linear mixed model fit by DAStau 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-3.9536 -0.4634  0.0231  0.4634  5.1793 
+
+Random effects:
+ Groups   Name        Variance  Std.Dev.  Corr
+ Subject  (Intercept) 6.121e+02 24.740453     
+          Days        3.507e+01  5.922133 0.07
+ Group    (Intercept) 1.667e-06  0.001291     
+ Residual             6.549e+02 25.591816     
+Number of obs: 180, groups: Subject, 18; Group, 4
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  251.405      6.825   36.84
+Days          10.467      1.546    6.77
+
+Correlation of Fixed Effects:
+     (Intr)
+Days -0.138
+
+Robustness weights for the residuals: 
+ All 180 weights are ~= 1.
+
+Robustness weights for the random effects: 
+ All 40 weights are ~= 1.
+
+Rho functions used for fitting:
+  Residuals:
+    eff: classic 
+    sig: classic 
+  Random Effects, variance component 1 (Subject):
+    eff: classic 
+    vcp: classic 
+  Random Effects, variance component 2 (Group):
+    eff: classic 
+    vcp: classic 
+       308        308        309        309        310        310        330 
+  2.336286  39.684502 -41.788767 -34.584124 -40.300941 -20.949982  24.505733 
+       330        331        331        332        332        333        333 
+-22.459268  23.026218 -14.807444   9.350593  -1.792955  17.419942  -2.112813 
+       334        334        335        335        337        337        349 
+ -7.481466   5.145143  -0.345178 -46.541690  36.090993  34.995587 -26.077638 
+       349        350        350        351        351        352        352 
+  6.794814 -13.519719  29.532278   4.735367 -13.369250  21.581548  13.895660 
+       369        369        370        370        371        371        372 
+  3.388167   3.554730 -26.494257  22.625122   0.834812  -4.334243  12.738306 
+       372          a          b          c          d 
+  4.723933   0.002465   0.009918  -0.008731  -0.003652 
+#### Checking equality with lmer... ####
+Fixed effects:  TRUE 
+Random effects: TRUE 
+Theta:          TRUE 
+Sigma:          TRUE 
+
+################################################
+################################################
+################################################
+
+################ results for DASvar  ##############
+                             lmer         IRWLS       
+Coef                                                  
+(Intercept)                  251.4 (6.82) 251.4 (6.82)
+Days                          10.5 (1.55)  10.5 (1.55)
+                                                      
+VarComp                                               
+(Intercept) | Subject        24.74045     24.74045    
+Days | Subject                5.92213      5.92213    
+(Intercept) | Group           0.00000      0.00129    
+                                                      
+Correlations                                          
+(Intercept) x Days | Subject 0.0656       0.0656      
+                                                      
+sigma                        25.6         25.6        
+                                                      
+REML                         1744                     
+
+################ results for DAStau  ##############
+                             lmer         IRWLS       
+Coef                                                  
+(Intercept)                  251.4 (6.82) 251.4 (6.82)
+Days                          10.5 (1.55)  10.5 (1.55)
+                                                      
+VarComp                                               
+(Intercept) | Subject        24.74045     24.74045    
+Days | Subject                5.92213      5.92213    
+(Intercept) | Group           0.00000      0.00129    
+                                                      
+Correlations                                          
+(Intercept) x Days | Subject 0.0656       0.0656      
+                                                      
+sigma                        25.6         25.6        
+                                                      
+REML                         1744                     
+> ## robust
+> fit(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2,
++     rho.e = smoothPsi, rho.b = smoothPsi,
++     methods = c("DASvar")) ##, "DAStau"))
+
+######## DASvar ########
+boundary (singular) fit: see help('isSingular')
+Time elapsed: 0.745 0.006 0.788 0 0 
+Robust linear mixed model fit by DASvar 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-6.5115 -0.6087 -0.0211  0.5976  7.2831 
+
+Random effects:
+ Groups   Name        Variance Std.Dev. Corr 
+ Subject  (Intercept) 695.36   26.370        
+          Days         26.29    5.128   -0.33
+ Group    (Intercept)   0.00    0.000        
+ Residual             329.83   18.161        
+Number of obs: 180, groups: Subject, 18; Group, 4
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  255.759      7.672   33.34
+Days          10.649      1.486    7.17
+
+Correlation of Fixed Effects:
+     (Intr)
+Days -0.390
+
+Robustness weights for the residuals: 
+ 150 weights are ~= 1. The remaining 30 ones are summarized as
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  0.185   0.549   0.661   0.682   0.856   0.998 
+
+Robustness weights for the random effects: 
+ 22 weights are ~= 1. The remaining 18 ones are summarized as
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  0.144   0.207   0.213   0.418   0.683   0.833 
+
+Rho functions used for fitting:
+  Residuals:
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    sig: smoothed Huber, Proposal 2 (k = 1.345, s = 10) 
+  Random Effects, variance component 1 (Subject):
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    vcp: smoothed Huber (k = 1.345, s = 10) 
+  Random Effects, variance component 2 (Group):
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    vcp: smoothed Huber, Proposal 2 (k = 1.345, s = 10) 
+      308       308       309       309       310       310       330       330 
+ -7.27994  45.02252 -34.43548 -43.63598 -34.86356 -29.86900  12.96240 -14.17319 
+      331       331       332       332       333       333       334       334 
+ 15.01092  -7.79000  -2.34050   2.69974  10.45620   0.42985  -7.83544   0.07109 
+      335       335       337       337       349       349       350       350 
+  3.53196 -47.55048  25.57178  38.60405 -22.94681  -1.68308 -13.96637  21.31222 
+      351       351       352       352       369       369       370       370 
+ -0.54285  -9.82439  20.12126  12.11349  -0.18098   2.15850 -27.21225  14.03645 
+      371       371       372       372         a         b         c         d 
+ -0.99299  -4.14324   6.72405   5.32013   0.00000   0.00000   0.00000   0.00000 
+
+################################################
+################################################
+################################################
+
+################ results for DASvar  ##############
+                             IRWLS       
+Coef                                     
+(Intercept)                  255.8 (7.67)
+Days                          10.6 (1.49)
+                                         
+VarComp                                  
+(Intercept) | Subject        26.37       
+Days | Subject                5.13       
+(Intercept) | Group           0.00       
+                                         
+Correlations                             
+(Intercept) x Days | Subject -0.334      
+                                         
+sigma                        18.2        
+                                         
+> fit(Reaction ~ Days + (Days|Subject) + (1|Group), sleepstudy2,
++     rho.e = smoothPsi, rho.b = smoothPsi,
++     methods = c("DASvar"), ##, "DAStau"),
++     init = lmerNoFit)
+
+######## DASvar ########
+boundary (singular) fit: see help('isSingular')
+Time elapsed: 0.493 0.003 0.554 0 0 
+Robust linear mixed model fit by DASvar 
+Formula: formula 
+   Data: data 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-6.5115 -0.6087 -0.0211  0.5976  7.2831 
+
+Random effects:
+ Groups   Name        Variance Std.Dev. Corr 
+ Subject  (Intercept) 695.36   26.370        
+          Days         26.29    5.128   -0.33
+ Group    (Intercept)   0.00    0.000        
+ Residual             329.83   18.161        
+Number of obs: 180, groups: Subject, 18; Group, 4
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  255.759      7.672   33.34
+Days          10.649      1.486    7.17
+
+Correlation of Fixed Effects:
+     (Intr)
+Days -0.390
+
+Robustness weights for the residuals: 
+ 150 weights are ~= 1. The remaining 30 ones are summarized as
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  0.185   0.549   0.661   0.682   0.856   0.998 
+
+Robustness weights for the random effects: 
+ 22 weights are ~= 1. The remaining 18 ones are summarized as
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  0.144   0.207   0.213   0.418   0.683   0.833 
+
+Rho functions used for fitting:
+  Residuals:
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    sig: smoothed Huber, Proposal 2 (k = 1.345, s = 10) 
+  Random Effects, variance component 1 (Subject):
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    vcp: smoothed Huber (k = 1.345, s = 10) 
+  Random Effects, variance component 2 (Group):
+    eff: smoothed Huber (k = 1.345, s = 10) 
+    vcp: smoothed Huber, Proposal 2 (k = 1.345, s = 10) 
+      308       308       309       309       310       310       330       330 
+ -7.27994  45.02252 -34.43548 -43.63598 -34.86356 -29.86900  12.96240 -14.17319 
+      331       331       332       332       333       333       334       334 
+ 15.01092  -7.79000  -2.34050   2.69974  10.45620   0.42985  -7.83544   0.07109 
+      335       335       337       337       349       349       350       350 
+  3.53196 -47.55048  25.57178  38.60406 -22.94681  -1.68308 -13.96637  21.31222 
+      351       351       352       352       369       369       370       370 
+ -0.54285  -9.82439  20.12126  12.11349  -0.18098   2.15850 -27.21225  14.03645 
+      371       371       372       372         a         b         c         d 
+ -0.99299  -4.14324   6.72405   5.32013   0.00000   0.00000   0.00000   0.00000 
+
+################################################
+################################################
+################################################
+
+################ results for DASvar  ##############
+                             IRWLS       
+Coef                                     
+(Intercept)                  255.8 (7.67)
+Days                          10.6 (1.49)
+                                         
+VarComp                                  
+(Intercept) | Subject        26.37       
+Days | Subject                5.13       
+(Intercept) | Group           0.00       
+                                         
+Correlations                             
+(Intercept) x Days | Subject -0.334      
+                                         
+sigma                        18.2        
+                                         
 > 
 > cat('Time elapsed: ', proc.time(),'\n') # for ``statistical reasons''
-Time elapsed:  2.624 0.088 2.716 0.001 0.002 
+Time elapsed:  27.351 0.253 27.837 0.005 0.007 
 > 
 > proc.time()
    user  system elapsed 
-  2.625   0.090   2.716 
+ 27.356   0.260  27.837 

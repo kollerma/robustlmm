@@ -2,12 +2,20 @@
 % Please edit documentation in R/influence_full.R
 \name{cooks.distance.rlmerMod}
 \alias{cooks.distance.rlmerMod}
-\title{Per-observation Cook's-distance equivalent for an rlmerMod fit.}
+\title{Cook's-distance equivalent for an rlmerMod fit (per observation or
+per cluster).}
 \usage{
-\method{cooks.distance}{rlmerMod}(model, IF = NULL, ...)
+\method{cooks.distance}{rlmerMod}(model, groups = NULL, IF = NULL, ...)
 }
 \arguments{
 \item{model}{An \code{rlmerMod} object.}
+
+\item{groups}{Cluster grouping for cluster-level Cook's distance:
+\code{NULL} (default) for per-observation; \code{TRUE} for the
+top-level grouping factor; or a factor / grouping-factor name to
+aggregate over. Cluster-level requires a single or nested grouping
+structure (crossed designs error, as for the variance-parameter
+covariance).}
 
 \item{IF}{Optional pre-computed \code{\link{implicitIF_full}(model)};
 computed on demand if \code{NULL}.}
@@ -15,15 +23,24 @@ computed on demand if \code{NULL}.}
 \item{...}{Currently unused.}
 }
 \value{
-Numeric vector of length \code{n}.
+Named numeric vector: one entry per observation
+  (\code{groups = NULL}) or per cluster level.
 }
 \description{
-Joint Mahalanobis influence of each observation on the fitted
-\eqn{(\hat{\beta}, \hat{\sigma}, \hat{\theta})}. Stacks the per-
-observation influence vectors into a \eqn{(p + 1 + L) \times n}
-matrix, computes the empirical variance \eqn{V = (1/n) IF\,IF^T},
-and returns \eqn{\sqrt{x_i^T V^{-1} x_i}} per observation. If
-\eqn{V} is singular (variance-component boundary), the Moore-Penrose
+Joint Mahalanobis influence on the fitted \eqn{(\hat{\beta},
+\hat{\sigma}, \hat{\theta})}. With \code{groups = NULL} (default) the
+unit is the observation: the per-observation influence vectors are
+stacked into a \eqn{(p + 1 + L) \times n} matrix \eqn{W}, and the
+result is \eqn{\sqrt{w_i^T V^{-1} w_i}} with \eqn{V = (1/n) W W^T}.
+With \code{groups} set the unit is the cluster: the
+per-cluster influence functions \eqn{\Xi = -J_{par}^{-1} S} (\eqn{S}
+the per-cluster score contributions from \code{.scoreByCluster}),
+restricted to the \eqn{(\beta, \sigma, \theta)} rows, are scored the
+same way with \eqn{V = (1/J) \Xi \Xi^T}. This flags whole-cluster
+outliers that no single observation reveals -- e.g. before relying on
+the bootstrap variance-component test of \code{\link{anova}}, which
+is anti-conservative under group contamination. If \eqn{V} is
+singular (a variance-component boundary) the Moore-Penrose
 pseudo-inverse is used.
 }
 \details{
@@ -33,5 +50,6 @@ via \code{IF = implicitIF_full(fit)} and pass it in if you need
 }
 \seealso{
 \code{\link{implicitIF_full}},
-  \code{\link[=influence.rlmerMod]{influence}}
+  \code{\link[=influence.rlmerMod]{influence}},
+  \code{\link[=hatvalues.rlmerMod]{hatvalues}}
 }

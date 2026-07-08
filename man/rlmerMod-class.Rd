@@ -93,6 +93,59 @@ A robust mixed-effects model as returned by \code{\link{rlmer}}.
   \code{logLik} stop with an error if they are called.
 }
 
+\section{Coefficient-table degrees of freedom}{
+ By default
+  (\code{df = "auto"}) \code{summary(object)} reports a
+  Satterthwaite-type \code{df} and a \code{Pr(>|t|)} column for the
+  fixed effects whenever computing it is cheap -- either the
+  underlying influence function is already cached on the fit (from an
+  earlier \code{\link[=cooks.distance.rlmerMod]{cooks.distance}},
+  \code{vcov} sandwich,
+  \code{\link[=confint.rlmerMod]{confint}} or \code{summary} call), or
+  its deterministic size workload is within the cutoff
+  \code{getOption("robustlmm.summary.df.max", 5000)}. On larger
+  fits \code{"auto"} falls back to the historic \code{Estimate} /
+  \code{Std. Error} / \code{t value} table (no p-values, as for
+  \code{\link[lme4]{lmer}}) and prints a one-line note on how to
+  request the df anyway. Use \code{df = "satterthwaite"} to always
+  compute it (which may be slow on large data) or \code{df = "none"}
+  to never compute it. The cutoff is a dimensionless function of the
+  problem size (number of observations, parameters and the df method),
+  so the same fit behaves identically on every machine; raise or lower
+  \code{robustlmm.summary.df.max} to show the df on larger or only on
+  smaller fits. See \code{\link{robustlmm-options}} for this option.
+  Unlike
+  \pkg{lmerTest}, the degrees of freedom are derived from the robust,
+  influence-function-based covariance of the variance parameters, so
+  they stay honest under contamination. The Satterthwaite construction
+  follows Giesbrecht and Burns (1985) and Fai and Cornelius (1996);
+  inserting a robust sandwich covariance into the moment-matching ratio
+  parallels the cluster-robust approach of Bell and McCaffrey (2002)
+  and Pustejovsky and Tipton (2018). The approximation is reliable
+  only for a moderate number of grouping levels; \code{summary} prints
+  a note recommending \code{\link[=confint.rlmerMod]{confint}(object,
+  method = "boot")} when the smallest grouping factor has fewer than
+  20 levels. The feature supports single-factor, nested
+  (e.g. \code{(1 | school/class)}) and crossed
+  (e.g. \code{(1 | subject) + (1 | item)}) designs with diagonal
+  random effects, including Mallows-weighted fits, with the default
+  \code{vcov}. Nested designs use a one-way cluster sandwich over the
+  coarsest grouping factor; crossed designs use a
+  Cameron-Gelbach-Miller multiway cluster-robust covariance,
+  projected to the nearest positive-semidefinite matrix. Designs not
+  covered (e.g. crossed random slopes) fall back to t-values with an
+  explanatory note. The same
+  Satterthwaite df is used by \pkg{emmeans} results (\code{emmeans},
+  \code{emtrends}, \code{contrast}) for this class when the default
+  \code{vcov} is in effect; a user-supplied \code{vcov.} keeps the
+  asymptotic (\code{Inf}, z-based) degrees of freedom. When a variance
+  component is estimated at 0 (a boundary fit), the df is computed
+  conditional on that component being held at the boundary -- it
+  equals the df of the model with that component dropped -- and
+  \code{summary} notes this; only a genuinely non-identifiable
+  (singular) fit suppresses the df.
+}
+
 \examples{
 
 showClass("rlmerMod")

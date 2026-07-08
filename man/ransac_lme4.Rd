@@ -10,6 +10,12 @@ ransac_lme4(
   K = 200L,
   sub_frac = 0.5,
   scale_fn = robustbase::Qn,
+  adaptive = TRUE,
+  patience = 50L,
+  K_min = 50L,
+  tol = 0.001,
+  stratify = TRUE,
+  n_keep = 1L,
   seed = NULL,
   verbose = FALSE
 )
@@ -19,12 +25,44 @@ ransac_lme4(
 
 \item{data}{full data frame.}
 
-\item{K}{number of random subsamples (default 200).}
+\item{K}{maximum number of random subsamples (default 200). With
+\code{adaptive = TRUE} the search stops early once the best score
+plateaus; \code{K} is then an upper budget rather than a fixed
+count.}
 
 \item{sub_frac}{fraction of the data per subsample (default 0.5).}
 
 \item{scale_fn}{function from a numeric residual vector to a
 scalar scale. Default \code{\link[robustbase]{Qn}}.}
+
+\item{adaptive}{logical (default \code{TRUE}); stop drawing
+subsamples once the best score has not improved by more than
+\code{tol} (relative) for \code{patience} consecutive draws, after
+at least \code{K_min} draws. \code{FALSE} runs exactly \code{K}
+draws (the previous behaviour).}
+
+\item{patience}{number of consecutive non-improving draws that
+triggers the adaptive stop (default 50).}
+
+\item{K_min}{minimum draws before the adaptive stop can fire
+(default 50).}
+
+\item{tol}{relative-improvement threshold for the adaptive stop
+(default 1e-3).}
+
+\item{stratify}{logical (default \code{TRUE}); draw each subsample
+stratified by the random-effects grouping factor (the one with the
+most levels, parsed from the formula), taking
+\code{ceiling(sub_frac * n_g)} (at least one) rows within each level
+so every grouping level is represented. This keeps the per-subsample
+\code{lmer} fittable on designs with many small clusters, where plain
+random subsampling can leave a level empty. \code{FALSE} (or no
+grouping factor) falls back to simple random subsampling.}
+
+\item{n_keep}{number of distinct best-scoring candidate starts to
+return in \code{$candidates} (default 1). The multi-start consensus
+of \code{\link{rlmer_ransac}} (\code{n_starts > 1}) uses these to
+sample several basins of a redescending psi.}
 
 \item{seed}{optional RNG seed for reproducibility.}
 
@@ -33,7 +71,11 @@ scalar scale. Default \code{\link[robustbase]{Qn}}.}
 \value{
 list with \code{fit} (best \code{lmerMod}), \code{scale}
   (its score), \code{subset} (its row indices), \code{scales}
-  (vector of all K scores), \code{K}, \code{n_sub}.
+  (length-\code{K} vector of scores; \code{NA} for draws not run
+  under an adaptive early stop), \code{K} (the requested cap),
+  \code{K_used} (draws actually run), \code{n_sub}, \code{n_singular}
+  (total number of collinear candidate observations skipped by the
+  nonsingular-subsampling draw across all subsamples; see below).
 }
 \description{
 RANSAC-style random subsample initial estimator for linear
@@ -46,13 +88,56 @@ scale of residuals computed on the \emph{full} data, and return
 the lmer fit minimising that score.
 
 The motivation is that for redescending psi-functions
-(e.g. \code{\link{bisquarePsi}}) the \code{\link{rlmer}}
+(e.g. \code{\link{lqqPsi}}, the recommended redescender, or the
+faster-redescending \code{\link{bisquarePsi}}) the \code{\link{rlmer}}
 optimiser benefits from a starting value close to the true
 parameters. A bad initial estimate can produce phony local
 minima (e.g. random-effects correlation pinned at +/- 1; see
 Koller and Stahel 2022, Section 4.4). RANSAC is a classical
 way of generating a high-breakdown-point initial estimate by
 subsampling.
+}
+\section{Nonsingular subsampling}{
+
+With categorical predictors a rank-deficient subsample often does
+\emph{not} make \code{\link[lme4]{lmer}} error --- it silently drops
+the aliased (all-zero) fixed-effect columns of a dropped factor
+level --- so a degenerate candidate would otherwise enter the scale
+competition with the wrong number of parameters. Rather than draw and
+then repair, each subsample is drawn \emph{nonsingular by construction}
+using the nonsingular-subsampling algorithm of Koller and Stahel (2017,
+Algorithm 1; the method behind
+\code{robustbase::\link[robustbase]{lmrob.control}(setting = "KS2014")}).
+The draw units (clusters when a grouping factor is available, else single
+observations) are randomly permuted; a Gaxpy-variant LU decomposition
+with partial pivoting and column skipping (implemented in C++) then walks
+the permuted observations and greedily selects the first \eqn{p} that are
+linearly independent, \emph{skipping} any observation collinear with
+those already chosen. This yields a full-rank fixed-effects core whenever
+the full design has full column rank. Whole clusters carrying that core
+are the mandatory seed; further clusters are then added in the permuted
+order until the retained data are identifiable --- (i) a full-rank
+fixed-effects design [guaranteed by the core], (ii) at least two observed
+levels of every random-effects grouping factor, and (iii) non-constant
+numeric random-slope variables --- and finally up to the target subsample
+size. Because adding clusters never lowers the rank or removes a level
+this is monotone and terminates. \code{n_singular} counts the collinear
+candidate observations skipped by the LU across all draws (a measure of
+the collinearity encountered); it is \code{0} on a purely continuous,
+full-rank design, where the algorithm selects exactly the first \eqn{p}
+permuted observations, so the draw is a uniform random cluster subsample
+--- statistically identical to plain random subsampling. Note that a
+nonsingular \emph{start} does not guarantee the fit stays nonsingular
+through the \code{\link{rlmer}} refinement: a redescending psi can
+zero-weight observations back into a rank-deficient design (Koller and
+Stahel 2017, Remark 2), which \code{\link{rlmer_ransac}} checks for and
+warns about.
+}
+
+\references{
+Koller, M. and Stahel, W. A. (2017) Nonsingular subsampling for
+regression S estimators with categorical predictors.
+\emph{Computational Statistics} \bold{32}(2), 631--646.
 }
 \examples{
   set.seed(1)

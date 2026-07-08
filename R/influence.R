@@ -14,6 +14,10 @@
 ##' \code{\link{caseweightIF}} and \code{\link{vcov_sandwich}}; users who
 ##' only want robust standard errors should call \code{vcov(object, type = "sandwich")}.
 ##'
+##' Prior weights and offsets are supported: the score is evaluated in
+##' the same prior-weight-whitened coordinates the estimator iterates
+##' in (\eqn{U_e = \mathrm{diag}(\sqrt{w})}, residuals offset-corrected).
+##'
 ##' This is the partial (\eqn{\sigma, \theta} held fixed) version. It is
 ##' \emph{not} the Hampel influence function; the Hampel object is
 ##' \code{\link{caseweightIF}}, which reuses the same Jacobian but with the
@@ -51,12 +55,24 @@ implicitIF <- function(fit, use.expected = FALSE) {
     beta  <- pp$beta
     u     <- pp$b.s
     y     <- fit@resp$y
+    off   <- fit@resp$offset
 
-    r_std <- as.numeric(solve(U_e, y - X %*% beta - Z %*% (U_b %*% u))) / sig
+    ## The estimator works in prior-weight-whitened coordinates: with
+    ## prior weights w (Var(e_i) = sigma^2 / w_i), U_e = diag(sqrt(w))
+    ## and the psi functions are evaluated at U_e r / sigma (equals
+    ## resp$wtres / sigma, see std.e() in helpers.R). For unit weights
+    ## U_e = I.
+    r_std <- as.numeric(U_e %*% (y - off - X %*% beta - Z %*% (U_b %*% u))) / sig
     u_std <- as.numeric(u) / sig
 
     Dpsi_e <- if (use.expected) rep(lambda_e, n) else rho_e@Dpsi(r_std)
     D_e_act <- Diagonal(x = Dpsi_e)
+    ## WS11: the e-side score is eta-weighted (X~' H psi_e, Z~' H psi_e),
+    ## so its curvature / y-derivative carry H D_e_act = diag(eta *
+    ## Dpsi_e). The b-side penalty (Lambda_ratio D_b_act) is unweighted.
+    ## eta == 1 gives D_e_eta == D_e_act (bit-identical).
+    eta     <- pp$eta
+    D_e_eta <- Diagonal(x = eta * Dpsi_e)
 
     if (use.expected) {
         D_b_act <- Diagonal(x = lambda_b_q)
@@ -64,19 +80,23 @@ implicitIF <- function(fit, use.expected = FALSE) {
         D_b_act <- .buildBlockDpsi_b(fit, u_std, rho_b)
     }
 
-    Ue_inv  <- Diagonal(x = 1 / diag(U_e))
-    A_X     <- as.matrix(Ue_inv %*% X)
-    A_ZUb   <- as.matrix(Ue_inv %*% (Z %*% U_b))
+    ## Whitened design matrices, identical to the ones the estimator
+    ## iterates with (pp$U_eX, pp$U_eZU_b).
+    A_X     <- as.matrix(U_e %*% X)
+    A_ZUb   <- as.matrix(U_e %*% (Z %*% U_b))
 
-    Jbb <- t(A_X) %*% D_e_act %*% A_X
-    Jbu <- t(A_X) %*% D_e_act %*% A_ZUb
+    Jbb <- crossprod(A_X, D_e_eta %*% A_X)
+    Jbu <- crossprod(A_X, D_e_eta %*% A_ZUb)
     Lambda_ratio <- Diagonal(x = lambda_e / lambda_b_q)
-    Juu <- t(A_ZUb) %*% D_e_act %*% A_ZUb + Lambda_ratio %*% D_b_act
+    Juu <- crossprod(A_ZUb, D_e_eta %*% A_ZUb) + Lambda_ratio %*% D_b_act
     Juu <- (Juu + t(Juu)) / 2
     Jub <- t(Jbu)
 
-    Gby <- t(A_X) %*% D_e_act %*% Ue_inv
-    Guy <- t(A_ZUb) %*% D_e_act %*% Ue_inv
+    ## d r_std / d y = U_e / sigma, so the y-rows of the Jacobian carry
+    ## another factor U_e (the sigma factors cancel against the ones
+    ## implicit in the parameter rows). The e-side weight H rides along.
+    Gby <- crossprod(A_X, D_e_eta %*% U_e)
+    Guy <- crossprod(A_ZUb, D_e_eta %*% U_e)
 
     Jbb_inv_Gby <- .solveSafe(Jbb, Gby)
     Jbb_inv_Jbu <- .solveSafe(Jbb, Jbu)
@@ -90,7 +110,7 @@ implicitIF <- function(fit, use.expected = FALSE) {
          lambda_e = lambda_e, lambda_b_q = lambda_b_q, sigma = sig,
          Jbb = Jbb, Jbu = Jbu, Jub = Jub, S = S,
          Jbb_inv_Jbu = Jbb_inv_Jbu,
-         A_X = A_X, A_ZUb = A_ZUb, U_b = U_b, Ue_inv = Ue_inv,
+         A_X = A_X, A_ZUb = A_ZUb, U_b = U_b, U_e = U_e,
          Lambda_ratio = Lambda_ratio,
          r_std = r_std, u_std = u_std)
 }
@@ -103,7 +123,7 @@ implicitIF <- function(fit, use.expected = FALSE) {
                 "using pseudo-inverse fallback.", call. = FALSE)
         sv <- svd(as.matrix(A))
         tol <- max(dim(A)) * .Machine$double.eps * sv$d[1L]
-        Ainv <- sv$v %*% diag(ifelse(sv$d > tol, 1 / sv$d, 0)) %*% t(sv$u)
+        Ainv <- tcrossprod(sv$v %*% diag(ifelse(sv$d > tol, 1 / sv$d, 0)), sv$u)
         Ainv %*% as.matrix(b)
     })
 }
@@ -143,8 +163,8 @@ caseweightIF <- function(fit, idx = NULL, use.expected = FALSE) {
     psi_e_vals <- rho_e@psi(parts$r_std)
 
     W     <- Diagonal(x = psi_e_vals[idx])
-    Gb_cw <- as.matrix(t(parts$A_X[idx, , drop = FALSE]) %*% W)
-    Gu_cw <- as.matrix(t(parts$A_ZUb[idx, , drop = FALSE]) %*% W)
+    Gb_cw <- as.matrix(crossprod(parts$A_X[idx, , drop = FALSE], W))
+    Gu_cw <- as.matrix(crossprod(parts$A_ZUb[idx, , drop = FALSE], W))
 
     Jbb_inv_Gb <- .solveSafe(parts$Jbb, Gb_cw)
     IF_u    <- as.matrix(.solveSafe(parts$S, Gu_cw - parts$Jub %*% Jbb_inv_Gb))
@@ -213,6 +233,16 @@ resolveCluster <- function(fit, cluster, n) {
 ##' few clusters, set \code{correction = "G1"} (default) for the
 ##' \eqn{J/(J-1)} small-sample scaling.
 ##'
+##' \strong{Small-J caveat.} The G1 correction is necessary but not
+##' sufficient at very small \eqn{J}: in a simulation study CI
+##' coverage drops to ~0.89 at \eqn{J = 8} (vs. nominal 0.95), and
+##' Wald-style hypothesis tests using the sandwich are anti-conservative
+##' (Type-I ~3-4x nominal). The function emits a warning for \eqn{J <
+##'   20}. For inference at small \eqn{J} prefer \code{vcov_type =
+##'   "default"} or pair the sandwich CI with a bootstrap calibration
+##' (e.g. \code{confintROB}); the sandwich is most useful at \eqn{J
+##'   \gtrsim 50}.
+##'
 ##' \eqn{\hat{\sigma}, \hat{\theta}} are held fixed (partial sandwich); the
 ##' returned variance is the leading-order fixed-effects covariance.
 ##'
@@ -241,6 +271,15 @@ vcov_sandwich <- function(fit, cluster = NULL, correction = c("G1", "none")) {
     groups  <- split(seq_len(n), g)
     J       <- length(groups)
 
+    if (J < 20L)
+        warning("Cluster sandwich with J = ", J, " < 20 clusters is ",
+                "anti-conservative for hypothesis tests (in simulations ",
+                "the anova Type-I error inflated to roughly 3-4x nominal ",
+                "at J = 8); use vcov_type = \"default\" for inference at ",
+                "small J, or pair the sandwich CI with a bootstrap ",
+                "calibration (e.g. confintROB).",
+                call. = FALSE)
+
     Smat <- vapply(groups,
                    function(ix) rowSums(Gb[, ix, drop = FALSE]),
                    numeric(p))
@@ -251,7 +290,7 @@ vcov_sandwich <- function(fit, cluster = NULL, correction = c("G1", "none")) {
     xb        <- Jbb_inv_S - parts$Jbb_inv_Jbu %*% xu
     IF        <- sig * as.matrix(xb)
 
-    V <- IF %*% t(IF)
+    V <- tcrossprod(IF)
     if (correction == "G1" && J > 1L) V <- V * (J / (J - 1))
     V <- (V + t(V)) / 2
     nm <- colnames(fit@pp$X)
@@ -267,10 +306,12 @@ vcov_sandwich <- function(fit, cluster = NULL, correction = c("G1", "none")) {
 .vcov_model_delta <- function(fit, parts = NULL) {
     if (is.null(parts)) parts <- implicitIF(fit)
     pp  <- fit@pp
-    Z_full <- t(pp$Zt) %*% pp$U_b
+    Z_full <- crossprod(pp$Zt, pp$U_b)
     n      <- pp$n
-    cov_y_unit <- as.matrix(Z_full %*% t(Z_full) + Diagonal(n))
-    V <- parts$sigma^2 * (parts$IF_beta %*% cov_y_unit %*% t(parts$IF_beta))
+    ## Var(y) / sigma^2 = Z U_b U_b' Z' + W^{-1}, W = diag(prior weights)
+    cov_y_unit <- as.matrix(tcrossprod(Z_full) +
+                            Diagonal(x = 1 / diag(pp$U_e)^2))
+    V <- parts$sigma^2 * tcrossprod(parts$IF_beta %*% cov_y_unit, parts$IF_beta)
     V <- (V + t(V)) / 2
     nm <- colnames(pp$X)
     dimnames(V) <- list(nm, nm)
@@ -374,10 +415,11 @@ vcov_sandwich <- function(fit, cluster = NULL, correction = c("G1", "none")) {
         parts   <- implicitIF(fit)
         sig2    <- parts$sigma^2
         U_b     <- parts$U_b
-        Z_full  <- t(fit@pp$Zt) %*% U_b
-        cov_y_u <- as.matrix(Z_full %*% t(Z_full) + Diagonal(fit@pp$n))
+        Z_full  <- crossprod(fit@pp$Zt, U_b)
+        cov_y_u <- as.matrix(tcrossprod(Z_full) +
+                             Diagonal(x = 1 / diag(fit@pp$U_e)^2))
         IF_b    <- as.matrix(U_b %*% parts$IF_u)
-        V_b     <- sig2 * (IF_b %*% cov_y_u %*% t(IF_b))
+        V_b     <- sig2 * tcrossprod(IF_b %*% cov_y_u, IF_b)
         Z_new   <- as.matrix(Z_new)
         se2 <- se2 + rowSums((Z_new %*% V_b) * Z_new)
     }

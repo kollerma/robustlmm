@@ -34,7 +34,9 @@ checkEquality <- function(cW, rW, tolerance = 1e-8) {
         ),
         all.equal(
             coef(summary(cW)) ,
-            coef(summary(rW)),
+            ## df = "none": compare the 3-column coefficient table against
+            ## lmer's; not the WS16 default Satterthwaite df table.
+            coef(summary(rW, df = "none")),
             tolerance = 100 * tolerance,
             check.attributes = FALSE
         )
@@ -44,22 +46,31 @@ checkEquality <- function(cW, rW, tolerance = 1e-8) {
 testBattery <- function(formula, data, tolerance) {
     nobs <- nrow(data)
 
+    ## both tau methods: DAStau was always pinned here; DASvar joined
+    ## 2026-06-12 (WS24) -- its tau_e double-counted the prior weights
+    ## (v_e in the tau^2 formula on top of the U_e whitening), biasing
+    ## sigma-hat low by up to 15% at cPsi for weights in [0.25, 4],
+    ## which nothing detected because this battery only ran the
+    ## default method.
     test <- function(weights) {
         ## lme4 (>= upcoming release) looks up `weights` in the formula's
         ## environment rather than the calling frame; make it visible
         ## there (GitHub issue #36, Ben Bolker).
         assign("weights", weights, environment(formula))
         cW <- lmer(formula, data, weights = weights)
-        rW <-
-            rlmer(
-                formula,
-                data,
-                weights = weights,
-                rho.e = cPsi,
-                rho.b = cPsi,
-                init = lmerNoFit
-            )
-        checkEquality(cW, rW, tolerance)
+        for (method in c("DAStau", "DASvar")) {
+            rW <-
+                rlmer(
+                    formula,
+                    data,
+                    weights = weights,
+                    rho.e = cPsi,
+                    rho.b = cPsi,
+                    init = lmerNoFit,
+                    method = method
+                )
+            checkEquality(cW, rW, tolerance)
+        }
     }
 
     test(rep(2, nobs))
@@ -71,11 +82,9 @@ testBattery <- function(formula, data, tolerance) {
 }
 
 testBattery(Yield ~ 1 | Batch, Dyestuff, 1e-8)
-
-# Skip these to speed up tests
-#testBattery(diameter ~ (1 | plate) + (1 | sample),
-#            Penicillin, 1e-6)
-#testBattery(Reaction ~ Days + (Days | Subject), sleepstudy, 1e-5)
+testBattery(diameter ~ (1 | plate) + (1 | sample),
+            Penicillin, 1e-6)
+testBattery(Reaction ~ Days + (Days | Subject), sleepstudy, 1e-5)
 
 # testBattery(y ~ service * dept + studage + lectage +
 #                 (1 | s) + (1 | d), InstEval)

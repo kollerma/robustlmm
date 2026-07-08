@@ -1,6 +1,10 @@
 #include "rlmerMatrixUtils.h"
 
 #include <R_ext/BLAS.h>
+#include <vector>
+#include <algorithm>
+#include <cmath>
+#include <utility>
 
 extern cholmod_common c;
 
@@ -390,6 +394,137 @@ tCrossproductColumnRowSubMatrices(const dgeMatrix& A, const dgeMatrix& B,
     return result;
 }
 
+/*
+ * Nonsingular subsampling via a Gaxpy-variant LU decomposition with
+ * partial pivoting and column skipping.
+ *
+ * Reimplements Algorithm 1 ("Constrained subsampling using the modified
+ * Gaxpy variant of the LU decomposition") of
+ *
+ *   Koller, M. and Stahel, W. A. (2017) Nonsingular subsampling for
+ *   regression S estimators with categorical predictors,
+ *   Computational Statistics 32(2), 631-646,
+ *
+ * itself derived from the Gaxpy LU of Golub & Van Loan, Matrix
+ * Computations (3rd ed.).  It is the C reimplementation of the reference
+ * R routine LU.gaxpy() shipped in robustbase's xtraR/subsample-fns.R; we
+ * do NOT depend on robustbase's internal R_subsample C symbol.
+ *
+ * Given the fixed-effects design transposed, Xt (p x n; rows = the p
+ * parameters, columns = the n observations), and a walk order over the
+ * observations (`order`, 0-based), walk the permuted columns and build an
+ * LU factorisation of a p x p submatrix one column at a time.  A candidate
+ * column is ACCEPTED when its pivot magnitude is >= tol (it raises the
+ * rank); a column that is linearly dependent on those already chosen has a
+ * pivot < tol and is SKIPPED (dropped, the next column in `order` is
+ * tried).  The result is a full-rank elemental p-subset by construction
+ * whenever the full design has full column rank.  With no collinearity the
+ * first p columns of `order` are accepted -- i.e. the method reduces to
+ * plain random subsampling.
+ *
+ * Preconditioning by equilibration (Remark 1): divide the whole design by
+ * max|Xt| so the singularity threshold tol is on a comparable scale.
+ */
+Rcpp::List nonsingularSubsampleLU(const Rcpp::NumericMatrix& Xt,
+                                  const Rcpp::IntegerVector& order,
+                                  double tol) {
+    const int p = Xt.nrow();
+    const int n = Xt.ncol();
+    const int nWalk = order.length();
+
+    // equilibration (Remark 1): scale so |entries| <= 1
+    double cf0 = 0.0;
+    for (int col = 0; col < n; ++col)
+        for (int row = 0; row < p; ++row) {
+            double a = std::abs(Xt(row, col));
+            if (a > cf0) cf0 = a;
+        }
+    if (cf0 <= 0.0) cf0 = 1.0; // all-zero design: everything is singular
+
+    // L is unit lower triangular (p x p), stored column-major in a vector.
+    std::vector<double> L(static_cast<size_t>(p) * p, 0.0);
+    for (int i = 0; i < p; ++i) L[static_cast<size_t>(i) + i * p] = 1.0;
+    std::vector<double> v(p, 0.0);
+    std::vector<double> z(p, 0.0);   // forward-solve work vector, length <= p
+    std::vector<int> idr(p);         // row permutation
+    for (int i = 0; i < p; ++i) idr[i] = i;
+
+    std::vector<int> selected;
+    selected.reserve(p);
+    int nSkipped = 0;
+    int k = 0;                       // pointer into `order`
+    bool singular = false;
+
+    for (int j = 0; j < p; ++j) {
+        bool accepted = false;
+        while (!accepted) {
+            if (k >= nWalk) { singular = true; break; }
+            int col = order[k];
+            if (col < 0 || col >= n) { singular = true; break; }
+
+            // --- compute v[j..p-1] for this candidate column ------------
+            if (j == 0) {
+                for (int i = 0; i < p; ++i)
+                    v[i] = Xt(idr[i], col) / cf0;
+            } else {
+                // z = L[0:j,0:j]^{-1} a[0:j], a[i] = Xt(idr[i], col)/cf0
+                // (forward substitution, L unit lower triangular)
+                for (int i = 0; i < j; ++i) {
+                    double s = Xt(idr[i], col) / cf0;
+                    for (int t = 0; t < i; ++t)
+                        s -= L[static_cast<size_t>(i) + t * p] * z[t];
+                    z[i] = s;
+                }
+                // v[j:p] = a[j:p] - L[j:p, 0:j] z
+                for (int i = j; i < p; ++i) {
+                    double s = Xt(idr[i], col) / cf0;
+                    for (int t = 0; t < j; ++t)
+                        s -= L[static_cast<size_t>(i) + t * p] * z[t];
+                    v[i] = s;
+                }
+            }
+
+            // --- partial pivot: largest |v| over the remaining rows -----
+            int mu = j;
+            if (j < p - 1) {
+                double best = std::abs(v[j]);
+                for (int i = j + 1; i < p; ++i) {
+                    double a = std::abs(v[i]);
+                    if (a > best) { best = a; mu = i; }
+                }
+            }
+
+            if (std::abs(v[mu]) >= tol) {
+                // accept: move the pivot into position j, update L
+                if (mu != j) {
+                    std::swap(v[j], v[mu]);
+                    std::swap(idr[j], idr[mu]);
+                    for (int t = 0; t < j; ++t)
+                        std::swap(L[static_cast<size_t>(j) + t * p],
+                                  L[static_cast<size_t>(mu) + t * p]);
+                }
+                for (int i = j + 1; i < p; ++i)
+                    L[static_cast<size_t>(i) + j * p] = v[i] / v[j];
+                selected.push_back(col);
+                accepted = true;
+                ++k;
+            } else {
+                // singular candidate: skip it, try the next in `order`
+                ++nSkipped;
+                ++k;
+            }
+        }
+        if (!accepted) { singular = true; break; }
+    }
+
+    int rank = static_cast<int>(selected.size());
+    return Rcpp::List::create(
+        Rcpp::Named("selected") = Rcpp::wrap(selected),
+        Rcpp::Named("rank")     = rank,
+        Rcpp::Named("singular") = singular,
+        Rcpp::Named("n_skipped") = nSkipped);
+}
+
 RCPP_MODULE(rlmerMatrixUtils_module) {
 
     function("calculateA", &calculateA);
@@ -400,5 +535,6 @@ RCPP_MODULE(rlmerMatrixUtils_module) {
     function("computeDiagonalOfTCrossproductNumericMatrix", &computeDiagonalOfTCrossproductNumericMatrix);
     function("crossproductColumnSubMatrix", &crossproductColumnSubMatrix);
     function("tCrossproductColumnRowSubMatrices", &tCrossproductColumnRowSubMatrices);
+    function("nonsingularSubsampleLU", &nonsingularSubsampleLU);
 
 }

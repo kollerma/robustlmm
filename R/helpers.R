@@ -103,6 +103,17 @@ dist.e <- function(object, sigma = .sigma(object)) {
 ## \code{center=TRUE}, then the centered distances are used to compute the
 ## robustness weights and the weight function given by rho.sigma.b is used.
 ##
+## The returned vector is aligned with the spherical random effects b.s
+## (the order of the columns of Z / getME(., "b_s")): entry j is the
+## weight of b.s[j]. The weights are computed per block type via
+## object@idx and assigned back through those b-indices. (They used to
+## be returned concatenated per block type instead, which silently
+## permutes the vector whenever a term expands into several interleaved
+## block types -- e.g. lme4 >= 2.0-0 heterogeneous diag() terms, where
+## findBlocks() yields one 1x1 block type per coordinate. Downstream
+## consumers, fitEffects() included, index the weights by b, so the
+## b-aligned order is the correct one.)
+##
 ## @title Calculate robustness weights
 ## @param object object to use
 ## @param sigma scale for standardization
@@ -113,10 +124,10 @@ wgt.b <- function(object, sigma = .sigma(object), center = FALSE,
                   use.rho.sigma = center) {
     db <- dist.b(object, sigma, center)
     rho <- rho.b(object, if (use.rho.sigma) "sigma" else "default")
-    ret <- numeric()
+    ret <- numeric(length(db))
     for (bt in seq_along(object@blocks)) {
         bind <- as.vector(object@idx[[bt]])
-        ret <- c(ret, rho[[bt]]@wgt(db[bind]))
+        ret[bind] <- rho[[bt]]@wgt(db[bind])
     }
     ret
 }
@@ -211,8 +222,16 @@ print.summary.rlmerMod <- function(x, digits = max(3, getOption("digits") - 3),
     p <- nrow(x$coefficients)
     if (p > 0) {
 	cat("\nFixed effects:\n")
-	printCoefmat(x$coefficients, zap.ind = 3, #, tst.ind = 4
-		     digits = digits, signif.stars = signif.stars)
+	if ("Pr(>|t|)" %in% colnames(x$coefficients)) {
+	    ## Satterthwaite table: Estimate, Std. Error, df, t value, Pr(>|t|)
+	    printCoefmat(x$coefficients, cs.ind = 1:2, tst.ind = 4L,
+			 has.Pvalue = TRUE, P.values = TRUE,
+			 digits = digits, signif.stars = signif.stars)
+	} else {
+	    printCoefmat(x$coefficients, zap.ind = 3, #, tst.ind = 4
+			 digits = digits, signif.stars = signif.stars)
+	}
+	if (!is.null(x$dfNote)) cat("  note:", x$dfNote, "\n")
 	if(is.null(correlation)) { # default
 	    correlation <- p <= .summary.cor.max
 	    if(!correlation) {
@@ -258,6 +277,15 @@ print.summary.rlmerMod <- function(x, digits = max(3, getOption("digits") - 3),
                         header="\nRobustness weights for the residuals:")
     summarizeRobWeights(x$wgt.b, digits=3,
                         header="\nRobustness weights for the random effects:")
+    ## WS11: Mallows design weights (eta), reported only when active.
+    eta <- x$design.weights
+    if (!is.null(eta) && any(eta < 1)) {
+        nd <- sum(eta < 1)
+        cat(sprintf(paste0("\nMallows design weights: %d of %d ",
+                           "observations downweighted by leverage ",
+                           "(min eta = %.3f).\n"),
+                    nd, length(eta), min(eta)))
+    }
     ## rho functions
     cat("\nRho functions used for fitting:\n")
     cat("  Residuals:\n")
@@ -302,9 +330,23 @@ print.rlmerMod <- function(x, digits = max(3, getOption("digits") - 3),
     invisible(x)
 }
 
+##' @importFrom stats pt
 ##' @export
 ## this follows the lines of summary.merMod of lme4
-summary.rlmerMod <- function(object, ...) {
+##
+## df = c("auto", "none", "satterthwaite"): "auto" (default) shows the
+## robust IF-based Satterthwaite df + Pr(>|t|) column (WS16) when it is
+## cheap enough -- either the influence function is already cached on the
+## fit (from cooks.distance / vcov_sandwich / confint / a previous
+## summary), or its deterministic size workload is within the cutoff
+## options(robustlmm.summary.df.max = <work units>, default 5000). On bigger
+## fits "auto" silently falls back to the historic t-value-only table
+## with a one-line note on how to request the df anyway. "satterthwaite"
+## always computes it (may be slow); "none" never does. Documented in the
+## rlmerMod-class help under "Coefficient-table degrees of freedom".
+summary.rlmerMod <- function(object, df = c("auto", "none", "satterthwaite"),
+                             ...) {
+    df <- match.arg(df)
     resp <- object@resp
     devC <- object@devcomp
     dd <- devC$dims
@@ -317,16 +359,91 @@ summary.rlmerMod <- function(object, ...) {
         coefs <- cbind(coefs, coefs[,1]/coefs[,2], deparse.level=0)
         colnames(coefs)[3] <- "t value"
     }
+
+    ## WS16: decide whether to compute the Satterthwaite df. "auto"
+    ## (default) computes it when cached or estimated-cheap (see
+    ## .satterthwaite_df_default_ok); otherwise it skips with a note.
+    dfNote <- NULL
+    computeDf <- df == "satterthwaite"
+    if (df == "auto" && nrow(coefs) > 0) {
+        ok <- .satterthwaite_df_default_ok(object)
+        computeDf <- isTRUE(ok)
+        if (!computeDf)
+            dfNote <- paste0(
+                "Satterthwaite df skipped: problem size ",
+                format(attr(ok, "work"), big.mark = ",",
+                       scientific = FALSE, trim = TRUE),
+                " exceeds the ",
+                format(getOption("robustlmm.summary.df.max", 5000),
+                       big.mark = ",", scientific = FALSE, trim = TRUE),
+                " auto cutoff; showing t-values without p-values. Request ",
+                "it with summary(object, df = \"satterthwaite\"), or raise ",
+                "options(robustlmm.summary.df.max).")
+    }
+
+    ## WS16 step 2: Satterthwaite df + p-values (default vcov).
+    ## .satterthwaite_df errors on the designs it does not yet cover
+    ## (e.g. crossed factors with non-diagonal random-effect blocks;
+    ## nested designs, crossed diagonal designs via the CGM multiway
+    ## sandwich, and Mallows-eta ARE supported, see tests/vcov-varpar.R
+    ## and tests/summary-satterthwaite.R) and warns + flags
+    ## attr(., "boundary") at a variance-component boundary, where the
+    ## (sigma, theta) covariance is not first-order identifiable. Handle
+    ## all three by falling back to the t-value-only table plus a note,
+    ## so summary() never errors just because df was requested.
+    if (computeDf && nrow(coefs) > 0) {
+        sw <- tryCatch(suppressWarnings(.satterthwaite_df(object)),
+                       error = function(e) e)
+        if (inherits(sw, "error")) {
+            dfNote <- paste0("Satterthwaite df unavailable (",
+                             conditionMessage(sw),
+                             "); showing t-values without p-values.")
+        } else if (isTRUE(attr(sw, "boundary")) &&
+                   !isTRUE(attr(sw, "reducible"))) {
+            ## genuinely singular fit (sigma or an interior variance
+            ## non-identifiable): suppress, as before (WS14).
+            dfNote <- paste("Variance-component boundary (singular fit):",
+                            "Satterthwaite df not identifiable, p-values",
+                            "suppressed.")
+        } else {
+            dfv  <- pmax(as.numeric(sw), 1) # floor at 1, as lmerTest does
+            tval <- coefs[, "t value"]
+            pval <- 2 * pt(-abs(tval), df = dfv)
+            coefs <- cbind(coefs[, c("Estimate", "Std. Error"),
+                                 drop = FALSE],
+                           "df" = dfv, "t value" = tval,
+                           "Pr(>|t|)" = pval)
+            ## WS14: at a reducible boundary the df is valid CONDITIONAL on
+            ## the variance component(s) estimated at 0; flag that.
+            if (isTRUE(attr(sw, "boundary"))) {
+                nb <- attr(sw, "n.boundary")
+                dfNote <- paste0(
+                    nb, " variance component",
+                    if (nb == 1L) "" else "s", " estimated at 0; the ",
+                    "Satterthwaite df is conditional on ",
+                    if (nb == 1L) "it" else "them",
+                    " being held at the boundary.")
+            }
+            minlev <- min(vapply(object@flist, nlevels, integer(1)))
+            if (is.finite(minlev) && minlev < 20L)
+                dfNote <- paste(c(dfNote, paste0(
+                    "Smallest grouping factor has ", minlev,
+                    " (< 20) levels; the Satterthwaite df is noisy at this ",
+                    "scale -- prefer confint(object, method = \"boot\").")),
+                    collapse = " ")
+        }
+    }
     varcor <- VarCorr(object)
 
     structure(list(methTitle=.methTitle(object), devcomp=devC,
                    ngrps=sapply(object@flist, function(x) length(levels(x))),
-                   coefficients=coefs, sigma=sig,
+                   coefficients=coefs, sigma=sig, dfMethod=df, dfNote=dfNote,
                    vcov=vcov(object, correlation=TRUE, sigm=sig),
                    varcor=varcor, # and use formatVC(.) for printing.
                    call=object@call,
                    wgt.e=wgt.e(object),
                    wgt.b=wgt.b(object),
+                   design.weights=object@resp$eta,   # WS11 (Mallows eta)
                    rho.e=rho.e(object),
                    rho.sigma.e=rho.e(object, "sigma"),
                    rho.b=rho.b(object),

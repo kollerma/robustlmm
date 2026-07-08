@@ -182,8 +182,8 @@ deviance.rlmerMod <- .deviance
     ## ----------------------------------------------------------------------
     ## Author: Manuel Koller, Date: 11 Apr 2011, 11:40
 
-    ## FIXME: ?? offset will be added in updateMu
-    crossprod(.Zt(object), .b(object))@x + (.X(object) %*% .fixef(object))[,1]
+    crossprod(.Zt(object), .b(object))@x + (.X(object) %*% .fixef(object))[,1] +
+        object@resp$offset
 }
 
 ### Get fixed effects
@@ -227,18 +227,30 @@ ranef.rlmerMod <- function(object, ...) {
 }
 
 ## return u as list arranged like ranef group ranefs with the same subject
+##
+## b.s must be aligned with the spherical random effects (b-index order);
+## object@idx entries are matrices of b-indices, one per block type. A
+## block type is matched to its RE term (cnms entry) through the Gp
+## ranges of the term's b-indices rather than by position: terms can
+## expand into SEVERAL block types (lme4 >= 2.0-0 diag() terms yield one
+## 1x1 block type per coordinate), so idx is not parallel to cnms in
+## general.
 uArrangedNames <- function(object, b.s = b.s(object)) {
+    ## RE term (index into cnms) each block type belongs to
+    typeTerm <- vapply(object@idx, function(bidx)
+        sum(object@Gp < bidx[1L, 1L]), integer(1))
     ret <- list()
     for (id in unique(names(object@cnms))) {
-        lid <- id == names(object@cnms)
-        lr <- lapply(object@idx[lid], function(bidx) {
+        terms <- which(id == names(object@cnms))
+        types <- which(typeTerm %in% terms)
+        lr <- lapply(object@idx[types], function(bidx) {
             lret <- b.s[bidx]
             dim(lret) <- dim(bidx)
             ## add rownames
             colnames(lret) <- names(b.s)[bidx[1,]]
             as.data.frame(t(lret)) })
         lr <- do.call(cbind, lr)
-        colnames(lr) <- unlist(object@cnms[lid])
+        colnames(lr) <- unlist(object@cnms[terms])
         ret <- c(ret, list(lr))
         names(ret)[length(ret)] <- id
     }
@@ -406,11 +418,14 @@ tnames <- function(object,diag.only=FALSE,old=TRUE,prefix=NULL) {
 ##'     \item{\code{"rho_sigma_b"}:}{list of rho functions used for the random effects when estimating the covariance parameters}
 ##'     \item{\code{"M"}:}{list of matrices, blocks of the Henderson's equations and the matrices used for computing the linear approximations of the estimates of beta and spherical random effects.}
 ##'     \item{\code{"w_e"}:}{robustness weights associated with the observations}
+##'     \item{\code{"design.weights"}:}{Mallows design weights \eqn{\eta_i}
+##'               (see argument \code{design.weights} of \code{\link{rlmer}});
+##'               a vector of ones unless design weights were specified}
 ##'     \item{\code{"w_b"}:}{robustness weights associated with the spherical random effects, returned in the same format as \code{\link[lme4:ranef.merMod]{ranef}()}}
-##'     \item{\code{"w_b_vector"}:}{robustness weights associated with the spherical random effects, returned as one long vector}
+##'     \item{\code{"w_b_vector"}:}{robustness weights associated with the spherical random effects, returned as one long vector, in the same order as the spherical random effects (\code{"b_s"})}
 ##'     \item{\code{"w_sigma_e"}:}{robustness weights associated with the observations when estimating sigma}
 ##'     \item{\code{"w_sigma_b"}:}{robustness weights associated with the spherical random effects when estimating the covariance parameters, returned in the same format as \code{\link[lme4:ranef.merMod]{ranef}()}}
-##'     \item{\code{"w_sigma_b_vector"}:}{robustness weights associated with the spherical random effects when estimating the covariance parameters, returned as one long vector}
+##'     \item{\code{"w_sigma_b_vector"}:}{robustness weights associated with the spherical random effects when estimating the covariance parameters, returned as one long vector, in the same order as the spherical random effects (\code{"b_s"})}
 ##'
 ##'      %% -- keep at the very end:
 ##'      \item{\code{"ALL"}:}{get all of the above as a \code{\link[base]{list}}.}
@@ -422,16 +437,6 @@ tnames <- function(object,diag.only=FALSE,old=TRUE,prefix=NULL) {
 ##' \code{\link[lme4:fixef.merMod]{fixef}}, \code{\link[lme4:vcov.merMod]{vcov}}, etc.:
 ##' see \code{methods(class="rlmerMod")}
 ##' @keywords utilities
-##' @usage getME(object,
-##'   name = c("X", "Z", "Zt", "Ztlist", "y", "mu",
-##'       "u", "b.s", "b",
-##'       "Gp", "Tp", "Lambda", "Lambdat", "A",
-##'       "U_b", "Lind", "sigma", "flist", "beta",
-##'       "theta", "n_rtrms", "n_rfacs", "cnms",
-##'       "devcomp", "offset", "lower", "rho_e",
-##'       "rho_b", "rho_sigma_e", "rho_sigma_b", "M",
-##'       "w_e", "w_b", "w_b_vector", "w_sigma_e",
-##'       "w_sigma_b", "w_sigma_b_vector", "is_REML"))
 ##' @examples
 ##' ## shows many methods you should consider *before* using getME():
 ##' methods(class = "rlmerMod")
@@ -468,7 +473,8 @@ getME.rlmerMod <-
                       "cnms", "devcomp", "offset", "lower",
                       "rho_e", "rho_b", "rho_sigma_e", "rho_sigma_b",
                       "M", "w_e", "w_b", "w_b_vector", "w_sigma_e",
-                      "w_sigma_b", "w_sigma_b_vector"), ...)
+                      "w_sigma_b", "w_sigma_b_vector",
+                      "design.weights"), ...)
 {
     if(missing(name)) stop("'name' must not be missing")
     ## Deal with multiple names -- "FIXME" is inefficiently redoing things
@@ -567,11 +573,22 @@ getME.rlmerMod <-
            "rho_sigma_b" = rho.b(object, "sigma"),
            "M" = PR$ M(),
            "w_e" = wgt.e(object),
-           "w_b" = uArrangedNames(object, wgt.b(object)),
+           ## wgt.b() is aligned with the spherical random effects
+           ## (b-index order), which is what uArrangedNames() expects;
+           ## naming the vector by the Z columns labels the rows of the
+           ## per-factor data frames with the grouping-factor levels.
+           "w_b" = uArrangedNames(object, structure(
+               wgt.b(object), names = dimnames(getZ(object))[[2]])),
            "w_b_vector" = wgt.b(object),
            "w_sigma_e" = wgt.e(object, use.rho.sigma=TRUE),
-           "w_sigma_b" = uArrangedNames(object, wgt.b(object, use.rho.sigma=TRUE)),
+           "w_sigma_b" = uArrangedNames(object, structure(
+               wgt.b(object, use.rho.sigma=TRUE),
+               names = dimnames(getZ(object))[[2]])),
            "w_sigma_b_vector" = wgt.b(object, use.rho.sigma=TRUE),
+           "design.weights" = {
+               eta <- rsp$eta
+               if (length(eta) != dims[["n"]]) rep.int(1, dims[["n"]]) else eta
+           },
            "is_REML" = TRUE,
 	   "..foo.." =# placeholder!
 	   stop(gettextf("'%s' is not implemented yet",
@@ -613,7 +630,13 @@ theta <- function(object) {
                 paste(g, mm, sep = ".")
             }
         }, names(object@cnms), object@cnms)))
-        names(tt) <- nc
+        ## Only name theta when the generated labels line up with it. They
+        ## do for unstructured/diagonal terms; structured covariances
+        ## (homogeneous cs/ar1) use a reduced theta whose entries do not
+        ## correspond one-to-one to covariance cells, so leave it unnamed.
+        if (length(nc) == length(tt)) {
+            names(tt) <- nc
+        }
         tt
     } else getME(object, "theta")
 }

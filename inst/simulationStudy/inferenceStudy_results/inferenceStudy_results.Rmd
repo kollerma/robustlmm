@@ -1,0 +1,869 @@
+---
+title: "WS6 inference study — empirical evaluation of `rlmer`'s inference methods"
+author: "robustlmm simulation study, Phases A + C + D + E + F + G + H"
+output:
+  github_document:
+    toc: true
+    toc_depth: 2
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,
+                      results = "asis")
+suppressPackageStartupMessages({
+    library(robustlmm)
+    library(knitr)
+})
+options(scipen = 5)
+
+## .Rbuildignore excludes this directory from the installed package,
+## so when knitting from a source checkout the working directory IS
+## the canonical location of the result artefacts. Use it directly
+## if it has any .rds files; otherwise fall back to system.file (for
+## the case where a user has copied the artefacts into the installed
+## tree manually).
+study_dir <- if (length(list.files(".", pattern = "\\.rds$")) > 0L) {
+    "."
+} else {
+    p <- system.file("simulationStudy/inferenceStudy_results",
+                      package = "robustlmm")
+    if (p == "") "." else p
+}
+
+## The lmer-comparison run carries every method we report on
+## (Wald.default, Wald.sandwich, Wald.lmer, anova.Wald.*,
+## anova.lmer, pair.Wald.*, pair.LRT.lmer) -- prefer it.
+rds_paths <- list.files(study_dir, pattern = "_lmer_.*\\.rds$",
+                         full.names = TRUE)
+if (length(rds_paths) == 0L)
+    stop("No lmer-comparison .rds found under ", study_dir)
+out <- readRDS(sort(rds_paths, decreasing = TRUE)[1L])
+
+prov  <- out$provenance
+aggs  <- out$aggregates
+
+## Phase E (VC bootstrap quasi-deviance) shipped in a separate run.
+phaseE_paths <- list.files(study_dir, pattern = "_phaseE_.*\\.rds$",
+                            full.names = TRUE)
+out_E <- if (length(phaseE_paths) > 0L)
+    readRDS(sort(phaseE_paths, decreasing = TRUE)[1L]) else NULL
+aggs_E <- if (!is.null(out_E)) out_E$aggregates else NULL
+prov_E <- if (!is.null(out_E)) out_E$provenance else NULL
+
+## Phase F (residual-bootstrap variant of Phase E).
+phaseF_paths <- list.files(study_dir, pattern = "_phaseF_.*\\.rds$",
+                            full.names = TRUE)
+out_F <- if (length(phaseF_paths) > 0L)
+    readRDS(sort(phaseF_paths, decreasing = TRUE)[1L]) else NULL
+aggs_F <- if (!is.null(out_F)) out_F$aggregates else NULL
+prov_F <- if (!is.null(out_F)) out_F$provenance else NULL
+
+## Phase G (robustness-weighted residual bootstrap).
+phaseG_paths <- list.files(study_dir, pattern = "_phaseG_.*\\.rds$",
+                            full.names = TRUE)
+out_G <- if (length(phaseG_paths) > 0L)
+    readRDS(sort(phaseG_paths, decreasing = TRUE)[1L]) else NULL
+aggs_G <- if (!is.null(out_G)) out_G$aggregates else NULL
+prov_G <- if (!is.null(out_G)) out_G$provenance else NULL
+
+## Phase H (subject-block residual bootstrap).
+phaseH_paths <- list.files(study_dir, pattern = "_phaseH_.*\\.rds$",
+                            full.names = TRUE)
+out_H <- if (length(phaseH_paths) > 0L)
+    readRDS(sort(phaseH_paths, decreasing = TRUE)[1L]) else NULL
+aggs_H <- if (!is.null(out_H)) out_H$aggregates else NULL
+prov_H <- if (!is.null(out_H)) out_H$provenance else NULL
+
+contam_levels <- c("clean", "t3", "CN_e", "CN_re", "shift_subj")
+
+pretty_method <- function(x)
+    factor(x, levels = c("Wald.default", "Wald.sandwich", "Wald.lmer",
+                          "anova.Wald.default", "anova.Wald.sandwich",
+                          "anova.lmer",
+                          "pair.Wald.default", "pair.Wald.sandwich",
+                          "pair.LRT.lmer"))
+
+pretty_contam <- function(x) factor(x, levels = contam_levels)
+
+fmt <- function(x, digits = 3L) format(round(x, digits), nsmall = digits)
+pct <- function(x) sprintf("%.0f%%", 100 * x)
+ppct <- function(x) sprintf("%+.0f pp", 100 * x)
+
+## Convenience: pivot an aggregate table into wide form
+## (J on rows, contamination on columns) for one (method, stat) pair.
+pivot_wide <- function(df, value_col, method, contam_levels = NULL) {
+    if (is.null(contam_levels))
+        contam_levels <- levels(pretty_contam(df$contamination))
+    sub <- df[df$method == method, ]
+    sub$contamination <- pretty_contam(sub$contamination)
+    out <- reshape(sub[, c("J", "contamination", value_col)],
+                    idvar = "J", timevar = "contamination",
+                    direction = "wide")
+    cn <- gsub(paste0(value_col, "\\."), "", colnames(out))
+    cn[cn == "J"] <- "J"
+    colnames(out) <- cn
+    out <- out[, c("J", contam_levels)]
+    out$J <- as.integer(out$J)
+    out
+}
+
+n_reps <- prov$n_reps
+J_grid <- prov$J_values
+```
+
+This document summarises the WS6 simulation study comparing the inference
+methods exposed in `rlmer` (`vcov`, `confint`, `anova`) against the
+`lme4::lmer` baseline that users would otherwise reach for: Phases A + C + D
+(Wald CI coverage and `anova` Type-I/power) plus Phases E--H (the
+variance-component bootstrap test and three attempts to make it robust to
+subject-level contamination).
+
+Configuration of the run quoted below (all numbers in this document are pulled
+live from the `.rds`):
+
+- Replicates per cell: **`r n_reps`**
+- `J` sweep: **`r paste(J_grid, collapse = ", ")`** subjects
+- Contamination: **`r paste(prov$contamination, collapse = ", ")`**
+- Effect sizes for Phases C / D: **`r paste(prov$eff_sizes, collapse = ", ")`** (`0` = Type-I cell, `>0` = power cell)
+- Cores: **`r prov$n_cores`** via `parallel::mclapply`
+- Wallclock: **`r round(prov$runtime_secs / 60, 1)` min**
+- Master seed: **`r prov$master_seed`** (`r prov$robustlmm_version` of robustlmm)
+
+# Headline
+
+Three methods, three verdicts:
+
+```{r headline-table}
+cov_var1 <- aggs$coverage_A[aggs$coverage_A$coef %in% c("Var1ii","Var1iii"), ]
+cov_var1 <- aggregate(covered ~ J + contamination + method,
+                       data = cov_var1, FUN = mean)
+range_for <- function(method, contam = NULL) {
+    d <- cov_var1[cov_var1$method == method, ]
+    if (!is.null(contam)) d <- d[d$contamination %in% contam, ]
+    sprintf("%.2f - %.2f", min(d$covered), max(d$covered))
+}
+
+t1_d <- aggs$type1_D
+range_t1 <- function(method, contam = NULL, J = NULL) {
+    d <- t1_d[t1_d$method == method, ]
+    if (!is.null(contam)) d <- d[d$contamination %in% contam, ]
+    if (!is.null(J)) d <- d[d$J %in% J, ]
+    sprintf("%.2f - %.2f", min(d$rej05), max(d$rej05))
+}
+
+## Phase E adds the VC bootstrap quasi-deviance test if its .rds is
+## present.
+range_E <- if (!is.null(aggs_E)) {
+    d <- aggs_E$type1_E
+    sprintf("%.2f - %.2f", min(d$rej05), max(d$rej05))
+} else "(not run)"
+
+headline <- data.frame(
+    Method   = c("`confint(method = \"Wald\", vcov_type = \"default\")`",
+                 "`confint(method = \"Wald\", vcov_type = \"sandwich\")`",
+                 "`confint(lmer_fit, method = \"Wald\")`",
+                 "`anova(rlmerfit)` / `anova(f0, f1)` (default vcov)",
+                 "`anova(rlmerfit)` / `anova(f0, f1)` (sandwich vcov)",
+                 "`anova(lmer0, lmer1)` LRT",
+                 "`anova(f0, f1, test = \"boot\")` VC bootstrap"),
+    `Coverage / Type-I across cells` = c(
+        range_for("Wald.default"),
+        range_for("Wald.sandwich"),
+        range_for("Wald.lmer"),
+        range_t1("pair.Wald.default"),
+        range_t1("pair.Wald.sandwich"),
+        range_t1("pair.LRT.lmer"),
+        range_E),
+    Verdict = c(
+        "**Trust at any J.**",
+        sprintf("OK at J >= %d; under-covers at J = %d.",
+                J_grid[2L], J_grid[1L]),
+        "Trust at any J (same coverage as rlmer-default).",
+        "**Trust at any J.**",
+        sprintf("Anti-conservative at J = %d; OK from J >= %d.",
+                J_grid[1L], 50L),
+        "Trust at any J (same Type I as rlmer-default).",
+        "OK under clean / t3; **anti-conservative under subject-level contamination** (Phase E)."),
+    check.names = FALSE)
+kable(headline, caption = sprintf(
+    "Coverage / Type-I summary across the %d contamination cells x %d J values.",
+    length(contam_levels), length(J_grid)))
+```
+
+The headline finding is **not** about Type I — both `rlmer` (default vcov) and
+`lmer` calibrate correctly under all five contamination regimes tested. The
+headline is about **efficiency under contamination**:
+
+```{r headline-power-gain}
+pow_d <- aggs$power_D
+key <- function(method, contam, J) {
+    pow_d$rej05[pow_d$method == method &
+                pow_d$contamination == contam &
+                pow_d$J == J]
+}
+gain <- function(contam, J) {
+    100 * (key("pair.Wald.default", contam, J) -
+           key("pair.LRT.lmer",     contam, J))
+}
+```
+
+Under heavy-tailed errors (`t3`), at `J = 50`, the `rlmer` Wald test rejects
+**`r ppct((key("pair.Wald.default","t3",50L) - key("pair.LRT.lmer","t3",50L)))`** more
+often than the `lme4` LRT at the same nominal level
+(power **`r pct(key("pair.Wald.default","t3",50L))`** vs **`r pct(key("pair.LRT.lmer","t3",50L))`**).
+Under contaminated-normal errors (`CN_e`), the gap is
+**`r ppct((key("pair.Wald.default","CN_e",50L) - key("pair.LRT.lmer","CN_e",50L)))`** at the
+same `J`. Under clean Gaussian data the methods are
+indistinguishable. **This is the canonical robustness-buys-power trade-off, now
+quantified for `rlmer`'s anova.**
+
+# Phase A — CI coverage and length
+
+Coverage for the two Var1 slope coefficients (averaged) and mean CI length, on
+the one-way ANOVA design `y ~ Var1 + (1 | Var2)`:
+
+## Coverage (target 0.95)
+
+```{r coverage-tables, results="asis"}
+cov <- aggs$coverage_A
+cov <- cov[cov$coef %in% c("Var1ii", "Var1iii"), ]
+cov_mean <- aggregate(covered ~ J + contamination + method,
+                       data = cov, FUN = mean)
+for (m in c("Wald.default", "Wald.sandwich", "Wald.lmer")) {
+    w <- pivot_wide(cov_mean, "covered", m)
+    rownames(w) <- NULL
+    cat(sprintf("\n**Coverage: `%s`**\n\n", m))
+    print(kable(w, digits = 3))
+    cat("\n\n")
+}
+```
+
+`Wald.default` and `Wald.lmer` cover at the nominal level across the entire
+grid. `Wald.sandwich` under-covers at `J = `r J_grid[1L]`` by
+`r pct(0.95 - mean(cov_mean$covered[cov_mean$method == "Wald.sandwich" &
+                                      cov_mean$J == J_grid[1L]]))`
+on average, then converges by `J = `r J_grid[2L]``. **The shortfall is
+roughly the same across contamination types**, confirming that the
+small-J finite-sample bias is the dominant effect, not contamination-induced
+misspecification.
+
+## CI length (lower = sharper at matched coverage)
+
+The length tells the robustness story coverage alone cannot:
+
+```{r length-tables, results="asis"}
+len <- aggregate(length ~ J + contamination + method,
+                  data = cov, FUN = mean)
+for (m in c("Wald.default", "Wald.sandwich", "Wald.lmer")) {
+    w <- pivot_wide(len, "length", m)
+    rownames(w) <- NULL
+    cat(sprintf("\n**Mean CI length: `%s`**\n\n", m))
+    print(kable(w, digits = 3))
+    cat("\n\n")
+}
+```
+
+```{r length-ratios}
+ratio <- function(contam, J) {
+    a <- len$length[len$method == "Wald.lmer" &
+                     len$contamination == contam & len$J == J]
+    b <- len$length[len$method == "Wald.default" &
+                     len$contamination == contam & len$J == J]
+    a / b
+}
+r_t3_50  <- ratio("t3",   50L)
+r_cne_50 <- ratio("CN_e", 50L)
+r_clean_50 <- ratio("clean", 50L)
+```
+
+Under `clean` Gaussian errors the two methods produce essentially identical
+intervals (length ratio `r fmt(r_clean_50, 2)` at `J = 50`). Under `t3`, lmer's
+intervals are **`r fmt(r_t3_50, 2)`x as wide** as rlmer's at `J = 50` at the
+*same* nominal coverage — i.e. lmer effectively wastes that much information by
+not downweighting the heavy tails. Under `CN_e` the lmer:rlmer length ratio
+is `r fmt(r_cne_50, 2)`. Random-effects contamination (`CN_re`) and the moderate
+`shift_subj` regime leave both methods on roughly equal footing.
+
+# Phase C — single-fit `anova(fit)` Type I + power
+
+```{r phaseC-tables, results="asis"}
+t1_c <- aggs$type1_C
+pow_c <- aggs$power_C
+for (m in c("anova.Wald.default", "anova.Wald.sandwich", "anova.lmer")) {
+    w <- pivot_wide(t1_c, "rej05", m); rownames(w) <- NULL
+    cat(sprintf("\n**Type-I (eff = 0, nominal 0.05): `%s`**\n\n", m))
+    print(kable(w, digits = 3))
+    cat("\n\n")
+}
+for (m in c("anova.Wald.default", "anova.Wald.sandwich", "anova.lmer")) {
+    w <- pivot_wide(pow_c, "rej05", m); rownames(w) <- NULL
+    cat(sprintf("\n**Power (eff = 0.5): `%s`**\n\n", m))
+    print(kable(w, digits = 3))
+    cat("\n\n")
+}
+```
+
+The single-fit table mirrors the pairwise story below: `anova.Wald.default` and
+`anova.lmer` calibrate cleanly; `anova.Wald.sandwich` is anti-conservative at
+small J.
+
+# Phase D — pairwise `anova(f0, f1)` Type I + power
+
+This is the key comparison for nested-model testing, the most common
+user-facing case.
+
+## Type I (target 0.05)
+
+```{r phaseD-type1, results="asis"}
+t1_d_tbl <- aggs$type1_D
+for (m in c("pair.Wald.default", "pair.Wald.sandwich", "pair.LRT.lmer")) {
+    w <- pivot_wide(t1_d_tbl, "rej05", m); rownames(w) <- NULL
+    cat(sprintf("\n**Type-I (eff = 0, nominal 0.05): `%s`**\n\n", m))
+    print(kable(w, digits = 3))
+    cat("\n\n")
+}
+```
+
+`pair.Wald.default` and `pair.LRT.lmer` are interchangeable on calibration —
+the maximum absolute deviation from nominal across the entire grid is
+**`r fmt(max(abs(t1_d_tbl$rej05[t1_d_tbl$method %in% c("pair.Wald.default","pair.LRT.lmer")] - 0.05)), 3)`**.
+`pair.Wald.sandwich` is anti-conservative at `J = `r J_grid[1L]``: the worst-case rate is
+**`r fmt(max(t1_d_tbl$rej05[t1_d_tbl$method == "pair.Wald.sandwich" & t1_d_tbl$J == J_grid[1L]]), 3)`**
+under `r contam_levels[which.max(c(NA, sapply(contam_levels, function(cc) max(t1_d_tbl$rej05[t1_d_tbl$method == "pair.Wald.sandwich" & t1_d_tbl$J == J_grid[1L] & t1_d_tbl$contamination == cc]))[1]))]`
+(`r fmt(max(t1_d_tbl$rej05[t1_d_tbl$method == "pair.Wald.sandwich" & t1_d_tbl$J == J_grid[1L]]) / 0.05, 1)`x nominal).
+By `J >= 50` it returns to nominal.
+
+## Power (eff_size = 0.5)
+
+```{r phaseD-power, results="asis"}
+pow_d_tbl <- aggs$power_D
+for (m in c("pair.Wald.default", "pair.Wald.sandwich", "pair.LRT.lmer")) {
+    w <- pivot_wide(pow_d_tbl, "rej05", m); rownames(w) <- NULL
+    cat(sprintf("\n**Power (eff = 0.5): `%s`**\n\n", m))
+    print(kable(w, digits = 3))
+    cat("\n\n")
+}
+```
+
+```{r phaseD-power-summary}
+power_gain <- function(contam, J) {
+    a <- pow_d_tbl$rej05[pow_d_tbl$method == "pair.Wald.default" &
+                          pow_d_tbl$contamination == contam &
+                          pow_d_tbl$J == J]
+    b <- pow_d_tbl$rej05[pow_d_tbl$method == "pair.LRT.lmer" &
+                          pow_d_tbl$contamination == contam &
+                          pow_d_tbl$J == J]
+    100 * (a - b)
+}
+gain_t3   <- sapply(J_grid, function(j) power_gain("t3", j))
+gain_cne  <- sapply(J_grid, function(j) power_gain("CN_e", j))
+gain_clean <- sapply(J_grid, function(j) power_gain("clean", j))
+power_gain_tab <- data.frame(
+    J     = J_grid,
+    clean = sprintf("%+.0f pp", gain_clean),
+    t3    = sprintf("%+.0f pp", gain_t3),
+    CN_e  = sprintf("%+.0f pp", gain_cne),
+    check.names = FALSE)
+kable(power_gain_tab,
+      caption = "Power gain of `pair.Wald.default` (rlmer) over `pair.LRT.lmer` (lmer), percentage points.")
+```
+
+Under clean data, the methods are within
+**`r sprintf("%.0f pp", max(abs(gain_clean)))`** of each other at every J --
+rlmer is paying essentially nothing for robustness. Under error-distribution
+contamination (`t3`, `CN_e`), rlmer's advantage is most pronounced at moderate
+J (`r J_grid[2L]` and `r J_grid[3L]`) and only collapses to zero once both
+methods saturate near 100 %. Under RE-level contamination (`CN_re`) and the
+moderate subject-shift cell, the methods are tied.
+
+# Robustness profile across contamination
+
+A single summary row per (method, contamination) averaged over the J sweep:
+
+```{r robustness-profile}
+power_profile <- aggregate(rej05 ~ method + contamination,
+                            data = pow_d_tbl, FUN = mean)
+power_profile <- reshape(power_profile,
+                          idvar = "method", timevar = "contamination",
+                          direction = "wide")
+colnames(power_profile) <- gsub("rej05\\.", "", colnames(power_profile))
+power_profile <- power_profile[match(c("pair.Wald.default",
+                                         "pair.Wald.sandwich",
+                                         "pair.LRT.lmer"),
+                                      power_profile$method), ]
+power_profile <- power_profile[, c("method", contam_levels)]
+rownames(power_profile) <- NULL
+cat("\n**Mean power across J in {8, 18, 50, 100} per (method, contamination), eff_size = 0.5.**\n\n")
+print(kable(power_profile, digits = 3))
+```
+
+```{r type1-profile}
+t1_profile <- aggregate(rej05 ~ method + contamination,
+                        data = t1_d_tbl, FUN = mean)
+t1_profile <- reshape(t1_profile, idvar = "method",
+                       timevar = "contamination", direction = "wide")
+colnames(t1_profile) <- gsub("rej05\\.", "", colnames(t1_profile))
+t1_profile <- t1_profile[match(c("pair.Wald.default",
+                                   "pair.Wald.sandwich",
+                                   "pair.LRT.lmer"),
+                                t1_profile$method), ]
+t1_profile <- t1_profile[, c("method", contam_levels)]
+rownames(t1_profile) <- NULL
+cat("\n**Mean Type-I across J in {8, 18, 50, 100} per (method, contamination).**\n\n")
+print(kable(t1_profile, digits = 3))
+```
+
+# Phase E — variance-component test via parametric bootstrap
+
+This is the VC bootstrap quasi-deviance test from WS5: nested models that
+differ only in random-effects structure (intercept-only vs intercept +
+slope), on a longitudinal `y ~ time + (... | id)` design. The H_0 cell
+sets the true slope variance to zero (`theta_slope = 0`) -- the PSD-cone
+boundary that classical Wald and LRT asymptotics can't handle. The H_1
+cell uses `theta_slope = 0.5`.
+
+```{r phaseE-skip-check, results = "asis", eval = is.null(out_E)}
+cat("*Phase E results not found in `", study_dir,
+    "`; section omitted.*\n\n", sep = "")
+```
+
+```{r phaseE-prov, eval = !is.null(out_E)}
+cat("Configuration (pulled from Phase E provenance):\n\n")
+cat(sprintf("- Replicates per cell: **%d**\n", prov_E$n_reps))
+cat(sprintf("- Bootstrap depth `nsim_boot`: **%d**\n", prov_E$nsim_boot))
+cat(sprintf("- `J` sweep: **%s**\n",
+            paste(prov_E$J_values, collapse = ", ")))
+cat(sprintf("- Contamination: **%s**\n",
+            paste(prov_E$contamination, collapse = ", ")))
+cat(sprintf("- Cores (PSOCK): **%d**\n", prov_E$n_cores))
+cat(sprintf("- Wallclock: **%.1f h**\n",
+            prov_E$runtime_secs / 3600))
+```
+
+## Type I (target 0.05)
+
+```{r phaseE-type1, eval = !is.null(out_E), results = "asis"}
+t1 <- aggs_E$type1_E
+t1$contamination <- factor(t1$contamination,
+                            levels = prov_E$contamination)
+w <- reshape(t1[, c("J", "contamination", "rej05")],
+              idvar = "J", timevar = "contamination",
+              direction = "wide")
+colnames(w) <- gsub("rej05\\.", "", colnames(w))
+rownames(w) <- NULL
+cat("\n**`pair.boot.QD` Type-I (nominal 0.05)**\n\n")
+print(kable(w, digits = 3))
+cat("\n\n")
+```
+
+```{r phaseE-type1-summary, eval = !is.null(out_E)}
+t1 <- aggs_E$type1_E
+clean_t3 <- t1[t1$contamination %in% c("clean", "t3"), ]
+max_clean_t3 <- max(clean_t3$rej05)
+shift <- t1[t1$contamination == "shift_subj", ]
+max_shift <- max(shift$rej05)
+worst_shift_J <- shift$J[which.max(shift$rej05)]
+```
+
+Under **clean Gaussian errors** and **t3 heavy tails**, the bootstrap
+quasi-deviance test is well-calibrated -- the worst Type-I across those
+two contamination types and all three `J` values is
+**`r fmt(max_clean_t3, 3)`**, well within Monte-Carlo noise of nominal
+0.05. The bootstrap correctly absorbs both the boundary problem at
+\eqn{\theta_{\text{slope}} = 0} and the heavy-tailed error distribution.
+
+The **`shift_subj` cell tells a different story**: Type I climbs to
+**`r fmt(max_shift, 3)`** at `J = `r worst_shift_J``, roughly
+**`r fmt(max_shift / 0.05, 1)`x** nominal, and is still elevated at
+`J = `r prov_E$J_values[length(prov_E$J_values)]``. The robust scoring
+equations absorb error-distribution contamination cleanly but the
+bootstrap simulates from the fitted central LMM at `fit0`'s estimates --
+which inherits any bias `fit0` picked up from the shifted subjects. The
+bootstrap null distribution under-represents the true noise process,
+giving anti-conservative p-values.
+
+## Power (eff = 0.5)
+
+```{r phaseE-power, eval = !is.null(out_E), results = "asis"}
+pw <- aggs_E$power_E
+pw$contamination <- factor(pw$contamination,
+                            levels = prov_E$contamination)
+w <- reshape(pw[, c("J", "contamination", "rej05")],
+              idvar = "J", timevar = "contamination",
+              direction = "wide")
+colnames(w) <- gsub("rej05\\.", "", colnames(w))
+rownames(w) <- NULL
+cat("\n**`pair.boot.QD` Power (eff_size = 0.5, target high)**\n\n")
+print(kable(w, digits = 3))
+cat("\n\n")
+```
+
+```{r phaseE-power-summary, eval = !is.null(out_E)}
+pw <- aggs_E$power_E
+clean_pow <- pw[pw$contamination == "clean", ]
+max_clean_pw <- max(clean_pow$rej05)
+max_clean_J  <- clean_pow$J[which.max(clean_pow$rej05)]
+```
+
+Power under clean Gaussian is **modest at best**: the largest cell
+(`J = `r max_clean_J``) reaches only **`r pct(max_clean_pw)`** rejection
+rate at `eff_size = 0.5` (i.e. true slope SD = 0.5 in scaled units).
+Under `t3` the test gains power -- consistent with the Phase D
+observation that the robust scoring equations buy extra information
+from heavy tails -- but the headline is that **at small-to-moderate
+\eqn{J}, the bootstrap quasi-deviance is conservative and detects only
+moderately large random-slope variances.** Designs needing high power
+on VC tests at small \eqn{J} should plan for a larger effect or move to
+a dedicated boundary-aware procedure (e.g. `RLRsim` for the classical
+LMM analog, then verify on the robust fit).
+
+# Phase F — residual-bootstrap variant (unweighted)
+
+Phase F replaces Phase E's Gaussian parametric simulation
+`eps = rnorm(n, sd = sigma_hat_0)` with a residual bootstrap. The
+implementation uses `weights(fit0)` as the sampling probability,
+which under `rlmer` returns the lme4 model weights (all 1s for an
+unweighted fit) -- so this is effectively *unweighted* resampling
+of the conditional residuals, not robustness-weighted. The
+motivation: under subject-level contamination, the empirical
+residual distribution carries the signature of the outliers (some
+residuals are very large), while the Gaussian step drops it.
+
+A weighted variant using `getME(fit0, "w_e")` (rlmer's actual
+robust weights) is reported below as Phase G, and a subject-block
+variant as Phase H.
+
+```{r phaseF-skip-check, results = "asis", eval = is.null(out_F)}
+cat("*Phase F results not found in `", study_dir,
+    "`; section omitted.*\n\n", sep = "")
+```
+
+```{r phaseF-prov, eval = !is.null(out_F)}
+cat("Configuration:\n\n")
+cat(sprintf("- Replicates per cell: **%d**\n", prov_F$n_reps))
+cat(sprintf("- Bootstrap depth `nsim_boot`: **%d**\n", prov_F$nsim_boot))
+cat(sprintf("- `J` sweep: **%s**\n",
+            paste(prov_F$J_values, collapse = ", ")))
+cat(sprintf("- Contamination: **%s**\n",
+            paste(prov_F$contamination, collapse = ", ")))
+cat(sprintf("- Cores (PSOCK): **%d**\n", prov_F$n_cores))
+cat(sprintf("- Wallclock: **%.1f h**\n",
+            prov_F$runtime_secs / 3600))
+```
+
+## Type I (target 0.05)
+
+```{r phaseF-type1, eval = !is.null(out_F), results = "asis"}
+t1F <- aggs_F$type1_F
+t1F$contamination <- factor(t1F$contamination,
+                             levels = prov_F$contamination)
+w <- reshape(t1F[, c("J", "contamination", "rej05")],
+              idvar = "J", timevar = "contamination",
+              direction = "wide")
+colnames(w) <- gsub("rej05\\.", "", colnames(w))
+rownames(w) <- NULL
+cat("\n**`pair.boot.QD.resid` Type-I (nominal 0.05)**\n\n")
+print(kable(w, digits = 3))
+cat("\n\n")
+```
+
+## Power (eff = 0.5)
+
+```{r phaseF-power, eval = !is.null(out_F), results = "asis"}
+pwF <- aggs_F$power_F
+pwF$contamination <- factor(pwF$contamination,
+                             levels = prov_F$contamination)
+w <- reshape(pwF[, c("J", "contamination", "rej05")],
+              idvar = "J", timevar = "contamination",
+              direction = "wide")
+colnames(w) <- gsub("rej05\\.", "", colnames(w))
+rownames(w) <- NULL
+cat("\n**`pair.boot.QD.resid` Power (eff_size = 0.5, target high)**\n\n")
+print(kable(w, digits = 3))
+cat("\n\n")
+```
+
+## Direct comparison: Gaussian (Phase E) vs residual (Phase F)
+
+```{r phaseEF-compare, eval = !is.null(out_F) && !is.null(out_E), results = "asis"}
+join_t1 <- merge(
+    aggs_E$type1_E[, c("J", "contamination", "rej05")],
+    aggs_F$type1_F[, c("J", "contamination", "rej05")],
+    by = c("J", "contamination"),
+    suffixes = c(".E", ".F"))
+join_t1$delta <- join_t1$rej05.F - join_t1$rej05.E
+join_t1$contamination <- factor(join_t1$contamination,
+                                 levels = prov_E$contamination)
+join_t1 <- join_t1[order(join_t1$contamination, join_t1$J), ]
+rownames(join_t1) <- NULL
+cat("\n**Type-I side-by-side (Phase E -- Gaussian boot -- vs Phase F -- residual boot)**\n\n")
+print(kable(join_t1, digits = 3,
+            col.names = c("J", "contamination", "E (Gaussian)",
+                          "F (residual)", "Delta (F - E)")))
+cat("\n\n")
+
+join_pw <- merge(
+    aggs_E$power_E[, c("J", "contamination", "rej05")],
+    aggs_F$power_F[, c("J", "contamination", "rej05")],
+    by = c("J", "contamination"),
+    suffixes = c(".E", ".F"))
+join_pw$delta <- join_pw$rej05.F - join_pw$rej05.E
+join_pw$contamination <- factor(join_pw$contamination,
+                                 levels = prov_E$contamination)
+join_pw <- join_pw[order(join_pw$contamination, join_pw$J), ]
+rownames(join_pw) <- NULL
+cat("\n**Power side-by-side (eff_size = 0.5)**\n\n")
+print(kable(join_pw, digits = 3,
+            col.names = c("J", "contamination", "E (Gaussian)",
+                          "F (residual)", "Delta (F - E)")))
+cat("\n\n")
+```
+
+```{r phaseEF-summary-prose, eval = !is.null(out_F) && !is.null(out_E), results = "asis"}
+shift_F <- aggs_F$type1_F[aggs_F$type1_F$contamination == "shift_subj", ]
+shift_E <- aggs_E$type1_E[aggs_E$type1_E$contamination == "shift_subj", ]
+clean_F <- aggs_F$type1_F[aggs_F$type1_F$contamination == "clean", ]
+clean_E <- aggs_E$type1_E[aggs_E$type1_E$contamination == "clean", ]
+cat(sprintf(paste0(
+"Phase F's headline change vs Phase E is the `shift_subj` cell: average ",
+"Type-I across `J` moves from **%s** (Phase E Gaussian) to **%s** ",
+"(Phase F residual). The `clean` cell stays well-calibrated (Phase E ",
+"average **%s**, Phase F average **%s**), so residual bootstrap doesn't ",
+"break what was already working.\n\n"),
+    fmt(mean(shift_E$rej05), 3),
+    fmt(mean(shift_F$rej05), 3),
+    fmt(mean(clean_E$rej05), 3),
+    fmt(mean(clean_F$rej05), 3)))
+```
+
+# Phase G — robustness-weighted residual bootstrap
+
+Phase G is the variant Phase F was originally meant to be: the
+residual resampling probabilities are `getME(fit0, "w_e")` --
+rlmer's actual robustness weights -- so contaminated residuals are
+*downweighted* (not dropped) at sampling time. If subject-level
+contamination inflates Phase E/F because the empirical null is too
+wide, downweighting the outlying residuals should narrow it.
+
+```{r phaseG-skip-check, results = "asis", eval = is.null(out_G)}
+cat("*Phase G results not found in `", study_dir,
+    "`; section omitted.*\n\n", sep = "")
+```
+
+```{r phaseG-prov, eval = !is.null(out_G)}
+cat("Configuration:\n\n")
+cat(sprintf("- Replicates per cell: **%d**\n", prov_G$n_reps))
+cat(sprintf("- Bootstrap depth `nsim_boot`: **%d**\n", prov_G$nsim_boot))
+cat(sprintf("- `J` sweep: **%s**\n",
+            paste(prov_G$J_values, collapse = ", ")))
+cat(sprintf("- Contamination: **%s**\n",
+            paste(prov_G$contamination, collapse = ", ")))
+cat(sprintf("- Cores (PSOCK): **%d**\n", prov_G$n_cores))
+cat(sprintf("- Wallclock: **%.1f h**\n",
+            prov_G$runtime_secs / 3600))
+```
+
+## Type I (target 0.05)
+
+```{r phaseG-type1, eval = !is.null(out_G), results = "asis"}
+t1G <- aggs_G$type1_G
+t1G$contamination <- factor(t1G$contamination,
+                             levels = prov_G$contamination)
+w <- reshape(t1G[, c("J", "contamination", "rej05")],
+              idvar = "J", timevar = "contamination",
+              direction = "wide")
+colnames(w) <- gsub("rej05\\.", "", colnames(w))
+rownames(w) <- NULL
+cat("\n**`pair.boot.QD.residw` Type-I (nominal 0.05)**\n\n")
+print(kable(w, digits = 3))
+cat("\n\n")
+```
+
+## Comparison: unweighted (Phase F) vs weighted (Phase G) vs Gaussian (Phase E)
+
+```{r phaseEFG-compare, eval = !is.null(out_G) && !is.null(out_F) && !is.null(out_E), results = "asis"}
+common <- intersect(intersect(prov_E$contamination, prov_F$contamination),
+                    prov_G$contamination)
+m <- merge(aggs_E$type1_E[, c("J", "contamination", "rej05")],
+           aggs_F$type1_F[, c("J", "contamination", "rej05")],
+           by = c("J", "contamination"), suffixes = c(".E", ".F"))
+m <- merge(m, aggs_G$type1_G[, c("J", "contamination", "rej05")],
+           by = c("J", "contamination"))
+names(m)[names(m) == "rej05"] <- "rej05.G"
+m <- m[m$contamination %in% common, ]
+m$contamination <- factor(m$contamination, levels = prov_G$contamination)
+m <- m[order(m$contamination, m$J), ]
+rownames(m) <- NULL
+cat("\n**Type-I across the three bootstrap nulls (nominal 0.05)**\n\n")
+print(kable(m, digits = 3,
+            col.names = c("J", "contamination", "E (Gaussian)",
+                          "F (resid)", "G (resid, weighted)")))
+cat("\n\n")
+```
+
+```{r phaseG-summary-prose, eval = !is.null(out_G) && !is.null(out_E), results = "asis"}
+shift_G <- aggs_G$type1_G[aggs_G$type1_G$contamination == "shift_subj", ]
+shift_E <- aggs_E$type1_E[aggs_E$type1_E$contamination == "shift_subj", ]
+clean_G <- aggs_G$type1_G[aggs_G$type1_G$contamination == "clean", ]
+shift_G <- shift_G[order(shift_G$J), ]
+cat(sprintf(paste0(
+"Weighting the residual resampling **does** help under subject-level ",
+"contamination, and the improvement grows with `J`: the `shift_subj` ",
+"Type-I falls to **%s** / **%s** / **%s** at `J` = %s, versus a Phase E ",
+"average of **%s**. It does not fully repair small `J`, though -- at ",
+"`J = %d` the test still rejects ~%s of the time under the null. The ",
+"`clean` cell stays calibrated (average **%s**), so weighting costs ",
+"nothing where there is nothing to fix. The bias that survives lives ",
+"in the Gaussian random-effect draw `b_sim ~ N(0, sigma^2 U_b U_b^T)`, ",
+"which inherits the variance `fit0` absorbed from the shifted subjects ",
+"-- weighting the residuals cannot touch it.\n\n"),
+    fmt(shift_G$rej05[1], 3), fmt(shift_G$rej05[2], 3),
+    fmt(shift_G$rej05[3], 3),
+    paste(shift_G$J, collapse = "/"),
+    fmt(mean(shift_E$rej05), 3),
+    shift_G$J[1], pct(shift_G$rej05[1]),
+    fmt(mean(clean_G$rej05), 3)))
+```
+
+# Phase H — subject-block residual bootstrap
+
+Phase H abandons the Gaussian random-effect draw entirely. Instead
+of `b_sim ~ N(0, sigma^2 U_b(theta_hat_0) U_b^T) + eps`, it
+transplants whole subjects' *total* residual vectors
+`r_tot_j = y_j - X_j beta_hat_0` (random effect and conditional
+residual together), resampled across subjects with replacement. The
+intent: cluster-level contamination should enter the bootstrap null
+as discrete outlying blocks -- exactly how it enters the data --
+rather than as inflated Gaussian variance, breaking the
+`contamination -> fit0 -> bootstrap-null` chain that Phases E--G
+could not.
+
+```{r phaseH-skip-check, results = "asis", eval = is.null(out_H)}
+cat("*Phase H results not found in `", study_dir,
+    "`; section omitted.*\n\n", sep = "")
+```
+
+```{r phaseH-prov, eval = !is.null(out_H)}
+cat("Configuration:\n\n")
+cat(sprintf("- Replicates per cell: **%d**\n", prov_H$n_reps))
+cat(sprintf("- Bootstrap depth `nsim_boot`: **%d**\n", prov_H$nsim_boot))
+cat(sprintf("- `J` sweep: **%s**\n",
+            paste(prov_H$J_values, collapse = ", ")))
+cat(sprintf("- Contamination: **%s**\n",
+            paste(prov_H$contamination, collapse = ", ")))
+cat(sprintf("- Effect sizes: **%s**\n",
+            paste(prov_H$eff_sizes, collapse = ", ")))
+cat(sprintf("- Cores (PSOCK): **%d**\n", prov_H$n_cores))
+cat(sprintf("- Wallclock: **%.1f h**\n",
+            prov_H$runtime_secs / 3600))
+```
+
+## Type I and power
+
+```{r phaseH-tables, eval = !is.null(out_H), results = "asis"}
+t1H <- aggs_H$type1_H
+t1H$contamination <- factor(t1H$contamination,
+                             levels = prov_H$contamination)
+w1 <- reshape(t1H[, c("J", "contamination", "rej05")],
+               idvar = "J", timevar = "contamination",
+               direction = "wide")
+colnames(w1) <- gsub("rej05\\.", "", colnames(w1))
+rownames(w1) <- NULL
+cat("\n**`pair.boot.QD.block` Type-I (nominal 0.05)**\n\n")
+print(kable(w1, digits = 3))
+cat("\n\n")
+
+pwH <- aggs_H$power_H
+pwH$contamination <- factor(pwH$contamination,
+                             levels = prov_H$contamination)
+w2 <- reshape(pwH[, c("J", "contamination", "rej05")],
+               idvar = "J", timevar = "contamination",
+               direction = "wide")
+colnames(w2) <- gsub("rej05\\.", "", colnames(w2))
+rownames(w2) <- NULL
+cat("\n**`pair.boot.QD.block` Power (eff_size = 0.5, target high)**\n\n")
+print(kable(w2, digits = 3))
+cat("\n\n")
+```
+
+```{r phaseH-pval-prose, eval = !is.null(out_H), results = "asis"}
+hp <- out_H$results$H$p
+cat(sprintf(paste0(
+"The block bootstrap is **degenerate**: it rejects essentially never, ",
+"under both the null *and* the alternative. The p-values pile up around ",
+"the centre (median **%s**, with only **%s** of the %d reps below 0.05 ",
+"and **%s** above 0.95) rather than spreading toward 0 under the ",
+"alternative. The mechanism is the mirror image of the fix it was meant ",
+"to be: transplanting whole-subject total residuals preserves whatever ",
+"random-slope signal is present in `r_tot`, so the bootstrap null scales ",
+"up in lockstep with `D_obs` and the observed statistic always lands in ",
+"the bulk of the null. It controls Type-I only in the trivial sense that ",
+"it controls *everything* to zero. Not a usable test.\n\n"),
+    fmt(median(hp, na.rm = TRUE), 3),
+    pct(mean(hp < 0.05, na.rm = TRUE)),
+    sum(!is.na(hp)),
+    pct(mean(hp > 0.95, na.rm = TRUE))))
+```
+
+# Recommendations
+
+1. **Use the default vcov everywhere.** Both `vcov(fit)` and the closed-form
+   `confint(fit, method = "Wald")` are well-calibrated across the entire grid,
+   are no worse than the classical `lmer` route on clean data, and are
+   substantially sharper under error-distribution contamination.
+
+2. **`vcov_type = "sandwich"` carries a small-J price.** The CI shortfall and
+   the much more pronounced anti-conservative anova Type I at
+   `J < `r J_grid[2L]`` mean the sandwich should be reserved for designs with
+   `J >= 50` (or paired with the bootstrap CI via `confintROB`). A warning in
+   `?vcov.rlmerMod` and `?anova.rlmerMod` for `n.clusters < 20` would be a
+   reasonable safety net.
+
+3. **`anova(f0, f1)` with the default vcov is a drop-in replacement for the
+   lme4 LRT** with two benefits and no downside under the conditions tested:
+   matching calibration on clean data, and 20-30 percentage points more power
+   under heavy-tailed or contaminated errors at moderate J.
+
+4. **VC test (`anova(f0, f1)`, `test = "boot"`) is calibrated only for
+   error-distribution contamination.** Phase E confirms the bootstrap
+   quasi-deviance test is well-calibrated under clean and `t3`, but
+   **anti-conservative by 2.5–5x nominal under subject-level contamination
+   (`shift_subj`).** The bootstrap simulates from the fitted central LMM, so
+   any bias `fit0` picked up from group outliers contaminates the empirical
+   null. Document this limitation in `?anova.rlmerMod` and recommend the
+   bootstrap test only when the data look clean at the subject level
+   (e.g. after a `cooks.distance` pass). Power is also modest (< 25 % at
+   `J = 50`, `theta_slope = 0.5`), so VC tests at small `J` should plan for
+   a larger expected effect or move to a dedicated boundary-aware
+   procedure.
+
+5. **No residual-resampling tweak rescues the VC bootstrap under
+   subject-level contamination.** Three variants were tried. Unweighted
+   residual resampling (Phase F) leaves the inflation essentially
+   unchanged. Robustness-weighted resampling (Phase G) helps — the
+   `shift_subj` Type-I improves with `J` and recovers to near-nominal by
+   `J = 50` — but it does not fix small `J`, because the surviving bias
+   lives in the Gaussian random-effect draw, not in the residuals. The
+   subject-block bootstrap (Phase H), which transplants whole-subject
+   total residuals to break that chain, is degenerate: it preserves the
+   slope signal in the resampled blocks, so the null scales with the
+   observed statistic and the test rejects essentially never (zero size
+   **and** zero power). The practical upshot stands with recommendation 4:
+   screen for subject-level outliers first; if a VC bootstrap is needed
+   under suspected cluster contamination, Phase G's weighted variant is a
+   modest mitigation at moderate-to-large `J`, but none of these is a cure
+   at small `J`.
+
+# Reproducibility
+
+The numbers in this document are pulled from
+`r paste(na.omit(c(basename(sort(rds_paths, decreasing = TRUE)[1L]), if (!is.null(out_E)) basename(sort(phaseE_paths, decreasing = TRUE)[1L]), if (!is.null(out_F)) basename(sort(phaseF_paths, decreasing = TRUE)[1L]), if (!is.null(out_G)) basename(sort(phaseG_paths, decreasing = TRUE)[1L]), if (!is.null(out_H)) basename(sort(phaseH_paths, decreasing = TRUE)[1L]))), collapse = ", ")`,
+produced by `Rscript inst/simulationStudy/inferenceStudy.R` with
+`master_seed = `r prov$master_seed``.
+The same seed reproduces the same `rlmer` numbers regardless of the lmer
+comparison being added (verified against the earlier rlmer-only run committed
+alongside).
+
+```{r session-info, include = FALSE}
+sessionInfo()
+```

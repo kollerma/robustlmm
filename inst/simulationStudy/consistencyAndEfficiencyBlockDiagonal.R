@@ -254,7 +254,7 @@ plot_efficiencyBlockDiagonal <-
            aes(k, s.lme / s.RSE, color = adjustment, shape = adjustment)) +
     geom_hline(aes(yintercept = 1)) +
     geom_point(data = asymptoticEfficiencies, aes(y = value), color = "black") +
-    lemon::geom_pointline(aes(group = adjustment)) + facet_wrap( ~ variable) +
+    ggh4x::geom_pointpath(aes(group = adjustment)) + facet_wrap( ~ variable) +
     ylab("empirical efficiency") +
     scale_colour_manual("Method", values = colors[2:3]) +
     scale_shape_manual("Method", values = c(2, 16)) +

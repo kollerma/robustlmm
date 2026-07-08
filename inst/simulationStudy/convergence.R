@@ -243,7 +243,7 @@ plot_convergence_N_N_bias <-
             color = numberOfReplicates
         )
     ) +
-    lemon::geom_pointline(aes(group = interaction(Method, numberOfReplicates))) +
+    ggh4x::geom_pointpath(aes(group = interaction(Method, numberOfReplicates))) +
     geom_hline(yintercept = 1) +
     facet_grid(numberOfReplicates ~ variable) + ylab("Location")
 
@@ -262,7 +262,7 @@ plot_convergence_N_N_scale <-
             color = numberOfReplicates
         )
     ) +
-    lemon::geom_pointline(aes(group = interaction(Method, numberOfReplicates))) +
+    ggh4x::geom_pointpath(aes(group = interaction(Method, numberOfReplicates))) +
     facet_wrap( ~ variable) + ylab("Scale")
 
 if (interactive()) {
@@ -280,7 +280,7 @@ plot_convergence_N_N_efficiency <-
             color = numberOfReplicates
         )
     ) +
-    lemon::geom_pointline(aes(group = interaction(Method, numberOfReplicates))) +
+    ggh4x::geom_pointpath(aes(group = interaction(Method, numberOfReplicates))) +
     facet_wrap( ~ variable) + ylab("Empirical efficiency")
 
 if (interactive()) {

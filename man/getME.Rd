@@ -3,9 +3,6 @@
 \alias{getME}
 \alias{theta}
 \title{Extract or Get Generalize Components from a Fitted Mixed Effects Model}
-\alias{getME.rlmerMod}
-\alias{getME}
-\alias{theta}
 \usage{
 \S3method{getME}{rlmerMod}(
   object,
@@ -14,7 +11,7 @@
     "theta", "ST", "is_REML", "n_rtrms", "n_rfacs", "N", "n", "p", "q", "p_i", "l_i",
     "q_i", "k", "m_i", "m", "cnms", "devcomp", "offset", "lower", "rho_e", "rho_b",
     "rho_sigma_e", "rho_sigma_b", "M", "w_e", "w_b", "w_b_vector", "w_sigma_e",
-    "w_sigma_b", "w_sigma_b_vector"),
+    "w_sigma_b", "w_sigma_b_vector", "design.weights"),
   ...
 )
 
@@ -129,11 +126,14 @@ theta(object)
     \item{\code{"rho_sigma_b"}:}{list of rho functions used for the random effects when estimating the covariance parameters}
     \item{\code{"M"}:}{list of matrices, blocks of the Henderson's equations and the matrices used for computing the linear approximations of the estimates of beta and spherical random effects.}
     \item{\code{"w_e"}:}{robustness weights associated with the observations}
+    \item{\code{"design.weights"}:}{Mallows design weights \eqn{\eta_i}
+              (see argument \code{design.weights} of \code{\link{rlmer}});
+              a vector of ones unless design weights were specified}
     \item{\code{"w_b"}:}{robustness weights associated with the spherical random effects, returned in the same format as \code{\link[lme4:ranef.merMod]{ranef}()}}
-    \item{\code{"w_b_vector"}:}{robustness weights associated with the spherical random effects, returned as one long vector}
+    \item{\code{"w_b_vector"}:}{robustness weights associated with the spherical random effects, returned as one long vector, in the same order as the spherical random effects (\code{"b_s"})}
     \item{\code{"w_sigma_e"}:}{robustness weights associated with the observations when estimating sigma}
     \item{\code{"w_sigma_b"}:}{robustness weights associated with the spherical random effects when estimating the covariance parameters, returned in the same format as \code{\link[lme4:ranef.merMod]{ranef}()}}
-    \item{\code{"w_sigma_b_vector"}:}{robustness weights associated with the spherical random effects when estimating the covariance parameters, returned as one long vector}
+    \item{\code{"w_sigma_b_vector"}:}{robustness weights associated with the spherical random effects when estimating the covariance parameters, returned as one long vector, in the same order as the spherical random effects (\code{"b_s"})}
 
      %% -- keep at the very end:
      \item{\code{"ALL"}:}{get all of the above as a \code{\link[base]{list}}.}

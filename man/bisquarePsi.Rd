@@ -6,5 +6,9 @@
 \description{
 Pre-built \code{psi_func_rcpp} from \code{\link{makeBisquarePsi}} with
 the conventional tuning constant \code{c = 4.685} (\eqn{\approx 95\%}
-efficiency at the normal model).
+efficiency at the normal model). The bisquare redescends comparatively
+fast; \code{\link{lqqPsi}} is the recommended redescender.
+}
+\seealso{
+\code{\link{lqqPsi}}, \code{\link{makeRobustbasePsi}}.
 }

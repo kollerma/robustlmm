@@ -1,8 +1,8 @@
 Package: robustlmm
 Type: Package
 Title: Robust Linear Mixed Effects Models
-Version: 3.4-5
-Date: 2026-06-21
+Version: 3.5.0
+Date: 2026-07-08
 Author: Manuel Koller [aut, cre]
 Authors@R: person(given = "Manuel", family = "Koller", role = c("aut", "cre"), email = "kollerma@proton.me")
 Maintainer: Manuel Koller <kollerma@proton.me>
@@ -25,7 +25,6 @@ Suggests:
     estimability,
     lqmm,
     MASS,
-    lemon,
     RColorBrewer,
     skewt,
     fs,
@@ -71,13 +70,16 @@ Collate:
     'ransac.R'
     'influence.R'
     'influence_full.R'
+    'df_satterthwaite.R'
     'bootstrapWald.R'
+    'anova.R'
     'fitDatasets.R'
     'processFit.R'
     'processFile.R'
     'simulationStudies.R'
     'asymptoticEfficiency.R'
     'emmeans.R'
+    'options.R'
 LinkingTo: Rcpp, robustbase, Matrix
 Encoding: UTF-8
 RcppModules: psi_function_module

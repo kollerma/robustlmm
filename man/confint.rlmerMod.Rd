@@ -10,7 +10,8 @@
   level = 0.95,
   method = c("Wald", "boot", "BCa"),
   vcov_type = c("default", "sandwich"),
-  boot.type = c("parametric", "wild"),
+  df = c("none", "satterthwaite"),
+  boot.type = c("wild", "parametric"),
   nsim = 1000L,
   seed = NULL,
   ...
@@ -36,9 +37,18 @@ behaviour) or \code{"sandwich"} (the robust cluster-sandwich
 factor, approximate for crossed designs). Ignored when
 \code{method = "boot"} or \code{"BCa"}.}
 
+\item{df}{Critical-value degrees of freedom for \code{method =
+"Wald"}. \code{"none"} (default) uses the normal quantile
+\eqn{z_{1-\alpha/2}} as before; \code{"satterthwaite"} uses a
+per-coefficient Satterthwaite t-quantile (the robust IF-based
+df), matching \code{summary(object, df = "satterthwaite")}. It
+requires \code{vcov_type = "default"} and a single grouping factor;
+otherwise it warns and falls back to the normal quantile.}
+
 \item{boot.type}{Bootstrap kind passed to \code{confintROB} when
 \code{method = "boot"} or \code{"BCa"}: one of
-\code{"parametric"} (default) or \code{"wild"}.}
+\code{"wild"} (default, the \code{confintROB} recommendation) or
+\code{"parametric"}.}
 
 \item{nsim}{Bootstrap replicates; default 1000.}
 
@@ -76,11 +86,18 @@ Two routes.
 Guidance (Koller 2014; Mason et al. 2024). The chi-sq-p Wald limit
 is adequate for \eqn{J \gtrsim 20} groups; the bootstrap earns its
 (substantial) cost mainly at smaller \eqn{J}. \code{boot.type =
-  "wild"} is robust to misspecification of the response covariance,
-while \code{"parametric"} is exact under the fitted central LMM.
+  "wild"} (the default, following \pkg{confintROB}) is robust to
+misspecification of the response covariance, while
+\code{"parametric"} is exact under the fitted central LMM.
 \code{method = "BCa"} adds the bias-correction-and-acceleration
 adjustment to the bootstrap percentile (preferred when the
 bootstrap distribution is skewed).
+
+\strong{Small-J caveat for the sandwich.} \code{vcov_type =
+  "sandwich"} under-covers at \eqn{J < 20} (in a simulation study:
+coverage ~0.89 at \eqn{J = 8} vs. nominal 0.95); the sandwich path
+emits a warning. For Wald CIs at small \eqn{J} prefer \code{vcov_type
+  = "default"} or use \code{method = "boot"} / \code{"BCa"}.
 }
 \references{
 Mason F, Cantoni E, Ghisletta P (2021). \emph{Parametric

@@ -42,6 +42,14 @@ returns the robust cluster-sandwich \code{\link{vcov_sandwich}}.
 The cluster sandwich is exact for a single (nested) grouping factor;
 for crossed factors it is approximate (a warning is issued, see
 \code{\link{vcov_sandwich}}).
+
+\strong{Small-J caveat for the sandwich.} The G1 correction is
+necessary but not sufficient at very small \eqn{J}: in a
+simulation study sandwich CI coverage drops to ~0.89 at \eqn{J =
+  8} (vs. nominal 0.95). \code{vcov_sandwich} emits a warning for
+\eqn{J < 20}; for inference at small \eqn{J} prefer \code{type =
+  "default"} or pair the sandwich CI with a bootstrap calibration
+(e.g. \code{confintROB}).
 }
 \seealso{
 \code{\link{vcov_sandwich}}

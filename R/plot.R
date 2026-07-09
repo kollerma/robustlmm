@@ -1,6 +1,6 @@
 ## plot functions for rlmerMod objects
 
-globalVariables("theoretical", add=TRUE)
+globalVariables(c("theoretical", ".data"), add=TRUE)
 
 ## internal functions, called via plot.rlmerMod
 ## TA-plots inclusive coloring for weights
@@ -27,7 +27,16 @@ qq <- function(obj, type = c("resid", "ranef"), title="",
     val0 <- switch(type,
                   resid = list(resid = data.frame(resid=resid(obj))),
                   ranef = ranef(obj))
-    ord0 <- numeric(0)
+    ## robustness weights arranged EXACTLY like val0 (same list of
+    ## per-factor data frames), so each point's weight is looked up by
+    ## (factor, coordinate, row) rather than by position in a flat
+    ## vector -- the flat w_b_vector is in b order (level-major), which
+    ## does not match the coordinate-major iteration below.
+    wgt0 <- if (is(obj, "rlmerMod")) {
+        switch(type,
+               resid = list(resid = data.frame(resid = getME(obj, "w_e"))),
+               ranef = getME(obj, "w_b"))
+    } else NULL
     for (level in names(val0)) {
         val1 <- val0[[level]]
         for (col in colnames(val1)) {
@@ -36,16 +45,12 @@ qq <- function(obj, type = c("resid", "ranef"), title="",
             name <- if (ncol(val1) == 1) level else paste(level, col, sep="/")
             data <- data.frame(level = name,
                                sample = val[ord],
-                               theoretical = qnorm(ppoints(length(val))))
+                               theoretical = qnorm(ppoints(length(val))),
+                               weights = if (is.null(wgt0)) 1 else
+                                             wgt0[[level]][[col]][ord])
             data0 <- if (exists("data0")) rbind(data0, data) else data
-            ord0 <- c(ord0, length(ord0) + ord)
         }
     }
-    data0$weights <-
-        if (is(obj, "rlmerMod")) {
-            switch(type, resid = getME(obj, "w_e"),
-                   ranef = getME(obj, "w_b_vector"))[ord0]
-        } else 1
     if (multiply.weights) data0$sample <- data0$sample * data0$weights
     plt <- ggplot2::ggplot(data0, ggplot2::aes(theoretical, sample))
     if (add.line == "below")
@@ -63,18 +68,20 @@ qq <- function(obj, type = c("resid", "ranef"), title="",
 rsc <- function(obj, title="") {
     r <- ranef(obj)
     if (is(obj, "rlmerMod")) w <- getME(obj, "w_b")
-    qn <- function(n) paste("`", n, "`", sep="")
     plots <- list()
     for (g in names(r)) {
         df <- r[[g]]
         nc <- ncol(df)
         if (nc < 2) next
+        cn <- colnames(df)   # random-effect coordinate names (axes)
         if (is(obj, "rlmerMod")) df <- cbind(df, weights=w[[g]][,1])
         ## create a plot for all combinations
         for (i in 1L:(nc-1L)) {
             for (j in (i+1L):nc) {
-                lplt <- ggplot2::ggplot(df, ggplot2::aes_string(x=qn(colnames(df)[i]),
-                                                      y=qn(colnames(df)[j])))
+                ## .data[[]] (tidy eval) replaces the deprecated
+                ## aes_string(); handles non-syntactic coordinate names.
+                lplt <- ggplot2::ggplot(df, ggplot2::aes(x = .data[[cn[i]]],
+                                                         y = .data[[cn[j]]]))
                 if (title != "") lplt <- lplt + ggplot2::ggtitle(sprintf(title, g))
                 lplt <- if (is(obj, "rlmerMod"))
                     lplt + ggplot2::geom_point(ggplot2::aes(color = weights))

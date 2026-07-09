@@ -23,11 +23,33 @@ derivative slots implement Tukey's bisquare (biweight) function
 suitable for use as \code{rho.e} (or \code{rho.b}, \code{rho.sigma.e},
 \code{rho.sigma.b}) in \code{\link{rlmer}}.
 
+Since robustlmm 3.5.0 the psi, rho, weight and derivative evaluations
+delegate to robustbase's compiled bisquare family
+(\code{\link[robustbase]{Mpsi}}, \code{\link[robustbase]{Mwgt}},
+\code{\link[robustbase]{Mchi}}), so they match
+\code{\link[robustbase]{lmrob}} exactly; the returned values are
+identical (to numerical tolerance) to the previous hand-coded
+implementation. \code{makeBisquarePsi} is the scalar-cutoff special
+case of the general \code{\link{makeRobustbasePsi}}.
+
 The Fisher consistency expectations (\code{Erho}, \code{Epsi2},
 \code{EDpsi}) are computed by numerical integration against the
 standard normal.
+
+The bisquare redescends comparatively fast; for a redescending fit the
+\code{"lqq"} psi (\code{\link{lqqPsi}}), the recommended redescender of
+robustbase's \code{lmrob.control(setting = "KS2014")}, is generally
+preferable (Koller and Stahel 2011).
 }
 \examples{
   pf <- bisquarePsi
   pf@psi(c(-6, -3, 0, 3, 6))
+}
+\references{
+Koller, M. and Stahel, W. A. (2011) Sharpening Wald-type inference in
+robust regression for small samples. \emph{Computational Statistics &
+Data Analysis} \bold{55}(8), 2504--2515.
+}
+\seealso{
+\code{\link{makeRobustbasePsi}}, \code{\link{lqqPsi}}.
 }

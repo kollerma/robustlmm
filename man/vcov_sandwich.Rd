@@ -34,6 +34,16 @@ factors (a warning is issued via \code{\link{resolveCluster}}). With
 few clusters, set \code{correction = "G1"} (default) for the
 \eqn{J/(J-1)} small-sample scaling.
 
+\strong{Small-J caveat.} The G1 correction is necessary but not
+sufficient at very small \eqn{J}: in a simulation study CI
+coverage drops to ~0.89 at \eqn{J = 8} (vs. nominal 0.95), and
+Wald-style hypothesis tests using the sandwich are anti-conservative
+(Type-I ~3-4x nominal). The function emits a warning for \eqn{J <
+  20}. For inference at small \eqn{J} prefer \code{vcov_type =
+  "default"} or pair the sandwich CI with a bootstrap calibration
+(e.g. \code{confintROB}); the sandwich is most useful at \eqn{J
+  \gtrsim 50}.
+
 \eqn{\hat{\sigma}, \hat{\theta}} are held fixed (partial sandwich); the
 returned variance is the leading-order fixed-effects covariance.
 }

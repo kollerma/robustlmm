@@ -61,7 +61,13 @@ if (have_conf) {
     stopifnot(identical(colnames(ci_b), c("2.5 %", "97.5 %")))
     stopifnot(all(ci_b[, 1] < beta & beta < ci_b[, 2]))
     stopifnot(attr(ci_b, "method")    == "boot")
-    stopifnot(attr(ci_b, "boot.type") == "parametric")
+    ## default boot.type is "wild" (confintROB's own recommendation)
+    stopifnot(attr(ci_b, "boot.type") == "wild")
+    ## explicit boot.type = "parametric" is still honoured
+    ci_bp <- suppressWarnings(
+        confint(fit, method = "boot", boot.type = "parametric",
+                nsim = nsim_test, seed = 20260602L))
+    stopifnot(attr(ci_bp, "boot.type") == "parametric")
 
     ## Reproducibility under the same seed.
     ci_b2 <- suppressWarnings(

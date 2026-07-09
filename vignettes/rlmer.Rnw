@@ -243,12 +243,7 @@ We start by loading the \Rp package and the modified \code{Penicillin} dataset.
 options(width = 60, str = strOptions(vec.len = 1.4), prompt = 'R> ', continue = '+  ')
 <<init>>=
 require("robustlmm")
-warning("Current dir: ", system.file("", package = "robustlmm"), " has contents: ",
-        paste(list.files(system.file("", package = "robustlmm")), collapse = ", "))
-warning("doc dir: ", system.file("doc", package = "robustlmm"), " has contents: ",
-        paste(list.files(system.file("doc", package = "robustlmm")), collapse = ", "))
 filename <- system.file("doc/Penicillin.R", package = "robustlmm", mustWork = TRUE)
-warning("Filename: ", filename)
 source(filename)
 <<plot-figure1, echo=FALSE, eval=FALSE>>=
 require(ggplot2)
@@ -364,7 +359,11 @@ For confidence intervals on the fixed-effect coefficients the package exposes \c
 
 When the asymptotic $\chi^2_p$ limit is suspect---typically for small numbers of groups $J$---bootstrap inference is preferable.  \code{confint.rlmerMod} delegates \code{method = "boot"} and \code{method = "BCa"} to the \pkg{confintROB} package \citep{mason2021confintrob, mason2024confintrob}, which implements both the parametric and the wild bootstrap (option \code{boot.type}), with optional bias-correction-and-acceleration on the bootstrap quantile (\code{method = "BCa"}).  \pkg{confintROB} is the published, peer-reviewed implementation for \code{rlmer} fits and should be the default route for any bootstrap CI.  Practical guidance from those papers: the $\chi^2_p$ Wald limit is adequate for $J \gtrsim 20$ groups, so the bootstrap mainly earns its (substantial) cost at smaller $J$; the wild bootstrap is robust to misspecification of the response covariance while the parametric bootstrap is exact under the fitted central LMM; and BCa is preferable when the bootstrap distribution is skewed.
 
-\pkg{confintROB} is in \code{Suggests}, so the bootstrap paths require it to be installed; \code{method = "Wald"} works without it.  Example:
+\pkg{confintROB} is in \code{Suggests}, so the bootstrap paths require it to be installed; \code{method = "Wald"} works without it.
+
+The methodology behind these tools---the influence function, the cluster-robust sandwich covariance, the robust Satterthwaite degrees of freedom (also used by \code{summary}, \code{anova} and \code{emmeans}), the influence diagnostics (\code{cooks.distance}, \code{hatvalues}) and the robust \code{anova}---is collected in Appendix~\ref{sec:methods350}. A worked tour of each is given in \code{vignette("robustlmm-3.5.0")}.
+
+\emph{Small-$J$ caveat for the sandwich.}  A simulation study shows that at $J = 8$ the cluster sandwich undercovers (empirical $\approx 0.89$ vs nominal $0.95$) and that Wald-based \code{anova} tests using the sandwich are anti-conservative ($3$--$4\times$ nominal Type I); calibration returns to nominal only from $J \gtrsim 50$.  \code{vcov_sandwich} emits a warning when fewer than 20 clusters are detected.  At small $J$, prefer \code{vcov_type = "default"} for hypothesis tests or pair the sandwich CI with the \pkg{confintROB} bootstrap.  Example:
 
 <<finite-sample-confint, eval=FALSE>>=
 fit  <- rlmer(Yield ~ (1 | Batch), Dyestuff)
@@ -377,6 +376,40 @@ confint(fit, method = "BCa", nsim = 1000, # parametric BCa bootstrap
 confint(fit, method = "boot",             # wild bootstrap
         boot.type = "wild", nsim = 1000)
 @
+
+\subsection{Robustness to high-leverage design points}\label{sec:designWeights}
+
+The $\psi$-functions bound the influence of outliers in the
+\emph{response}, but a single high-leverage observation (extreme
+covariates with a plausible response) can still move $\hat\beta$
+arbitrarily---the classical gap between Huber-type and
+GM-estimators. The \code{design.weights} argument adds Mallows-type
+weights $\eta_i \in (0, 1]$ that downweight the score contribution of
+high-leverage design points. Passing \code{"mcd"} derives $\eta$ from
+robust Mahalanobis distances of the non-constant columns of $\bld X$ (via
+\code{covMcd}); a numeric vector may be supplied instead.
+
+<<design-weights, eval=FALSE>>=
+fit_mallows <- rlmer(Yield ~ x + (1 | Batch), data,
+                     design.weights = "mcd")
+@
+
+This trades a little efficiency for robustness in the design space. On
+clean data the cost is small---about a 1\% increase in the variance of
+$\hat\beta$ at the default tuning ($\gamma = 1$, cutoff $0.975$),
+roughly stable as the number of non-constant columns of $\bld X$
+grows---and it vanishes entirely for intercept-only designs (where
+\code{"mcd"} reduces to $\eta \equiv 1$). The protection it buys is
+substantial: under leverage contamination that drags ordinary and plain
+robust fits toward a spurious slope, the Mallows fit stays close to the
+clean-data estimate (several-fold smaller slope bias at moderate
+contamination). The feature is experimental and assumes a single
+grouping factor; \code{summary} reports how many observations are
+downweighted by design. Appendix~\ref{sec:methMallows} gives the
+definition of $\eta_i$ and how it enters the estimating equations; the
+RANSAC initial estimator (Appendix~\ref{sec:methRansac}) and the
+structured \code{cs}/\code{ar1} covariances
+(Appendix~\ref{sec:methStructured}) are likewise documented there.
 
 \section{Further information}
 
@@ -863,5 +896,261 @@ By splitting the left-hand side into two sums, moving the second sum to the righ
 \end{remark}
 
 The resulting algorithm, considering steps 2 to 4 together, is then of EM-type. It converges fairly quickly, except when the solution is zero, i.e., some variance components are dropped. An illustration of the problem and potential improvements to the algorithm can be found in \citet[Section~2.12]{demidenko2004mixed}.
+
+\section{Methodology added in version 3.5.0}\label{sec:methods350}
+
+This Appendix sketches the methodology behind the features added for the
+3.5.0 release (their usage is shown in the companion vignette,
+\code{vignette("robustlmm-3.5.0")}). All of them build on the robust
+scoring equations \eqref{eq:robustEEq} and the fitted estimator
+$(\wh{\vec\beta}, \wh{\vec u}, \wh\sigma, \wh{\vec\theta})$.
+
+\subsection{Influence function and the cluster-robust sandwich}\label{sec:methSandwich}
+
+Write the stacked $(\vec\beta, \vec u)$ scoring equations
+\eqref{eq:robustEEq} as $\vec g(\vec\beta, \vec u; \vec y) = \vec 0$ and
+let $\bld J$ be their Jacobian with blocks $\bld J_{\beta\beta}$,
+$\bld J_{\beta u}$, $\bld J_{u\beta}$, $\bld J_{uu}$ (each evaluated at
+the fit). Eliminating $\vec u$ gives the marginal
+(Schur-complement) $\vec\beta$-Jacobian
+\begin{equation*}
+  \wh{\bld A} = \bld J_{\beta\beta} - \bld J_{\beta u}\,\bld J_{uu}\inv\,\bld J_{u\beta}\;.
+\end{equation*}
+Implicit differentiation of $\vec g = \vec 0$ with respect to a shift in
+the response gives the local-shift sensitivity
+$\partial\wh{\vec\beta}/\partial\vec y$ (the function
+\code{implicitIF}); replacing the $\vec y$-derivative of the score by
+its value $\bld\psi$ gives instead the case-weight (Hampel) influence
+function $\mathrm{IF}(y_i) = -\wh{\bld A}\inv \vec s_i$, where $\vec s_i$
+is the marginal $\vec\beta$-score contribution of observation $i$
+(\code{caseweightIF}). Summing these contributions by cluster, $\vec s_j
+= \sum_{i \in j} \vec s_i$, yields the cluster-robust sandwich
+covariance
+\begin{equation}\label{eq:sandwich}
+  \wh{\bld V} = \wh{\bld A}\inv \Bigl(\textstyle\sum_{j=1}^J \vec s_j \vec s_j\tr\Bigr) \wh{\bld A}^{-\top}\;,
+\end{equation}
+with the small-sample correction $\bld V \mapsto \tfrac{J}{J-1}\bld V$
+(\code{correction = "G1"}). On a single grouping factor the clusters are
+the groups; on crossed designs the multiway estimator of
+\citet{cameron2011robust}, $\bld V_a + \bld V_b - \bld V_{a:b}$,
+projected to the nearest positive-semidefinite matrix, is used.
+Equation~\eqref{eq:sandwich} is returned by \code{vcov(., type =
+"sandwich")} and \code{vcov\_sandwich}; the default \code{vcov} is
+unchanged. The sandwich is a large-$J$ device and undercovers at small
+$J$ (see the inference study in \code{vignette("simulationStudies")}).
+
+\subsection{Cook's distances and robust leverage}\label{sec:methCooks}
+
+Extending the differentiation above to the full estimating equations ---
+including the scale \eqref{eq:sigmaDAS} and the covariance-parameter
+equations --- gives the per-observation influence on the joint parameter
+vector $\vec\vartheta = (\vec\beta, \sigma, \vec\theta)$
+(\code{implicitIF\_full}). Stacking these into a matrix $\bld W$ with one
+column per observation and writing $\bld V_\vartheta = n\inv \bld W \bld
+W\tr$, the (robust) Cook's distance of observation $i$ is the
+Mahalanobis norm
+\begin{equation*}
+  D_i = \sqrt{\vec w_i\tr \bld V_\vartheta\inv \vec w_i}\;,
+\end{equation*}
+with $\vec w_i$ its column of $\bld W$. With \code{groups} the unit
+becomes the cluster, using the per-cluster influence $\bld\Xi = -\bld
+J_{\mathrm{par}}\inv \bld S$. Robust leverage (\code{hatvalues}) is the
+self-influence $A_{ii}$ in the random-effect-whitened convolution; it
+reduces to the classical \pkg{lme4} leverage when $\rho_e$ is the
+identity (\code{cPsi}).
+
+\subsection{Robust Satterthwaite degrees of freedom}\label{sec:methDf}
+
+For a contrast $\vec c\tr\wh{\vec\beta}$ with variance $s^2 = \vec c\tr
+\wh{\bld V} \vec c$, the Satterthwaite \citep{satterthwaite1946}
+denominator degrees of freedom are
+\begin{equation*}
+  \nu = \frac{2\,s^4}{\widehat{\mathrm{Var}}(s^2)}\;,
+\end{equation*}
+where $\widehat{\mathrm{Var}}(s^2)$ is obtained by the delta method from
+the influence-function-based covariance of the variance parameters
+$(\sigma, \vec\theta)$ (the gradient $\partial s^2/\partial(\sigma,
+\vec\theta)$ times that covariance), exactly the construction
+\citet{giesbrecht1985} and \citet{fai1996} use for the classical mixed
+model. Because the covariance is the
+robust IF-based one rather than the expected-information matrix used by
+\pkg{lmerTest} \citep{kuznetsova2017lmertest}, $\nu$ stays honest under
+contamination. Inserting a sandwich covariance (rather than the
+information matrix) into the Satterthwaite moment-matching ratio is
+itself established in the cluster-robust regression literature
+\citep{bell2002bias, pustejovsky2018small}; here the sandwich is the
+robust influence-function covariance of an $M$-estimator's variance
+parameters. The same machinery serves \code{summary}, \code{confint}
+(via $t_\nu$ quantiles), \code{anova} (an $F$-test) and
+\code{emmeans}; nested designs aggregate into the coarsest grouping
+factor and crossed designs use the multiway covariance of
+Section~\ref{sec:methSandwich}. At a variance-component boundary
+($\wh\theta_k = 0$) the df are computed conditionally on that component
+being held at zero.
+
+\subsection{Robust ANOVA}\label{sec:methAnova}
+
+For a set of estimable contrasts collected in a matrix $\bld L$, the
+per-term Wald statistic is $\wh{\vec\beta}\tr \bld L\tr (\bld L \wh{\bld
+V} \bld L\tr)\inv \bld L \wh{\vec\beta}$, referred to a $\chi^2$ (or, with
+\code{ddf = "satterthwaite"}, an $F$) distribution; $\wh{\bld V}$ is the
+default or the sandwich covariance. For two nested fixed-effects models
+this reduces to a Wald restriction test. Variance-component comparisons
+lie on the boundary of the parameter cone, where the Wald statistic is
+not applicable; \code{test = "boot"} instead uses a parametric-bootstrap
+quasi-deviance test, evaluating both models' robust objective at a common
+scale (that of the smaller model) to avoid a sign-flip artefact when the
+fitted scales differ. This path is experimental. Two known issues have
+principled remedies that are not yet implemented: the parametric bootstrap
+is inconsistent when the tested parameter is on the boundary
+\citep{andrews2000}, which a shrinkage of the bootstrap-generating
+variance components toward the boundary repairs \citep{guedon2024}; and it
+is anti-conservative under group contamination (the contamination biases
+the null fit). For the latter, the experimental \code{null = "robust"}
+option is the practical mitigation: it generates the parametric bootstrap
+from a contamination-cleaned null fit (trimming the clusters the robust
+fit heavily downweights), which curbs the contamination-induced Type-I
+inflation at larger $J$ while preserving power, at the cost of mild
+conservatism on clean data. The boundary inconsistency, and a
+finite-sample theorem for the robust null, remain open. Independently, the
+automatic robustness-weight warning flags the at-risk fits. The
+cluster-level \code{cooks.distance} is not a reliable screen for this
+purpose: the robust fit absorbs a contaminated group into a heavily
+downweighted random effect, so the bounded influence saturates exactly
+when contamination is present; the random-effect robustness weights are
+the effective screen.
+
+\subsection{Robust variance-component score test}\label{sec:methScore}
+
+When the alternative adds exactly one independent scalar variance
+component in the direction of a design column $\vec z$, \code{anova(.,
+test = "score")} needs no refit of the alternative at all. Let $\bld
+V_j$ be the null fit's estimated marginal covariance of cluster $j$.
+From the whitened marginal residuals $\vec r_j = \bld
+V_j\invsq(\vec y_j - \bld X_j \wh{\vec\beta}_0)$ and the whitened
+tested direction $\vec v_j = \bld V_j\invsq \vec z_j$ (symmetric
+square roots), each cluster contributes
+\begin{equation*}
+  s_j = \bigl(\vec v_j\tr \bld\psi_e(\vec r_j)\bigr)^2
+        - \kappa_1 \norm{\vec v_j}^2\;, \qquad
+  \kappa_1 = \ERWi{0}{\psi_e\fn{\es}^2}\;,
+\end{equation*}
+which is exactly centered at the Gaussian null ($\kappa_1
+\norm{\vec v_j}^2$ is the null expectation of the squared projection;
+cross terms vanish because $\psi_e$ is odd), and the one-sided
+statistic is the self-normalised cluster sum $S = \sum_j s_j \big/
+\bigl(\sum_j (s_j - \bar s)^2\bigr)^{1/2}$, large positive values
+indicating extra variance in the tested direction. Calibration is a
+score-only parametric bootstrap: datasets are simulated from the null
+fit's estimates, only the null model is refitted per replicate, and
+the $p$-value is $(1 + \#\{S^* \ge S\})/(n_{\mathrm{eff}} + 1)$. The
+robustness rationale is that of bounded-influence testing
+\citep{heritier1994}: because $\bld\psi_e$ bounds every cluster's
+contribution, whole-cluster contamination shifts the law of the
+bounded statistic --- observed and bootstrap values together ---
+instead of poisoning the bootstrap null generation the way it biases
+the quasi-deviance path's generating parameters, so no null cleaning
+is needed. The scope is deliberately narrow: a single added scalar
+component over one shared grouping factor with identical fixed
+effects; the test is validated by simulation
+(\code{inst/simulationStudy/scoreTest.R}), not by a finite-sample
+theorem, and contamination aligned with the tested direction is
+undecidable for any test with power --- the returned per-cluster
+contributions $s_j$ identify the driving clusters for inspection.
+
+\subsection{The RANSAC initial estimator}\label{sec:methRansac}
+
+A redescending $\rho_e$ makes \eqref{eq:robustEEq} non-convex, so a poor
+start can trap the estimator in a bad local solution. Seeding a
+redescending estimator from a high-breakdown initial estimate is the
+classical remedy of \citet{yohai1987high}'s \textsc{mm}-estimators, whose
+initial stage is a high-breakdown but not necessarily efficient fit.
+\code{ransac\_lme4} adapts random sample consensus
+\citep{fischler1981ransac}: it draws many small subsamples, fits a
+classical \code{lmer} on each, and scores each candidate by a robust
+scale ($Q_n$) of the residuals it induces on the \emph{full} data,
+keeping the best. The number of subsamples needed to draw at least one
+outlier-free subset with high probability follows the standard
+resampling bound of \citet{rousseeuw1987robust}, and the
+fit-then-refine-then-keep-the-lowest-scale scheme mirrors the fast-{S}
+algorithm of \citet{salibian2006fast}. Subsampling is stratified over the finest grouping
+factor so each subsample stays fittable, and, following the nonsingular
+subsampling of \citet{ks2017nonsingular} (the \code{setting = "KS2014"}
+default of \pkg{robustbase}), each drawn subsample is repaired to a
+full-rank fixed-effects design before it enters the scale competition, so
+a silently rank-deficient candidate (a dropped factor level) cannot win.
+The search stops early once
+the best score plateaus. A redescending $\rho_e$ preserves the support of
+a high-breakdown start only within the radius $r^\ast(c) = c\,
+\sigma / (2 \max_j \lVert \vec x_j \rVert)$ (\code{ransac\_basin\_radius}),
+where $c$ is the rejection point of $\psi_e$ (the tuning cutoff for the
+bisquare; found numerically for the recommended lqq redescender of
+\citealp{ks2011}).
+\code{rlmer\_ransac(n\_starts = m)} fits from the $m$ best distinct
+starts and returns the interior, lowest-residual-scale fit, which guards
+against the phony random-effects attractor in which $|\wh\rho| \to 1$.
+
+\subsection{Mallows-type design weights}\label{sec:methMallows}
+
+The $\psi$-functions bound the influence of response outliers but not of
+high-leverage design points. Mallows-type weights $\eta_i \in (0, 1]$
+\citep{MarRMY06} restore the bound by down-weighting the score
+contribution of extreme covariates. With \code{"mcd"} they are
+\begin{equation*}
+  \eta_i = \min\!\left\{1,\ \bigl(\chi^2_{p^\ast, c}\,/\,d_i^2\bigr)^{\gamma/2}\right\}\;,
+\end{equation*}
+where $d_i^2$ is the robust (minimum-covariance-determinant) Mahalanobis
+distance of the $p^\ast$ non-constant columns of $\bld X$, $\chi^2_{p^\ast, c}$ the
+$c$-quantile of the reference $\chi^2$, and $\gamma$ a severity exponent
+(defaults $c = 0.975$, $\gamma = 1$). The weight multiplies the
+$e$-side of every estimating equation: writing $\bld H = \diag(\eta_i)$,
+the residual score $\bld X\tr \bld U_e^{-\top} \bld\psi_e$ in
+\eqref{eq:robustEEq} becomes $\bld X\tr \bld U_e^{-\top} \bld H \bld\psi_e$
+(and likewise for the $\vec u$-, $\sigma$- and $\vec\theta$-equations),
+turning the RSE into a generalised $M$-estimator of Mallows type, whose
+influence is bounded separately in the response (by $\bld\psi_e$) and in
+the design (by $\eta$), as for the Mallows \textsc{glm} estimators of
+\citet{cantoni2001robust}; the resulting gross-error sensitivity
+in the design is bounded (empirically in
+\code{inst/simulationStudy/leverageGES.R}), unlike the plain RSE. Bounded
+influence is not the same as a high breakdown point: Mallows-type
+$M$-estimators break down at $\le 1/(p^\ast + 1)$
+\citep{maronna1979bias}, so for high-breakdown protection against design
+outliers a high-breakdown estimator \citep[e.g.][]{copt2006high} is
+needed instead. Active
+design weights are supported for a single grouping factor; \code{rlmer}
+stops with an error on models with more than one.
+
+\subsection{Structured random-effect covariances}\label{sec:methStructured}
+
+For a block $\bld\Sigma_k = \sigma^2 \bld\Lambda_k \bld\Lambda_k\tr$ of
+the random-effect covariance, \code{diag} drops the off-diagonal
+elements and is fitted directly. \code{cs} (one common correlation) and
+\code{ar1} ($\mathrm{Cor}(i,j) = \rho^{|i-j|}$) are fitted by projecting
+the unstructured scoring-equation update onto the structured manifold at
+each iteration: the marginal variances from the unstructured update are
+retained, and the single correlation parameter is re-estimated from the
+block's robust correlation matrix. For \code{cs} this is the average
+off-diagonal correlation, which is also the constrained estimator for the
+\emph{linear} compound-symmetric structure \citep{anderson1973}. For
+\code{ar1} the lag-one correlation $\rho$ is the conditional maximiser of
+the working-Gaussian objective over the manifold given the marginal
+variances --- the minimiser of $\operatorname{tr}(\bld R(\rho)\inv \bld
+C) + (n_c-1)\log(1-\rho^2)$ over $\rho \in (-1,1)$, with $\bld R(\rho) =
+(\rho^{|i-j|})$ and $\bld C$ the sample correlation matrix. This is the
+conditional-maximisation (ECME) step of \citet{mengrubin1993} and
+\citet{liurubin1994}: it makes the projected fixed point a stationary
+point of the constrained objective and admits $\rho < 0$, unlike the
+former log-correlation least-squares fit. The projected $\bld\Lambda_k$
+replaces the unstructured one before the next iteration, so the structure
+is enforced exactly while \eqref{eq:robustEEq} and the scale/covariance
+updates are otherwise unchanged. A projected \code{cs}/\code{ar1} block of
+dimension $n_c$ is identifiable only when every cluster carries more than
+$n_c$ observations (within-cluster replication); with at most $n_c$
+observations per cluster the structured random effect cannot be separated
+from the residual and \code{rlmer} stops with an informative error. Full
+consistency theory for the projected estimator is still open (most directly
+for the curved \code{ar1} structure), so \code{cs}/\code{ar1} fitting
+remains experimental; it requires \pkg{lme4}~$\geq$~2.0-0.
 
 \end{document}

@@ -20,7 +20,8 @@ rlmer(
   verbose = 0,
   doFit = TRUE,
   init,
-  size_obr = FALSE
+  size_obr = FALSE,
+  design.weights = NULL
 )
 
 lmerNoFit(formula, data = NULL, ..., initTheta)
@@ -118,6 +119,29 @@ magnitudes (a typically modest 1-2 percentage-point gain at
 matched gross-error sensitivity). Has no effect for diagonal
 \eqn{V_b} (block size 1).}
 
+\item{design.weights}{Mallows-type design weights for robustness to
+high-leverage design points: \code{NULL} (default, exact
+current behaviour), a numeric vector of deterministic weights
+\eqn{\eta_i \in (0, 1]} of length \code{n}, or \code{"mcd"} to
+compute \eqn{\eta_i = \min(1, \chi^2_{p^*}(0.975) / d_i^2)^{1/2}}
+from robust squared Mahalanobis distances \eqn{d_i^2} of the
+non-constant fixed-effects covariates
+(\code{\link[robustbase]{covMcd}}); the \code{"mcd"} tuning
+(severity \eqn{\gamma = 1}, cutoff \eqn{c = 0.975}) is the
+simulation-backed default (see \code{vignette("rlmer")}). The
+weights multiply the
+e-side score contribution of each observation throughout the
+estimator -- the \eqn{\beta}, \eqn{u}, \eqn{\sigma} and
+\eqn{\theta} equations, the model \code{vcov}, the Satterthwaite
+degrees of freedom and the influence
+diagnostics -- bounding the influence of high-leverage design
+points. For designs without continuous covariates \code{"mcd"}
+reduces to \eqn{\eta \equiv 1} (the unmodified estimator). Active
+design weights are supported for a \emph{single grouping factor}
+only; \code{rlmer} stops with an error if the model has more than
+one. Leverage robustness costs a little efficiency at the clean model
+(about 1\% at the default tuning; see \code{vignette("rlmer")}).}
+
 \item{initTheta}{parameter to initialize theta with (optional)}
 }
 \value{
@@ -164,7 +188,15 @@ direct approximation which is faster but less accurate. For complex models
 with correlated random effects with more than one correlation term, this is
 the only method available.
 
-} }
+}
+
+\code{DAStau} supports blocks of random effects of dimension at most 2;
+for fits containing a larger block it falls back to \code{DASvar} with a
+warning. An \emph{experimental} option,
+\code{options(robustlmm.dastau.mc = TRUE)}, lifts this restriction via a
+Monte-Carlo calibration of the consistency factors; it is
+simulation-validated but not backed by a finite-sample theorem, see
+\code{\link{robustlmm-options}}. }
 
 \item{Weight functions:}{
 

@@ -1,0 +1,711 @@
+\documentclass[nojss]{jss}
+\usepackage{rlmer}
+
+%\VignetteIndexEntry{New features in robustlmm 3.5.0: robust inference, diagnostics and structured covariances}
+%\VignetteDepends{robustlmm, lme4, emmeans}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% declarations for jss.cls %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\author{Manuel Koller}
+\title{New Features in \pkg{robustlmm} 3.5.0: Robust Inference,
+  Diagnostics and Structured Covariances}
+\Plaintitle{New Features in robustlmm 3.5.0: Robust Inference,
+  Diagnostics and Structured Covariances}
+\Shorttitle{New Features in \pkg{robustlmm} 3.5.0}
+
+\Abstract{The 3.5.0 release of \pkg{robustlmm} adds a layer of
+  inference, diagnostic and modelling tools on top of the Robust
+  Scoring Equations estimator introduced in the main package vignette.
+  This companion vignette is a feature tour. It shows how to obtain a
+  robust cluster-sandwich covariance for the fixed effects, Wald and
+  bootstrap confidence intervals, robust Wald and bootstrap ANOVA
+  tables, prediction intervals, and honest Satterthwaite degrees of
+  freedom that stay valid under contamination. It then covers the
+  influence diagnostics
+  (observation- and cluster-level Cook's distances and robust
+  leverages), a high-breakdown \textsc{ransac} initial estimator,
+  Mallows-type design weights that bound the influence of
+  high-leverage design points, and support for structured
+  (\code{diag}, \code{cs}, \code{ar1}) random-effect covariances. Every
+  example runs on a small built-in dataset so that the methods can be
+  reproduced interactively. For the model and the estimation algorithm
+  itself, see the main vignette, \code{vignette("rlmer")}.}
+
+\Keywords{robust statistics, mixed-effects model, inference,
+  influence, Cook's distance, sandwich, bootstrap, Satterthwaite,
+  \textsc{ransac}, design weights, compound symmetry, \proglang{R}}
+\Plainkeywords{robust statistics, mixed-effects model, inference,
+  influence, Cook's distance, sandwich, bootstrap, Satterthwaite,
+  RANSAC, design weights, compound symmetry, R}
+
+\Address{
+  Manuel Koller\\
+  E-mail: \email{kollerma@proton.me}\\
+  URL: \url{https://github.com/kollerma/robustlmm}
+}
+
+%% end of declarations %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\SweaveOpts{prefix.string=text-350}
+
+\begin{document}
+\SweaveOpts{concordance=TRUE}
+
+\baselineskip 15pt
+
+<<preliminaries, echo=FALSE, results=hide>>=
+options(prompt = "R> ", continue = "+  ", width = 76,
+        useFancyQuotes = FALSE, digits = 4)
+suppressPackageStartupMessages(library("robustlmm"))
+set.seed(20260623)
+## Numbers quoted from the simulation studies are precomputed into this
+## RDS by vignettes/precompute-3.5.0.R and pulled in with \Sexpr{} below,
+## so they always match the studies and are never hand-typed.
+nums <- readRDS("robustlmm-3.5.0-numbers.rds")
+fmt <- function(x, digits = 2) formatC(x, format = "f", digits = digits)
+## Sweave does not echo R warnings into the vignette the way an
+## interactive session does; this helper prints them next to the call
+## that triggers them.
+echoWarnings <- function(expr)
+    withCallingHandlers(expr, warning = function(w) {
+        writeLines(strwrap(paste("Warning:", conditionMessage(w)),
+                           width = 74))
+        invokeRestart("muffleWarning")
+    })
+@
+
+\section{Introduction}\label{sec:intro}
+
+The main \pkg{robustlmm} vignette \citep{vignette} introduces the
+Robust Scoring Equations (RSE) estimator and shows how to fit a model
+with \code{rlmer}, tune its robustness and efficiency, and read the
+robustness weights. This companion vignette documents the features
+added for the 3.5.0 release. Several of the foundations---the sandwich
+covariance, the Wald and bootstrap confidence intervals, the prediction
+intervals, the observation-level influence diagnostics and the base
+\textsc{ransac} start---first shipped to CRAN in releases 3.4-4/3.4-5;
+this vignette documents the full series. The features fall into four
+groups:
+
+\begin{enumerate}
+\item \textbf{Inference for the fixed effects}
+  (Section~\ref{sec:inference}): a robust cluster-sandwich covariance
+  (\code{vcov(., type = "sandwich")}), Wald and bootstrap confidence
+  intervals (\code{confint}), robust Wald and bootstrap ANOVA tables
+  (\code{anova}), prediction intervals (\code{predict}), and honest
+  Satterthwaite degrees of freedom and $p$~values
+  (\code{summary(., df = ...)}).
+\item \textbf{Influence diagnostics} (Section~\ref{sec:influence}):
+  observation- and cluster-level Cook's distances
+  (\code{cooks.distance}), the full per-observation influence matrix
+  (\code{influence}) and robust leverages (\code{hatvalues}).
+\item \textbf{A high-breakdown initial estimator}
+  (Section~\ref{sec:ransac}): a \textsc{ransac} start
+  (\code{init = "ransac"}, \code{ransac\_lme4}, \code{rlmer\_ransac}).
+\item \textbf{Robustness in the design space}
+  (Section~\ref{sec:design}): Mallows-type design weights
+  (\code{design.weights}) and structured random-effect covariances
+  (\code{diag}, \code{cs}, \code{ar1}, Section~\ref{sec:structured}).
+\end{enumerate}
+
+The \code{cs}/\code{ar1} covariances (group~4) are \emph{experimental}:
+they are validated by simulation but rest on newer, partly heuristic
+machinery, and their interface or defaults may still change; their
+section title is marked accordingly. The \textsc{ransac} start (group~3)
+and the Mallows design weights (group~4) are stable: settled interfaces
+with simulation-backed defaults.
+
+All examples use the small built-in datasets \code{sleepstudy},
+\code{Dyestuff} and \code{Penicillin} from \pkg{lme4} so that they run
+in seconds. Throughout we fit with \code{method = "DASvar"}, the fast
+direct approximation, to keep the vignette quick to build; for final
+analyses the default \code{method = "DAStau"} is more accurate (see the
+main vignette). We start from a robust fit of the \code{sleepstudy}
+data, a random-slope model for reaction time as a function of days of
+sleep deprivation:
+
+<<base-fit>>=
+fm <- rlmer(Reaction ~ Days + (Days | Subject), sleepstudy,
+            method = "DASvar")
+@
+
+\section{Inference for the fixed effects}\label{sec:inference}
+
+\subsection{Robust cluster-sandwich covariance}\label{sec:sandwich}
+
+The fixed-effect covariance that \code{summary} reports by default is
+the linearised (model-based) covariance inherited from the \pkg{lme4}
+machinery. \code{vcov} now takes a \code{type} argument that selects
+between this default and a robust \emph{cluster-sandwich} estimator,
+$\hat V = \hat A\inv \hat B \hat A^{-\top}$, where $\hat A$ is the
+marginal (Schur-complement) $\beta$-Jacobian and
+$\hat B = \sum_j \vec s_j \vec s_j\tr$ sums the per-cluster
+$\beta$-score contributions. The sandwich is heteroscedasticity- and
+misspecification-robust and does not assume the fitted covariance is
+correct.
+
+<<vcov-sandwich>>=
+vcov(fm, type = "default")
+echoWarnings(vcov(fm, type = "sandwich"))
+@
+
+The default is preserved byte-for-byte, so existing code is
+unaffected. The small-sample correction \code{correction = "G1"}
+(default) applies the $J / (J - 1)$ scaling. On a design with a single
+grouping factor the cluster variable is detected automatically; on
+crossed designs pass \code{cluster = "factor-name"} and note that the
+sandwich is then only approximate.
+
+\emph{A small-$J$ caveat.} The sandwich is a large-$J$ approximation.
+\code{sleepstudy} has only $J = \Sexpr{nlevels(sleepstudy$Subject)}$
+subjects --- fewer than the $20$ clusters below which \code{vcov_sandwich}
+warns --- which is why the call above prints the warning: at small $J$ the
+sandwich undercovers and sandwich-based \code{anova} tests
+(Section~\ref{sec:anova}) become anti-conservative. The size of that
+effect, and the cluster count from which calibration returns to nominal,
+are quantified by a simulation study; the conclusions are recorded
+in \code{?vcov\_sandwich} and \code{?anova.rlmerMod}. At small $J$, prefer
+\code{type = "default"} for tests, or pair the sandwich interval with a
+bootstrap calibration (Section~\ref{sec:confint}).
+
+\subsection{Confidence intervals}\label{sec:confint}
+
+\code{confint} gains a \code{method} argument. The default
+\code{method = "Wald"} returns the closed-form per-coefficient interval
+$\hat\beta_k \pm q\sqrt{\hat V_{kk}}$ from \code{vcov(., type =
+  vcov\_type)}. Bare \code{confint(fit)} used to error on the
+\code{dpoMatrix} covariance; it now returns the Wald interval.
+
+<<confint-wald>>=
+confint(fm, method = "Wald")
+suppressWarnings(  # silence the small-J sandwich note shown above
+    confint(fm, method = "Wald", vcov_type = "sandwich"))
+@
+
+By default the quantile $q$ is the normal $z_{1 - \alpha/2}$. Passing
+\code{df = "satterthwaite"} substitutes the robust Satterthwaite
+$t$-quantile (Section~\ref{sec:df}), which widens the interval at small
+$J$:
+
+<<confint-df>>=
+confint(fm, method = "Wald", df = "satterthwaite")
+@
+
+When the asymptotic $\chi^2_p$ limit is suspect---typically at small
+$J$---a bootstrap is preferable. \code{confint} delegates
+\code{method = "boot"} and \code{method = "BCa"} to the \pkg{confintROB}
+package \citep{mason2021confintrob, mason2024confintrob}, which
+implements the parametric and the wild bootstrap (\code{boot.type},
+default \code{"wild"}), with optional bias-correction-and-acceleration
+(\code{method = "BCa"}). \pkg{confintROB} is in \code{Suggests}, so
+these paths require it to be installed; \code{method = "Wald"} does
+not. The bootstrap is costly, so it is not run here:
+
+<<confint-boot, eval=FALSE>>=
+## parametric BCa bootstrap (needs the 'confintROB' package)
+confint(fm, method = "BCa",  nsim = 1000, seed = 20260601)
+## wild bootstrap
+confint(fm, method = "boot", boot.type = "wild", nsim = 1000,
+        seed = 20260601)
+@
+
+Practical guidance from those papers: the $\chi^2_p$ Wald limit is
+adequate for $J \gtrsim 20$ groups, the wild bootstrap is robust to
+misspecification of the response covariance, and BCa is preferable when
+the bootstrap distribution is skewed.
+
+\subsection{ANOVA: robust Wald and bootstrap tests}\label{sec:anova}
+
+\code{anova} now works on \code{rlmer} fits. Called on a single fit it
+prints a per-term robust Wald table:
+
+<<anova-single>>=
+anova(fm)
+@
+
+Pass \code{vcov\_type = "sandwich"} to base the table on the
+cluster-sandwich covariance instead. Called on two nested
+fixed-effects models it performs a Wald restriction test:
+
+<<anova-two>>=
+fm0 <- rlmer(Reaction ~ 1 + (Days | Subject), sleepstudy,
+             method = "DASvar")
+anova(fm0, fm)
+@
+
+With \code{ddf = "satterthwaite"} the table reports an $F$-test with
+robust Satterthwaite denominator degrees of freedom:
+
+<<anova-ddf>>=
+anova(fm, ddf = "satterthwaite")
+@
+
+For variance-component comparisons on the PSD-cone boundary,
+\code{test = "boot"} runs a parametric-bootstrap quasi-deviance test
+(using a common scale to avoid a sign-flip artefact). This refits the
+model many times and so is not run here:
+
+<<anova-boot, eval=FALSE>>=
+anova(fm0, fm, test = "boot", nsim = 1000, seed = 20260601)
+@
+
+The bootstrap variance-component test is \emph{experimental}: it is
+currently the only exposed variance-component path, and a simulation
+study shows it becomes anti-conservative when whole groups are
+contaminated. The test guards against this on its own: it warns
+automatically when the null fit heavily downweights a random-effects
+group (smallest random-effect robustness weight below 0.5), a direct
+signal that the bootstrap null built from that fit may be poisoned;
+\code{null = "robust"} (below) is the mitigation. The per-term Wald
+table and the fixed-effect restriction test above are not affected.
+
+Under group contamination the bootstrap null generation itself can be
+poisoned by the contaminated estimates. The experimental
+\code{null = "robust"} option,
+\code{anova(fm0, fm, test = "boot", null = "robust")}, generates the
+bootstrap samples from a contamination-cleaned null fit: clusters whose
+smallest random-effect robustness weight falls below a tuned threshold
+are trimmed for the generation step only, while the observed statistic
+still uses all the data. In simulation this reduces --- but does not
+fully remove --- the contamination-induced Type-I inflation at larger
+$J$ while preserving power. It is validated by simulation, not by a
+finite-sample theorem; see \code{?anova.rlmerMod}.
+
+For the common special case where the alternative adds exactly one
+independent scalar variance component --- as in the example above,
+\code{(1|Subject)} vs \code{(1|Subject) + (0 + Days|Subject)}, or
+diagonal structures adding one component --- the experimental
+\code{test = "score"}, \code{anova(fm0, fm, test = "score")}, is the
+contamination-robust alternative. It computes a one-sided score
+statistic from psi-bounded per-cluster contributions of the robust
+\emph{null} fit only and calibrates it by a score-only parametric
+bootstrap that refits just the null model per replicate, about four
+times cheaper than \code{test = "boot"} (default \code{nsim = 199}).
+In simulation the bounded statistic held its size where the deviance
+bootstrap did not: with 10\% of clusters shifted at $J = 50$, Type-I
+was 0.035 vs the deviance bootstrap's 0.115, at clean-null Type-I
+0.045 and power 0.920 vs 0.900
+(\code{inst/simulationStudy/scoreTest.R}, which reproduces these
+cells end-to-end through the package interface). Contamination aligned with the tested
+direction is indistinguishable from the alternative for any test with
+power; the returned per-cluster contributions (\code{attr(., "boot")\$s\_j})
+identify the driving clusters, to be inspected together with the
+cluster diagnostics of Section~\ref{sec:influence} when a rejection is
+suspect. Outside its scope (multi-component or correlated-slope
+alternatives, crossed or nested grouping factors) it stops with an
+error; \code{test = "boot"} remains the default variance-component
+path. It is validated by simulation, not by a theorem; see
+\code{?anova.rlmerMod} for the full record.
+
+Under error-distribution contamination the robust Wald test can be
+substantially more powerful than the classical likelihood-ratio test
+while matching its Type-I error on clean data; a simulation study
+quantifies the power gain (see \code{?anova.rlmerMod}).
+
+\subsection{Satterthwaite degrees of freedom}\label{sec:df}
+
+By default \code{summary} of an \code{rlmer} fit reports a $t$-value
+without a reference distribution, because the small-sample distribution
+of the robust estimator is not pivotal. The 3.5.0 release adds robust
+Satterthwaite degrees of freedom \citep{satterthwaite1946}. Unlike
+\pkg{lmerTest} \citep{kuznetsova2017lmertest}, the degrees of freedom
+derive from the robust influence-function-based covariance of the
+variance parameters, so they stay honest under contamination.
+\code{summary} gains a \code{df} argument; \code{df = "satterthwaite"}
+adds \code{df} and \code{Pr(>|t|)} columns:
+
+<<summary-df>>=
+summary(fm, df = "satterthwaite")$coefficients
+@
+
+The degrees of freedom are consistent across all four inference
+surfaces: \code{summary}, \code{confint(df = "satterthwaite")}
+(Section~\ref{sec:confint}), \code{anova(ddf = "satterthwaite")}
+(Section~\ref{sec:anova}), and \pkg{emmeans}, which now returns finite
+degrees of freedom instead of \code{Inf}:
+
+<<emmeans-df>>=
+emmeans::emtrends(fm, ~ 1, var = "Days")
+@
+
+\code{summary} shows the degrees of freedom \emph{by default}
+(\code{df = "auto"}) whenever it is cheap---either the underlying
+influence function is already cached on the fit, or a deterministic,
+dimension-only size workload is below the cutoff
+\code{getOption("robustlmm.summary.df.max", 5000)} (machine-independent
+by construction).
+Otherwise it falls back to the historic $t$-value table with a one-line
+note; \code{df = "satterthwaite"} forces the computation and
+\code{df = "none"} disables it. The (expensive) influence function is
+cached on the fit and shared by \code{summary}, \code{anova},
+\code{confint}, \code{emmeans}, \code{cooks.distance} and the sandwich
+\code{vcov}, so it is computed once. Single-factor, nested
+(\code{(1 | school/class)}) and crossed (\code{(1 | s) + (1 | item)})
+designs are supported; nested designs use a one-way sandwich over the
+coarsest grouping factor and crossed designs a
+Cameron--Gelbach--Miller multiway cluster-robust covariance
+\citep{cameron2011robust}. When a variance component is estimated at
+the boundary (zero), the degrees of freedom are computed conditional on
+that component being held at zero. The package options are documented
+on the \code{help("robustlmm-options")} help page.
+
+The \emph{robust} Satterthwaite degrees of freedom are a new
+construction. Their nominal coverage has been validated by the
+package's own Monte-Carlo simulations --- for single-factor, nested,
+crossed and variance-component-boundary designs --- rather than by an
+external published study (see the inference study in
+\code{vignette("simulationStudies")}). On a design they do not yet cover
+(e.g.\ crossed random slopes) \code{summary} falls back to the plain
+$t$-value table rather than reporting an unvalidated number.
+
+\subsection{Prediction intervals}\label{sec:predict}
+
+\code{predict} gains an \code{interval} argument. The default
+\code{interval = "none"} preserves the previous numeric-vector return;
+\code{"confidence"} and \code{"prediction"} return a data frame with
+columns \code{fit}, \code{lwr}, \code{upr} and \code{se}. The
+fixed-effect contribution to the standard error comes from the sandwich
+\code{vcov}; the random-effect contribution from the partial influence
+function of $\hat u$.
+
+<<predict-interval>>=
+nd <- data.frame(Days = 0:2, Subject = "308")
+suppressWarnings(predict(fm, newdata = nd, interval = "confidence"))
+suppressWarnings(predict(fm, newdata = nd, interval = "prediction"))
+@
+
+\section{Influence diagnostics}\label{sec:influence}
+
+\subsection{Observation-level influence}\label{sec:cooks-obs}
+
+\code{cooks.distance} measures the joint Mahalanobis influence of each
+observation on $(\hat\beta, \hat\sigma, \hat\theta)$, computed from the
+full influence function \citep{cook1982residuals}. We illustrate on the
+\code{Penicillin} data (a crossed design):
+
+<<cooks-obs>>=
+fpen <- rlmer(diameter ~ (1 | plate) + (1 | sample), Penicillin,
+              method = "DASvar")
+cd <- cooks.distance(fpen)
+sort(cd, decreasing = TRUE)[1:5]
+@
+
+\code{influence(fit)} returns the full per-observation influence matrix
+(one row per observation, one column per parameter) that
+\code{cooks.distance} condenses; \code{caseweightIF},
+\code{vcov\_sandwich} and \code{implicitIF\_full} expose the underlying
+substrate for advanced use.
+
+\subsection{Cluster-level influence and robust leverage}\label{sec:cooks-cluster}
+
+A whole group can be an outlier even when no single observation in it
+is. \code{cooks.distance(fit, groups = TRUE)} (or
+\code{groups = "<factor>"}) gives a per-cluster Cook's distance---the
+Mahalanobis norm of the per-cluster influence function---a general
+diagnostic for such groups. It is, however, not a reliable screen for
+group contamination ahead of the bootstrap variance-component test of
+\code{anova} (Section~\ref{sec:anova}): the robust fit absorbs a
+contaminated group into a heavily downweighted random effect, so the
+bounded influence saturates exactly when contamination is present. That
+test's guard therefore uses the random-effect robustness weights, and
+fires automatically. Cluster level requires a single or nested grouping
+structure.
+
+<<cooks-cluster>>=
+cdc <- cooks.distance(fm, groups = "Subject")
+sort(cdc, decreasing = TRUE)[1:5]
+@
+
+\code{hatvalues(fit)} returns the robust leverage (the self-leverage
+$A_{ii}$ in the random-effect-whitened convolution; it reduces to the
+classical \pkg{lme4} leverage at \code{rho = cPsi}), with a
+\code{groups} argument to sum it per cluster:
+
+<<hatvalues>>=
+range(hatvalues(fm))
+@
+
+\begin{figure}[t]
+\centering
+<<cluster-fig, fig=TRUE, echo=FALSE, width=7, height=3.6>>=
+op <- par(mar = c(4, 4, 1, 1))
+dotchart(sort(cdc), xlab = "Cluster-level Cook's distance",
+         ylab = "Subject", pch = 19, cex = 0.7)
+par(op)
+@
+\caption{Per-subject (cluster-level) Cook's distances for the robust
+  \code{sleepstudy} fit. Subjects at the top are the most influential
+  on the joint parameter vector $(\hat\beta, \hat\sigma, \hat\theta)$.}
+\label{fig:cluster}
+\end{figure}
+
+\section{A high-breakdown initial estimator: RANSAC}\label{sec:ransac}
+
+By default the RSE estimator uses a monotone (smoothed Huber)
+$\psi$-function, which is convex and largely insensitive to the starting
+values. For stronger robustness against extreme outliers one can instead
+choose a \emph{redescending} $\psi$-function---for example
+\code{rho.e = lqqPsi}---whose influence function returns to zero so
+that gross outliers are rejected outright. The bisquare
+(\code{rho.e = bisquarePsi}) is the classical redescender, but it
+redescends comparatively fast; the lqq (linear-quadratic-quadratic) psi
+of \citet{ks2011}, the recommended redescender used by
+\pkg{robustbase}'s \code{lmrob.control(setting = "KS2014")}, is generally
+preferable and is pre-built as \code{lqqPsi} (the general constructor
+\code{makeRobustbasePsi} additionally exposes the \code{optimal},
+\code{hampel} and \code{ggw} families). Redescending $M$-estimators
+are more robust, but their estimating equations are non-convex and can be
+drawn to a bad local solution from a poor start. Release 3.4-5 added a
+\textsc{ransac} (\textsc{ra}ndom \textsc{sa}mple \textsc{c}onsensus,
+\citealp{fischler1981ransac}) high-breakdown start that makes such fits
+reliable; 3.5.0 refines it with the adaptive early stopping, stratified
+and nonsingular subsampling, and multi-start consensus described below.
+The string form \code{init = "ransac"} plugs it straight into
+\code{rlmer}:
+
+<<ransac-init>>=
+fr <- rlmer(Reaction ~ Days + (Days | Subject), sleepstudy,
+            method = "DASvar", init = "ransac")
+fixef(fr)
+@
+
+\code{ransac\_lme4} exposes the start directly and returns the fitted
+subsample, the consensus residual scale and diagnostics. The search is
+adaptive: it stops early once the best $Q_n$ score plateaus, so \code{K}
+is a maximum budget rather than a fixed number of iterations
+(\code{adaptive = FALSE} restores the fixed loop). Subsampling is
+stratified by default (\code{stratify = TRUE}): each subsample covers
+every level of the finest grouping factor, keeping the per-subsample
+\code{lmer} fittable on designs with many small clusters. Following the
+nonsingular subsampling of \citet{ks2017nonsingular} (the
+\code{setting = "KS2014"} default of \pkg{robustbase}), each draw is
+full-rank \emph{by construction}: with categorical predictors a
+rank-deficient subsample does not always error---\code{lmer} would
+silently drop the aliased columns of a dropped factor level---so, rather
+than draw-then-check, an LU decomposition with column pivoting walks a
+random permutation of the observations and keeps only those that raise
+the fixed-effects rank, skipping any that are collinear with those
+already chosen. Whole clusters are then added until the retained data
+are a fully identifiable mixed-model subsample (full-rank fixed design,
+at least two levels per grouping factor, varying random slopes), which
+succeeds whenever the full design is identifiable. The collinear
+observations skipped by the LU are counted in \code{n\_singular}; on a
+design without collinearity the draw reduces to a uniform random cluster
+subsample.
+
+<<ransac-lme4>>=
+rs <- ransac_lme4(Reaction ~ Days + (Days | Subject), sleepstudy,
+                  K = 20L, seed = 20260601)
+rs$K_used
+@
+
+\code{rlmer\_ransac} wraps the start and the robust fit and runs three
+diagnostics: a fixed-effect \emph{basin} check (warns when a
+redescending \code{rho.e} left the support-preservation radius
+$r^\ast(c) = c\,\sigma / (2 \max_j \lVert x_j \rVert)$, with $c$ the
+rejection point of \code{rho.e} --- the bisquare cutoff, or found
+numerically for lqq and the other redescenders --- returned by
+\code{ransac\_basin\_radius}), a random-effects phony-correlation
+check (warns when the fitted RE covariance is near-singular,
+$|\hat\rho| \to 1$), and a refinement-singularity check
+(\citealp{ks2017nonsingular}, Remark~2): a redescending $\psi$ can
+zero-weight observations back into a rank-deficient design during the
+robust fit, so \code{rlmer\_ransac} re-seeds and re-fits from a fresh
+nonsingular start until the positive-weight fixed-effects design is full
+rank, up to \code{max\_tries} (default 5), warning only if every attempt
+still collapses. The multi-start consensus
+\code{rlmer\_ransac(n\_starts = m)} fits from the $m$ best distinct
+starts and returns the lowest-residual-scale fit whose RE covariance is
+interior, recovering the good solution when the single best start falls
+into the phony-correlation attractor (per-start summary in
+\code{attr(fit, "consensus")}):
+
+<<ransac-consensus>>=
+fc <- rlmer_ransac(Reaction ~ Days + (Days | Subject), sleepstudy,
+                   K = 20L, n_starts = 3L, seed = 20260601)
+attr(fc, "consensus")
+@
+
+The per-start summary reports each start's largest absolute random-effect
+correlation (\code{max\_abscor}), its residual scale, whether its
+random-effects covariance is interior (not a phony $|\hat\rho| \to 1$
+solution), and which start was \code{chosen} (the interior fit with the
+lowest residual scale).
+
+The defaults are settled and simulation-backed. The optional multi-start
+consensus (\code{n\_starts > 1}, recommended when a redescending
+$\psi$ risks the phony attractor) cuts the phony-correlation rate about
+fivefold across the contamination scenarios of
+\code{inst/simulationStudy/ransacConsensus.R} (pooled $0.149 \to 0.027$)
+at no cost in slope accuracy, and \code{ransacBasin.R} backs the
+separate basin-radius and phony-correlation checks. RANSAC handles a
+single, crossed or nested grouping structure---subsampling is stratified
+by the finest grouping factor so each subsample \code{lmer} stays
+fittable on designs with many small clusters---and the start is fully
+reproducible from a \code{seed} (or, for the \code{init = "ransac"}
+string form, from an outer \code{set.seed}).
+
+\section{Robustness in the design space}\label{sec:design}
+
+\subsection{Mallows-type design weights}\label{sec:designweights}
+
+The $\psi$-functions of the RSE bound the influence of outliers in the
+\emph{response}, but a single high-leverage observation---extreme
+covariates with a plausible response---can still move $\hat\beta$
+arbitrarily. This is the classical gap between Huber-type and
+generalised $M$-estimators. The \code{design.weights} argument adds
+Mallows-type weights $\eta_i \in (0, 1]$ that downweight the score
+contribution of high-leverage design points. The weights enter the
+$e$-side of every estimating equation ($\beta, u, \sigma, \theta$), the
+model \code{vcov} and the influence diagnostics. Passing \code{"mcd"}
+derives $\eta$ from robust Mahalanobis distances of the non-constant
+columns of $X$ (via \code{covMcd}; note that with many binary dummy
+columns the MCD covariance estimate can be ill-conditioned); a numeric
+vector may be supplied instead.
+
+<<design-weights>>=
+dat <- sleepstudy
+dat$Days[1] <- 40                 # an extreme, high-leverage design point
+fw <- rlmer(Reaction ~ Days + (Days | Subject), dat,
+            method = "DASvar", design.weights = "mcd")
+sum(getME(fw, "design.weights") < 1)
+@
+
+\code{summary} reports how many observations are downweighted by
+design. On clean data the cost is small---about a
+\Sexpr{fmt(nums$mallows$costVsRsePct, 1)}\% increase in the variance of
+$\hat\beta$ relative to the plain RSE at the default tuning
+($\gamma = 1$, cutoff $0.975$), over \Sexpr{nums$mallows$nreps}
+replicates---and it vanishes for intercept-only designs (no
+non-constant columns in $X$).
+Under leverage contamination that drags ordinary and plain robust fits
+toward a spurious slope, the Mallows fit instead stays close to the
+clean-data estimate; the efficiency--robustness trade-off is quantified
+in \code{inst/simulationStudy/mallowsEfficiency.R} and
+\code{leverageBreakdown.R}. Active design weights are supported for a
+single grouping factor; \code{rlmer} stops with an error on models with
+more than one.
+
+\subsection{Structured random-effect covariances (experimental)}\label{sec:structured}
+
+With \pkg{lme4} $\geq$ 2.0-0, \code{rlmer} supports structured
+random-effect covariances: \code{diag(f | g)} (uncorrelated slopes,
+equivalent to \code{(f || g)}), \code{cs(f | g)} (compound symmetric:
+one common correlation) and \code{ar1(f | g)} (autoregressive,
+$\mathrm{Cor}(i, j) = \rho^{|i - j|}$), in both heterogeneous and
+homogeneous (equal-variance) forms. \code{diag} is fitted directly;
+\code{cs} and \code{ar1} are fitted by projecting each block's
+unstructured scoring-equation update onto the structured manifold at
+every iteration, so the structure is enforced exactly while the
+robustness machinery is unchanged. This projection is a pragmatic
+device rather than a fully established estimator, so \code{cs}/\code{ar1}
+fitting is \emph{experimental}. It is validated only for a single
+grouping factor (balanced repeated measures); \code{rlmer} warns when a
+\code{cs}/\code{ar1} term is combined with more than one grouping factor,
+where neither the fit nor its inference is validated. Inference degrades
+gracefully on structured fits---the sandwich \code{vcov} is available, and
+\code{summary(df = "satterthwaite")} reports the robust df where the
+constrained covariance admits it (e.g.\ \code{cs}) and otherwise falls
+back to the $t$-table with a note.
+
+To show the structure being enforced we simulate a balanced
+repeated-measures dataset with \pkg{robustlmm}'s own data generator
+\code{generateRepeatedMeasuresDatasets}: a four-level within-subject
+factor \code{visit}, replicated over $40$ subjects, with an underlying
+AR(1) random-effect covariance ($\sigma = 1.5$, $\rho = 0.6$).
+
+<<structured-data>>=
+set.seed(20260623)
+datasets <- generateRepeatedMeasuresDatasets(
+    1, numberOfSubjects = 40, numberOfVisits = 4, numberOfReplicates = 3,
+    structure = "ar1", marginalSd = 1.5, correlation = 0.6,
+    trueBeta = 10, trueSigma = 0.7)
+d <- datasets$generateData(1)
+@
+
+We model the factor with \code{0 + visit} (dropping the intercept) so
+that \emph{each} visit gets its own random effect: the term
+\code{(0 + visit | subject)} gives a four-dimensional random effect per
+subject, and that is the object on which a covariance structure is
+defined. An intercept-plus-slope parameterisation would instead give
+only a two-dimensional random effect, on which \code{cs} and \code{ar1}
+both reduce to a single correlation and so coincide with the
+unstructured fit. With four dimensions the structures differ: an
+unstructured fit estimates all $\binom{4}{2} = 6$ correlations, the
+\code{cs} fit collapses them to one common correlation, and the
+\code{ar1} fit to a single decay parameter $\rho$ with
+$\mathrm{Cor}(i, j) = \rho^{|i - j|}$. \code{VarCorr} annotates the
+structure it enforced:
+
+<<structured-fits>>=
+rcs  <- rlmer(y ~ 1 + cs(0 + visit | subject),  d, method = "DASvar")
+rar1 <- rlmer(y ~ 1 + ar1(0 + visit | subject), d, method = "DASvar")
+VarCorr(rcs)
+VarCorr(rar1)
+@
+
+Because the projection keeps the marginal variances and only constrains
+the correlations, a structured fit resists the over-parameterisation
+(and the spurious near-$\pm 1$ correlations) that an unstructured fit
+can fall into on short, noisy series, while remaining fully robust to
+outliers. A simulation study
+(\code{inst/simulationStudy/structuredCovariances.R},
+\Sexpr{nums$structured$nreps} replicates) confirms both properties. On
+clean data the robust and the classical structured fits both recover the
+truth. But when \Sexpr{nums$structured$contamPct}\% of the subjects
+carry an outlying random-effect vector, the classical (\code{lmer})
+common correlation collapses toward zero---from a true
+$\Sexpr{fmt(nums$structured$cs$trueRho)}$ to
+$\Sexpr{fmt(nums$structured$cs$contLmer)}$ for \code{cs} and from
+$\Sexpr{fmt(nums$structured$ar1$trueRho)}$ to
+$\Sexpr{fmt(nums$structured$ar1$contLmer)}$ for \code{ar1}, with its
+marginal standard deviations inflating from
+$\Sexpr{fmt(nums$structured$cs$trueSd)}$ to
+$\Sexpr{fmt(nums$structured$cs$contSdLmer)}$---whereas the robust
+structured fit holds near the truth (correlation
+$\Sexpr{fmt(nums$structured$cs$contRlmer)}$ for \code{cs} and
+$\Sexpr{fmt(nums$structured$ar1$contRlmer)}$ for \code{ar1}, marginal
+standard deviation $\Sexpr{fmt(nums$structured$cs$contSdRlmer)}$).
+
+A limitation of the default estimation method carries over to
+structured blocks: \code{method = "DAStau"} computes its consistency
+factors by Gauss--Hermite quadrature only for random-effect blocks of
+dimension $\leq 2$, so for larger blocks---such as the four-dimensional
+\code{cs}/\code{ar1} blocks above---the fit falls back to \code{DASvar}
+with a warning (which is why the fits above request \code{DASvar}
+directly). The experimental option
+\code{options(robustlmm.dastau.mc = TRUE)} enables a Monte-Carlo
+calibration of the same DAS-tau fixed point for such blocks; the sample
+is drawn once per fit from a deterministic seed, so fits remain
+reproducible. In a companion simulation on clean Gaussian data this
+removes the small calibration residual that the \code{DASvar}
+approximation leaves in the fitted correlation ($\approx 0.004$ in
+absolute value for four-level \code{ar1} blocks with $200$ subjects;
+\code{inst/simulationStudy/dasmcValidation.R}).
+It is validated by simulation only---not by a finite-sample
+theorem---and for blocks of dimension $\leq 2$ the quadrature path
+remains in place, as the Monte-Carlo path offers no improvement there.
+See \code{?"robustlmm-options"} for the option's companions and
+caveats.
+
+\section{Summary}\label{sec:summary}
+
+Release 3.5.0 turns \pkg{robustlmm} from an estimator into a more
+complete robust-modelling toolbox: robust standard errors and
+confidence intervals, ANOVA tables, prediction intervals and honest
+degrees of freedom for inference; observation- and cluster-level
+influence diagnostics; a high-breakdown \textsc{ransac} start; and
+design weights and structured covariances for robustness in the design
+and covariance space. For the underlying estimator and its tuning, see
+the main vignette \citep{vignette}; the simulation studies that
+validate these features live in \code{inst/simulationStudy}.
+
+<<sessionInfo, echo=FALSE, results=hide>>=
+## (session info intentionally not printed to keep the vignette stable)
+@
+
+\bibliography{rlmer}
+
+\end{document}

@@ -9,6 +9,8 @@
 \alias{fitDatasets_rlmer_DAStau}
 \alias{fitDatasets_rlmer_DAStau_lmerNoFit}
 \alias{fitDatasets_rlmer_DASvar}
+\alias{fitDatasets_rlmer_cs}
+\alias{fitDatasets_rlmer_ar1}
 \alias{fitDatasets_rlmer_DAStau_noAdj}
 \alias{fitDatasets_rlmer_DAStau_k_0_5}
 \alias{fitDatasets_rlmer_DAStau_k_0_5_noAdj}
@@ -49,6 +51,7 @@ fitDatasets_rlmer(
   postFit,
   datasetIndices = "all",
   ...,
+  formula,
   init
 )
 
@@ -57,6 +60,10 @@ fitDatasets_rlmer_DAStau(datasets, postFit, datasetIndices = "all")
 fitDatasets_rlmer_DAStau_lmerNoFit(datasets, postFit, datasetIndices = "all")
 
 fitDatasets_rlmer_DASvar(datasets, postFit, datasetIndices = "all")
+
+fitDatasets_rlmer_cs(datasets, postFit, datasetIndices = "all")
+
+fitDatasets_rlmer_ar1(datasets, postFit, datasetIndices = "all")
 
 fitDatasets_rlmer_DAStau_noAdj(datasets, postFit, datasetIndices = "all")
 
@@ -162,6 +169,10 @@ try only a few datasets instead of all of them.}
 
 \item{...}{argument passed on to \code{\link{createRhoFunction}}.}
 
+\item{formula}{optional model formula to fit; defaults to the formula
+stored in \code{datasets}. Used by the structured-covariance wrappers to
+impose a \code{cs} / \code{ar1} covariance structure.}
+
 \item{init}{optional argument passed on to \code{\link{rlmer}}.}
 
 \item{K}{number of random subsamples used by the RANSAC initial
@@ -215,6 +226,18 @@ Existing fitting functions are:
 \code{fitDatasets_rlmer_DASvar}: Fits datasets using
   \code{\link{rlmer}} using method DASvar. The same rho functions and tuning
   parameters are used as for \code{fitDatasets_rlmer_DAStau}.
+
+\code{fitDatasets_rlmer_cs}: Fits datasets using \code{\link{rlmer}}
+  with method DASvar, forcing a compound-symmetric (\code{cs}) random-effects
+  covariance structure (the single random-effects term is rewritten to
+  \code{cs(...)} regardless of how the data were generated). Requires
+  \pkg{lme4} >= 2.0-0. The same rho functions and tuning parameters are used
+  as for \code{fitDatasets_rlmer_DASvar}.
+
+\code{fitDatasets_rlmer_ar1}: Fits datasets using
+  \code{\link{rlmer}} with method DASvar, forcing an autoregressive
+  (\code{ar1}) random-effects covariance structure. Otherwise identical to
+  \code{fitDatasets_rlmer_cs}. Requires \pkg{lme4} >= 2.0-0.
 
 \code{fitDatasets_rlmer_DAStau_noAdj}: Fits datasets using
   \code{\link{rlmer}} using method DAStau. The same rho functions and tuning

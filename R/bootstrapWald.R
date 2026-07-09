@@ -27,11 +27,18 @@
 ##' Guidance (Koller 2014; Mason et al. 2024). The chi-sq-p Wald limit
 ##' is adequate for \eqn{J \gtrsim 20} groups; the bootstrap earns its
 ##' (substantial) cost mainly at smaller \eqn{J}. \code{boot.type =
-##'   "wild"} is robust to misspecification of the response covariance,
-##' while \code{"parametric"} is exact under the fitted central LMM.
+##'   "wild"} (the default, following \pkg{confintROB}) is robust to
+##' misspecification of the response covariance, while
+##' \code{"parametric"} is exact under the fitted central LMM.
 ##' \code{method = "BCa"} adds the bias-correction-and-acceleration
 ##' adjustment to the bootstrap percentile (preferred when the
 ##' bootstrap distribution is skewed).
+##'
+##' \strong{Small-J caveat for the sandwich.} \code{vcov_type =
+##'   "sandwich"} under-covers at \eqn{J < 20} (in a simulation study:
+##' coverage ~0.89 at \eqn{J = 8} vs. nominal 0.95); the sandwich path
+##' emits a warning. For Wald CIs at small \eqn{J} prefer \code{vcov_type
+##'   = "default"} or use \code{method = "boot"} / \code{"BCa"}.
 ##'
 ##' @param object An \code{rlmerMod} object.
 ##' @param parm Either \code{NULL} (all fixed-effect coefficients), an
@@ -47,9 +54,17 @@
 ##'   \code{\link{vcov_sandwich}}; exact for a single nested grouping
 ##'   factor, approximate for crossed designs). Ignored when
 ##'   \code{method = "boot"} or \code{"BCa"}.
+##' @param df Critical-value degrees of freedom for \code{method =
+##'   "Wald"}. \code{"none"} (default) uses the normal quantile
+##'   \eqn{z_{1-\alpha/2}} as before; \code{"satterthwaite"} uses a
+##'   per-coefficient Satterthwaite t-quantile (the robust IF-based
+##'   df), matching \code{summary(object, df = "satterthwaite")}. It
+##'   requires \code{vcov_type = "default"} and a single grouping factor;
+##'   otherwise it warns and falls back to the normal quantile.
 ##' @param boot.type Bootstrap kind passed to \code{confintROB} when
 ##'   \code{method = "boot"} or \code{"BCa"}: one of
-##'   \code{"parametric"} (default) or \code{"wild"}.
+##'   \code{"wild"} (default, the \code{confintROB} recommendation) or
+##'   \code{"parametric"}.
 ##' @param nsim Bootstrap replicates; default 1000.
 ##' @param seed Optional RNG seed for reproducibility of the bootstrap.
 ##' @param ... Additional arguments forwarded to \code{confintROB}
@@ -67,17 +82,19 @@
 ##' @references Mason F, Cantoni E, Ghisletta P (2024). \emph{Bootstrap
 ##'   confidence intervals for fixed effects in mixed-effects models
 ##'   with outliers}. Psychological Methods.
-##' @importFrom stats confint qnorm
+##' @importFrom stats confint qnorm qt
 ##' @method confint rlmerMod
 ##' @export
 confint.rlmerMod <- function(object, parm = NULL, level = 0.95,
                              method = c("Wald", "boot", "BCa"),
                              vcov_type = c("default", "sandwich"),
-                             boot.type = c("parametric", "wild"),
+                             df = c("none", "satterthwaite"),
+                             boot.type = c("wild", "parametric"),
                              nsim = 1000L, seed = NULL, ...) {
     stopifnot(is(object, "rlmerMod"))
     method    <- match.arg(method)
     vcov_type <- match.arg(vcov_type)
+    df        <- match.arg(df)
     boot.type <- match.arg(boot.type)
 
     beta <- .fixef(object)
@@ -89,8 +106,37 @@ confint.rlmerMod <- function(object, parm = NULL, level = 0.95,
         a   <- (1 - level) / 2
         V   <- as.matrix(vcov(object, type = vcov_type))
         se  <- sqrt(diag(V))
-        z   <- qnorm(1 - a)
-        margin <- z * se
+        ## WS16 step 5: critical value is the normal quantile by default,
+        ## or a per-coefficient Satterthwaite t-quantile when df =
+        ## "satterthwaite" (default vcov only). Any obstacle -- a
+        ## non-default vcov, an unsupported design (>1 grouping factor or
+        ## Mallows eta), or a variance-component boundary -- warns and
+        ## falls back to the z-quantile, i.e. the previous behaviour.
+        crit <- rep(qnorm(1 - a), length(beta))
+        if (df == "satterthwaite") {
+            if (vcov_type != "default") {
+                warning("df = \"satterthwaite\" requires vcov_type = ",
+                        "\"default\"; using z-quantiles.", call. = FALSE)
+            } else {
+                sw <- tryCatch(suppressWarnings(.satterthwaite_df(object)),
+                               error = function(e) e)
+                if (inherits(sw, "error")) {
+                    warning("Satterthwaite df unavailable (",
+                            conditionMessage(sw),
+                            "); using z-quantiles.", call. = FALSE)
+                } else if (isTRUE(attr(sw, "boundary")) &&
+                           !isTRUE(attr(sw, "reducible"))) {
+                    warning("Variance-component boundary (singular fit): ",
+                            "Satterthwaite df not identifiable; using ",
+                            "z-quantiles.", call. = FALSE)
+                } else {
+                    ## WS14: a reducible boundary yields a valid df
+                    ## conditional on the zeroed component(s); use it.
+                    crit <- qt(1 - a, df = pmax(as.numeric(sw), 1))
+                }
+            }
+        }
+        margin <- crit * se
         out <- cbind(beta - margin, beta + margin)[parm_idx, , drop = FALSE]
         colnames(out) <- .pct_cols(a)
         rownames(out) <- nms[parm_idx]

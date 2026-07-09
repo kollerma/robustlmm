@@ -1,4 +1,6 @@
-## Disable test
+## Disabled on the CRAN release branch (historical github-transition set:
+## slow / MC-random / platform-fragile tests kept out of the CRAN check;
+## they run in full on master and in CI). See feedback in project notes.
 quit()
 
 ## Tests for the influence / vcov-sandwich layer (WS1a).
@@ -65,7 +67,7 @@ stopifnot(max(abs(V_g1 - ratio * V_none)) < 1e-10)
     X     <- pp$X
     Z     <- t(pp$Zt)
     U_b   <- parts$U_b
-    Ue_inv <- parts$Ue_inv
+    U_e   <- parts$U_e
     A_X    <- parts$A_X
     A_ZUb  <- parts$A_ZUb
     Lambda_ratio <- parts$Lambda_ratio
@@ -79,9 +81,10 @@ stopifnot(max(abs(V_g1 - ratio * V_none)) < 1e-10)
         xb <- as.numeric(Jbb_inv_rb - parts$Jbb_inv_Jbu %*% xu)
         list(xb = xb, xu = xu)
     }
+    off <- fit@resp$offset
     Gtilde <- function(beta, u, w) {
-        resid <- as.numeric(y - X %*% beta - Z %*% (U_b %*% u))
-        r_std <- as.numeric(Ue_inv %*% resid) / sigma
+        resid <- as.numeric(y - off - X %*% beta - Z %*% (U_b %*% u))
+        r_std <- as.numeric(U_e %*% resid) / sigma
         u_std <- u / sigma
         psi_e <- rho_e@psi(r_std)
         Gb <- as.numeric(t(A_X) %*% (w * psi_e))

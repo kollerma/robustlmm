@@ -5,13 +5,17 @@
 \title{Full implicit influence function (beta, u, sigma, theta) for a
 fitted \code{rlmerMod} object.}
 \usage{
-implicitIF_full(fit, eps = 1e-06)
+implicitIF_full(fit, eps = 1e-06, use.cache = TRUE)
 }
 \arguments{
 \item{fit}{An \code{rlmerMod} object.}
 
 \item{eps}{Numerical step for \code{numDeriv::jacobian} (default
 \code{1e-6}).}
+
+\item{use.cache}{If \code{TRUE} (default), return a result cached on
+the fit when one is stored for the current \eqn{\theta}, and cache
+the result otherwise.}
 }
 \value{
 A list with components \code{IF_beta} (\eqn{p \times n}),
@@ -23,9 +27,10 @@ A list with components \code{IF_beta} (\eqn{p \times n}),
 Extends \code{\link{implicitIF}} by adding the \eqn{\sigma}-DAS and
 \eqn{\theta}-DAS scoring equations to the implicit-derivative linear
 system. The Jacobian of the full score wrt \eqn{(\beta, u, \log
-\sigma, \theta)} is computed numerically via \code{\link[numDeriv:jacobian]{numDeriv::jacobian}}
-with Richardson extrapolation; the Jacobian wrt the response is a
-central finite difference column by column. Only \code{DASvar} and
+\sigma, \theta)} is computed via \code{\link[numDeriv:jacobian]{numDeriv::jacobian}}
+with Richardson extrapolation, reusing the converged DAS scales on the
+non-\eqn{\theta} columns (they depend on \eqn{\theta} only); the
+Jacobian wrt the response is closed-form. Only \code{DASvar} and
 \code{DAStau} methods are supported (DAStau additionally requires
 block sizes \eqn{\le 2}).
 }
@@ -34,8 +39,12 @@ This function is the engine behind \code{\link[=cooks.distance.rlmerMod]{cooks.d
 / \code{\link[=influence.rlmerMod]{influence}}; users who only want
 Cook's distance should call those S3 methods.
 
-The numerical Jacobian is slow (a few seconds on Penicillin); each
-call recomputes it from scratch.
+The result is cached on the fit (keyed by \eqn{\theta}) when
+\code{use.cache = TRUE}, so repeated calls -- and the consumers
+\code{\link[=cooks.distance.rlmerMod]{cooks.distance}}, the sandwich
+\code{vcov}, and the Satterthwaite \code{df} of \code{summary} /
+\code{anova} / \code{emmeans} / \code{confint} -- share a single
+computation.
 }
 \seealso{
 \code{\link{implicitIF}},

@@ -179,6 +179,9 @@ isDiagonalDataset <- function(datasets) {
 ##' @param method argument passed on to \code{\link{rlmer}}.
 ##' @param tuningParameter argument passed on to
 ##'   \code{\link{extractTuningParameter}}.
+##' @param formula optional model formula to fit; defaults to the formula
+##'   stored in \code{datasets}. Used by the structured-covariance wrappers
+##'   to impose a \code{cs} / \code{ar1} covariance structure.
 ##' @param init optional argument passed on to \code{\link{rlmer}}.
 ##' @param K number of random subsamples used by the RANSAC initial
 ##'   estimator (\code{\link{ransac_lme4}}). Only used by
@@ -210,9 +213,13 @@ fitDatasets_rlmer <-
              postFit,
              datasetIndices = "all",
              ...,
+             formula,
              init) {
         if (missing(method)) {
             method <- "DAStau"
+        }
+        if (missing(formula)) {
+            formula <- datasets[["formula"]]
         }
         if (missing(tuningParameter)) {
             tuningParameter <- c(1.345, 2.28, 1.345, 2.28, 5.14, 5.14)
@@ -245,7 +252,7 @@ fitDatasets_rlmer <-
                         rho.sigma.e = rho.sigma.e,
                         rho.sigma.b = rho.sigma.b
                     ),
-                    list(formula = datasets[["formula"]])
+                    list(formula = formula)
                 ))
             }
         } else {
@@ -261,7 +268,7 @@ fitDatasets_rlmer <-
                         rho.sigma.b = rho.sigma.b,
                         init = init
                     ),
-                    list(formula = datasets[["formula"]])
+                    list(formula = formula)
                 ))
             }
         }
@@ -492,6 +499,79 @@ fitDatasets_rlmer_DASvar <-
                 label = label,
                 postFit = postFit,
                 datasetIndices = datasetIndices
+            )
+        )
+    }
+
+##' Rewrite the single random-effects term of \code{formula} so that it is
+##' wrapped in the structured-covariance function \code{structure} (one of
+##' \code{"cs"}, \code{"ar1"} or \code{"diag"}), or unwrapped to the
+##' unstructured \code{(expr | group)} form when \code{structure} is \code{NA}.
+##' Used by the structured-covariance fitting wrappers so that a dataset
+##' generated under one covariance structure can be fitted under another.
+##' Requires exactly one random-effects term.
+##' @noRd
+rewriteRandomEffectsStructure <- function(formula, structure) {
+    bars <- reformulas::findbars(formula)
+    if (length(bars) != 1L) {
+        stop("structured-covariance fitting wrappers require exactly one ",
+             "random-effects term; got ", length(bars), ".")
+    }
+    bar <- bars[[1L]]
+    reTerm <- if (is.na(structure)) {
+        call("(", bar)
+    } else {
+        call(structure, bar)
+    }
+    feFormula <- reformulas::nobars(formula)
+    feRhs <- feFormula[[length(feFormula)]]
+    feFormula[[length(feFormula)]] <- call("+", feRhs, reTerm)
+    environment(feFormula) <- environment(formula)
+    return(feFormula)
+}
+
+##' @details \code{fitDatasets_rlmer_cs}: Fits datasets using \code{\link{rlmer}}
+##'   with method DASvar, forcing a compound-symmetric (\code{cs}) random-effects
+##'   covariance structure (the single random-effects term is rewritten to
+##'   \code{cs(...)} regardless of how the data were generated). Requires
+##'   \pkg{lme4} >= 2.0-0. The same rho functions and tuning parameters are used
+##'   as for \code{fitDatasets_rlmer_DASvar}.
+##' @rdname fitDatasets
+##' @export
+fitDatasets_rlmer_cs <-
+    function(datasets, postFit, datasetIndices = "all") {
+        label <- "fitDatasets_rlmer_cs"
+        return(
+            fitDatasets_rlmer(
+                datasets,
+                method = "DASvar",
+                tuningParameter = predefinedTuningParameter[["fitDatasets_rlmer_DASvar"]],
+                label = label,
+                postFit = postFit,
+                datasetIndices = datasetIndices,
+                formula = rewriteRandomEffectsStructure(datasets[["formula"]], "cs")
+            )
+        )
+    }
+
+##' @details \code{fitDatasets_rlmer_ar1}: Fits datasets using
+##'   \code{\link{rlmer}} with method DASvar, forcing an autoregressive
+##'   (\code{ar1}) random-effects covariance structure. Otherwise identical to
+##'   \code{fitDatasets_rlmer_cs}. Requires \pkg{lme4} >= 2.0-0.
+##' @rdname fitDatasets
+##' @export
+fitDatasets_rlmer_ar1 <-
+    function(datasets, postFit, datasetIndices = "all") {
+        label <- "fitDatasets_rlmer_ar1"
+        return(
+            fitDatasets_rlmer(
+                datasets,
+                method = "DASvar",
+                tuningParameter = predefinedTuningParameter[["fitDatasets_rlmer_DASvar"]],
+                label = label,
+                postFit = postFit,
+                datasetIndices = datasetIndices,
+                formula = rewriteRandomEffectsStructure(datasets[["formula"]], "ar1")
             )
         )
     }

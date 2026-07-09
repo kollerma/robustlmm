@@ -4,12 +4,38 @@
 \alias{rlmer_ransac}
 \title{rlmer with RANSAC initial estimator}
 \usage{
-rlmer_ransac(formula, data, K = 200L, sub_frac = 0.5, seed = NULL, ...)
+rlmer_ransac(
+  formula,
+  data,
+  K = 200L,
+  sub_frac = 0.5,
+  n_starts = 1L,
+  phony_threshold = 0.99,
+  seed = NULL,
+  max_tries = 5L,
+  ...
+)
 }
 \arguments{
 \item{formula, data}{passed to \code{\link{rlmer}}.}
 
 \item{K, sub_frac, seed}{passed to \code{\link{ransac_lme4}}.}
+
+\item{n_starts}{number of distinct RANSAC starts for the multi-start
+consensus (default 1 = single best start, the previous behaviour).}
+
+\item{phony_threshold}{a fit is treated as phony (non-interior) when
+its maximum \eqn{|\hat\rho|} exceeds this (default 0.99).}
+
+\item{max_tries}{maximum number of RANSAC re-seeds when a redescending
+\code{rho.e} zero-weights the refinement into a rank-deficient
+positive-weight design (Koller and Stahel 2017, Remark 2). The fit is
+re-drawn and re-fitted from a fresh nonsingular start until its
+positive-weight fixed-effects design is full rank, up to
+\code{max_tries} (default 5); if all attempts still collapse the last
+fit is returned with a warning. With a fixed \code{seed}, attempt
+\eqn{t} uses \code{seed + t - 1}, so the first attempt is reproducible
+and the retries are deterministic.}
 
 \item{...}{other arguments to \code{\link{rlmer}} (e.g.
 \code{rho.e}, \code{rho.b}, \code{method}).}
@@ -24,6 +50,26 @@ Fit \code{\link{rlmer}} with a RANSAC-derived initial estimator.
 Convenience wrapper that calls \code{\link{ransac_lme4}} to obtain
 a starting value and then passes it to \code{\link{rlmer}}'s
 \code{init} argument.
+
+With \code{n_starts > 1} it runs a multi-start consensus:
+\code{rlmer} is fitted from each of the \code{n_starts} best distinct
+RANSAC candidate starts, and the returned fit is the
+lowest-residual-scale one whose random-effects covariance is interior
+(\eqn{|\hat\rho| \le} \code{phony_threshold}). This samples several
+basins of a redescending \eqn{\psi} and so recovers the interior
+solution when the single best start happens to fall into the phony
+\eqn{|\hat\rho| \to 1} attractor. If every start lands phony, the
+best-scoring fit is returned with a warning. The per-start summary is
+attached as \code{attr(fit, "consensus")}.
+
+The nonsingular subsample guarantees a full-rank fixed-effects design
+at the \emph{start} only; a redescending \eqn{\psi} can zero-weight
+observations during the refinement and collapse the positive-weight
+design to rank-deficiency (Koller and Stahel 2017, Remark 2). After the
+fit converges its e-side robustness weights are inspected and a warning
+is issued if the design restricted to the positively-weighted
+observations is rank-deficient, suggesting a positive-weight
+\eqn{\psi} (e.g. \code{rho.e = smoothPsi}) or a different start.
 }
 \examples{
   \donttest{

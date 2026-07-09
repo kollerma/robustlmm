@@ -43,6 +43,7 @@ setRefClass("rlmerPredD",
                      ghZ     = "matrix",
                      ghZt    = "matrix",
                      ghW     = "matrix",
+                     eta     = "numeric",      ## WS11 Mallows design weights (length n, in (0,1])
                      D_e     = "ddiMatrix",    ## Diagonal Matrix D_e
                      D_b     = "ddiMatrix",    ## Diagonal Matrix D_b
                      Lambda_b = "ddiMatrix",   ## solve(D_b) lambda_e
@@ -70,6 +71,8 @@ setRefClass("rlmerPredD",
                      cache.M = "list",         ## cache
                      set.unsc = "logical",     ## cache
                      cache.unsc = "matrix",    ## cache
+                     cache.IFfull = "list",    ## WS16: cached implicitIF_full(fit)
+                     cache.IFfull.theta = "numeric", ## theta it was computed at (cache key)
                      MAT1 = "Matrix",          ## used in fitEffects
                      MAT2 = "Matrix"           ## used in fitEffects
                      ),
@@ -79,6 +82,8 @@ setRefClass("rlmerPredD",
                      function(X, Zt, Lambdat, Lind, theta, beta, b.s, lower,
                               sigma, v_e, ...) {
                          set.unsc <<- set.M <<- calledInit <<- FALSE
+                         cache.IFfull <<- list()
+                         cache.IFfull.theta <<- numeric(0)
                          initGH(...)
                          if (!nargs()) return()
                          X <<- as(X, "matrix")
@@ -221,7 +226,21 @@ setRefClass("rlmerPredD",
                          rho_sigma_e <<- object@rho.sigma.e
                          rho_b <<- object@rho.b
                          rho_sigma_b <<- object@rho.sigma.b
-                         D_e <<- Diagonal(x=rep.int(rho_e@EDpsi(), n))
+                         ## WS11: Mallows design weights eta (length n, in
+                         ## (0, 1]); default 1 reproduces the unweighted
+                         ## RSE. eta lives on the resp; read it here,
+                         ## defaulting to 1 for a resp without eta.
+                         eta <<- {
+                             e <- tryCatch(object@resp$eta,
+                                           error = function(.) NULL)
+                             if (is.null(e) || length(e) != n)
+                                 rep.int(1, n) else as.numeric(e)
+                         }
+                         ## D_e carries eta: M_XX = X~' D_e X~ etc. are
+                         ## built from sqrtD_e, so the eta weighting flows
+                         ## into M -> A / Kt / L automatically. eta == 1 is
+                         ## bit-identical (1 * lambda_e == lambda_e).
+                         D_e <<- Diagonal(x = eta * rho_e@EDpsi())
                          tmp <- btapply(rho_b, .calcE.D.re2, rep=object@ind[object@k])
                          D_b <<- Diagonal(x=tmp)
                          Lambda_b <<- Diagonal(x=rho_e@EDpsi() / tmp)
@@ -257,10 +276,13 @@ setRefClass("rlmerPredD",
                          'the unscaled variance-covariance matrix of the fixed-effects parameters'
                          if (set.unsc) return(cache.unsc)
                          r <- M()
-                         tmp <- if (all(zeroB)) { ## all theta == 0
+                         tmp <- if (all(eta == 1)) {
+                           ## scalar path (design.weights = NULL / eta = 1):
+                           ## unchanged, byte-identical to master.
+                           if (all(zeroB)) { ## all theta == 0
                              Epsi2_e / rho_e@EDpsi() *
                                  tcrossprod(solve(M_XX, t(sqrtD_e %*% U_eX)))
-                         } else {
+                           } else {
                              Epsi2_e / rho_e@EDpsi() *
                                  with(r, M_BB - crossprod(M_bB, Lambda_bD_b %*% M_bB)) +
                                  if (isDiagonal(U_b)) {
@@ -269,6 +291,38 @@ setRefClass("rlmerPredD",
                                      with(r, crossprod(Lambda_b %*% M_bB,
                                                        Epsi_bpsi_bt %*% Lambda_b %*% M_bB))
                                  }
+                           }
+                         } else {
+                           ## WS11 eta != 1: explicit beta-block of the
+                           ## sandwich M_full^-1 B_full M_full^-1. The bread
+                           ## beta-row of M_full^-1 is [M_BB | M_bB'] (M
+                           ## carries eta via D_e). The e-side meat carries
+                           ## H^2 = diag(eta^2): with G = [U_eX | U_eZU_b]
+                           ## and W = [M_BB | M_bB'] G' (the e-score ->
+                           ## beta influence per observation), the e-side
+                           ## contribution is Epsi2 * W diag(eta^2) W'. The
+                           ## b-side meat (psi_b) is not eta-weighted, so it
+                           ## is identical to the scalar code. Reduces to
+                           ## the scalar form at eta = 1 (pinned in tests).
+                           if (all(zeroB)) {
+                             W <- solve(M_XX, t(U_eX))                  # p x n
+                             Epsi2_e * tcrossprod(W %*% Diagonal(x = eta))
+                           } else {
+                             Pbeta <- cbind(as.matrix(r$M_BB),
+                                            t(as.matrix(r$M_bB)))       # p x (p+q)
+                             G <- cbind(as.matrix(U_eX),
+                                        as.matrix(U_eZU_b))             # n x (p+q)
+                             W <- tcrossprod(Pbeta, G)                  # p x n
+                             eside <- Epsi2_e *
+                                 tcrossprod(W %*% Diagonal(x = eta))
+                             bside <- if (isDiagonal(U_b)) {
+                                 crossprod(Diagonal(x=sqrt(Epsi2_b)) %*% Lambda_b %*% r$M_bB)
+                             } else {
+                                 with(r, crossprod(Lambda_b %*% M_bB,
+                                                   Epsi_bpsi_bt %*% Lambda_b %*% M_bB))
+                             }
+                             eside + bside
+                           }
                          }
                          cache.unsc <<- as.matrix(tmp)
                          ## test matrix for symmetry
@@ -346,8 +400,13 @@ setRefClass("rlmerPredD_DAS",
                  },
                  TbList = function() {
                      tmp <- as.matrix(L %*% Epsi_bbt)
+                     ## WS11: the e-side term is Kt' H^2 Kt (H = diag(eta));
+                     ## eta^2 sits inside the Kt crossproduct, reducing to
+                     ## crossprod(Kt) at eta == 1.
+                     KtKt <- if (all(eta == 1)) crossprod(Kt) else
+                         crossprod(Kt, Diagonal(x = eta^2) %*% Kt)
                      Tfull <- diag(q) - tmp - t(tmp) +
-                         as.matrix(Epsi2_e * crossprod(Kt) +
+                         as.matrix(Epsi2_e * KtKt +
                                        L %*% crossprod(Epsi_bpsi_bt, L))
                      Ts <- vector("list", nblocks)
                      i <- 1
@@ -418,10 +477,42 @@ setRefClass("rlmerPredD_DAS",
                      Btmp <- B()
                      if (method == "DASvar" || length(.tau_e) == 0) {
                          tmp <- tcrossprod(Epsi_bpsi_bt, Btmp)
-                         tau2 <-
-                             v_e - EDpsi_e * 2 * diagA + Epsi2_e * diagAAt +
+                         ## The leading term is the variance of the
+                         ## PRIOR-WEIGHT-WHITENED residual, which is 1
+                         ## by construction (U_e = diag(sqrt(v_e)) has
+                         ## already absorbed v_e; diagA/diagAAt/B are
+                         ## built from the whitened matrices). Using
+                         ## v_e here double-counted the weights and
+                         ## biased sigma-hat low for weighted DASvar
+                         ## fits (WS24 / bug 6 in PLAN-WS7-WS9.md);
+                         ## identical for unweighted fits (v_e = 1).
+                         bterm <-
                              computeDiagonalOfProduct(as(Btmp, "unpackedMatrix"),
                                                       as(tmp, "unpackedMatrix"))
+                         if (all(eta == 1)) {
+                             tau2 <-
+                                 1 - EDpsi_e * 2 * diagA + Epsi2_e * diagAAt +
+                                 bterm
+                         } else {
+                             ## WS11: eta-weighted DASvar tau. The estimator
+                             ## is a GM-sandwich: the curvature (bread)
+                             ## carries H = diag(eta) -- already in diagA via
+                             ## M -- and the score noise (meat) carries H^2.
+                             ## So the e-side linear term picks up eta_i
+                             ## (= lambda_e (A H)_ii), and the e-side
+                             ## quadratic term is diag(A H^2 A') =
+                             ## sum_k A_ik^2 eta_k^2 (eta^2 INSIDE the A A'
+                             ## sum, not the per-row eta_i^2 diag(A A')).
+                             ## The b-side term is unchanged: psi_b is not
+                             ## eta-weighted, eta enters it only through Kt
+                             ## (hence M). Reduces to the scalar path at
+                             ## eta == 1. FD-validated (tests/design-weights.R).
+                             Amat <- as.matrix(A())
+                             AH2At <- as.numeric(Amat^2 %*% (eta^2))
+                             tau2 <-
+                                 1 - eta * EDpsi_e * 2 * diagA +
+                                 Epsi2_e * AH2At + bterm
+                         }
                          tooSmall <- tau2 < 0.01
                          if (any(tooSmall)) {
                             tau2[tooSmall] <- 0.01
@@ -434,8 +525,14 @@ setRefClass("rlmerPredD_DAS",
                      }
                      if (method == "DAStau") {
                          stmp <- .s(theta = FALSE, pp = .self, B = Btmp)
+                         ## WS11: the self-leverage in the convolution is
+                         ## (A H)_ii = eta_i * diagA_i (= eta * diagA);
+                         ## bit-identical to diagA at eta == 1. Linearising
+                         ## calcTau's (1 - a)^2 + s^2 then reproduces the
+                         ## eta-weighted DASvar tau exactly.
+                         aLev <- if (all(eta == 1)) diagA else eta * diagA
                          .tau_e <<-
-                             calcTau(diagA, stmp, rho_e, rho_sigma_e, .self, kappa_e, .tau_e)
+                             calcTau(aLev, stmp, rho_e, rho_sigma_e, .self, kappa_e, .tau_e)
                      }
                      .setTau_e <<- TRUE
                      return(.tau_e)
@@ -450,7 +547,12 @@ setRefClass("rlmerResp",
                      sqrtrwt = "numeric",
                      weights = "numeric",
                      wtres   = "numeric",
-                     y       = "numeric"
+                     y       = "numeric",
+                     ## Mallows design weights eta_i in (0, 1]:
+                     ## deterministic given X, they multiply the score
+                     ## contribution of observation i. NOT the prior
+                     ## weights (which model Var(e_i) = sigma^2 / w_i).
+                     eta     = "numeric"
                 ),
             methods =
                 list(
@@ -469,6 +571,8 @@ setRefClass("rlmerResp",
                         sqrtrwt <<- if (!is.null(ll$sqrtrwt))
                             as.numeric(ll$sqrtrwt) else sqrt(weights)
                         wtres   <<- sqrtrwt * (y - mu)
+                        eta     <<- if (!is.null(ll$eta))
+                            as.numeric(ll$eta) else rep.int(1, n)
                     },
                     updateMu = function(lmu) {
                         mu <<- lmu
@@ -534,6 +638,56 @@ setRefClass("rlmerResp",
 ##'   Methods that depend on the log likelihood are therefore not available. For
 ##'   this reason the methods \code{deviance}, \code{extractAIC} and
 ##'   \code{logLik} stop with an error if they are called.
+##' @section Coefficient-table degrees of freedom: By default
+##'   (\code{df = "auto"}) \code{summary(object)} reports a
+##'   Satterthwaite-type \code{df} and a \code{Pr(>|t|)} column for the
+##'   fixed effects whenever computing it is cheap -- either the
+##'   underlying influence function is already cached on the fit (from an
+##'   earlier \code{\link[=cooks.distance.rlmerMod]{cooks.distance}},
+##'   \code{vcov} sandwich,
+##'   \code{\link[=confint.rlmerMod]{confint}} or \code{summary} call), or
+##'   its deterministic size workload is within the cutoff
+##'   \code{getOption("robustlmm.summary.df.max", 5000)}. On larger
+##'   fits \code{"auto"} falls back to the historic \code{Estimate} /
+##'   \code{Std. Error} / \code{t value} table (no p-values, as for
+##'   \code{\link[lme4]{lmer}}) and prints a one-line note on how to
+##'   request the df anyway. Use \code{df = "satterthwaite"} to always
+##'   compute it (which may be slow on large data) or \code{df = "none"}
+##'   to never compute it. The cutoff is a dimensionless function of the
+##'   problem size (number of observations, parameters and the df method),
+##'   so the same fit behaves identically on every machine; raise or lower
+##'   \code{robustlmm.summary.df.max} to show the df on larger or only on
+##'   smaller fits. See \code{\link{robustlmm-options}} for this option.
+##'   Unlike
+##'   \pkg{lmerTest}, the degrees of freedom are derived from the robust,
+##'   influence-function-based covariance of the variance parameters, so
+##'   they stay honest under contamination. The Satterthwaite construction
+##'   follows Giesbrecht and Burns (1985) and Fai and Cornelius (1996);
+##'   inserting a robust sandwich covariance into the moment-matching ratio
+##'   parallels the cluster-robust approach of Bell and McCaffrey (2002)
+##'   and Pustejovsky and Tipton (2018). The approximation is reliable
+##'   only for a moderate number of grouping levels; \code{summary} prints
+##'   a note recommending \code{\link[=confint.rlmerMod]{confint}(object,
+##'   method = "boot")} when the smallest grouping factor has fewer than
+##'   20 levels. The feature supports single-factor, nested
+##'   (e.g. \code{(1 | school/class)}) and crossed
+##'   (e.g. \code{(1 | subject) + (1 | item)}) designs with diagonal
+##'   random effects, including Mallows-weighted fits, with the default
+##'   \code{vcov}. Nested designs use a one-way cluster sandwich over the
+##'   coarsest grouping factor; crossed designs use a
+##'   Cameron-Gelbach-Miller multiway cluster-robust covariance,
+##'   projected to the nearest positive-semidefinite matrix. Designs not
+##'   covered (e.g. crossed random slopes) fall back to t-values with an
+##'   explanatory note. The same
+##'   Satterthwaite df is used by \pkg{emmeans} results (\code{emmeans},
+##'   \code{emtrends}, \code{contrast}) for this class when the default
+##'   \code{vcov} is in effect; a user-supplied \code{vcov.} keeps the
+##'   asymptotic (\code{Inf}, z-based) degrees of freedom. When a variance
+##'   component is estimated at 0 (a boundary fit), the df is computed
+##'   conditional on that component being held at the boundary -- it
+##'   equals the df of the model with that component dropped -- and
+##'   \code{summary} notes this; only a genuinely non-identifiable
+##'   (singular) fit suppresses the df.
 ##' @seealso \code{\link{rlmer}}; corresponding class in package \code{lme4}:
 ##'   \code{\link[lme4:merMod-class]{merMod}}
 ##' @keywords classes
@@ -629,7 +783,9 @@ setClass("rlmerMod",
         Lambdat <- getME(from, "Lambdat")
         Lind <- getME(from, "Lind")
         u <- as(getME(from, "u"), "numeric")
-        lower <- getME(from, "lower")
+        ## theta-space (Cholesky) lower bounds; differs from
+        ## getME(., "lower") for structured (cs/ar1) covariances
+        lower <- .structuredThetaLower(from)
         devcomp <- getME(from, "devcomp")
         theta <- getME(from, "theta")
         mu <- getME(from, "mu")
@@ -740,16 +896,44 @@ updateWeights <- function(object) {
     if (is.null(reCovs)) {
         return(object)
     }
-    ## Update each Covariance object with current theta
-    ## For supported structures (us, diag), par == theta, so we can
-    ## directly access the 'par' slot instead of using unexported methods.
-    ## Note: initialize() returns a new object, doesn't modify in place
+    ## Update each Covariance object's par slot from the current (fitted)
+    ## theta, so VarCorr() reports the fitted values. We set par via the
+    ## base S4 initialize() and reconstruct par ourselves rather than
+    ## using lme4's getPar()/setTheta() generics, which are not exported by
+    ## lme4 < 2.0-2:
+    ##   us / diag: par == theta (direct slice);
+    ##   cs / ar1 : rebuild the block covariance from the fitted theta via
+    ##              the block template (handles homogeneous structures,
+    ##              whose theta reuses entries across Cholesky positions)
+    ##              and recover (sigma, rho).
+    ## VarCorr() then reconstructs the covariance from par using lme4's
+    ## own internal getTheta(), so it stays consistent with the fit.
+    ## A degenerate block (collapsed component) keeps the previous par.
     currentTheta <- object@theta
-    thetaIdx <- 1
+    blocks <- object@blocks
+    thetaIdx <- 1L
     for (i in seq_along(reCovs)) {
-        ntheta <- length(slot(reCovs[[i]], "par"))
-        reCovs[[i]] <- initialize(reCovs[[i]],
-                                  par = currentTheta[thetaIdx:(thetaIdx + ntheta - 1)])
+        rc <- reCovs[[i]]
+        ntheta <- .covThetaLength(rc)
+        rng <- thetaIdx:(thetaIdx + ntheta - 1L)
+        if (class(rc)[1L] %in% .projectedCovClasses) {
+            par <- NULL
+            for (Ub in blocks) {
+                lind <- Ub[Ub != 0]
+                if (length(lind) > 0L && all(lind %in% rng)) {
+                    Ub[Ub != 0] <- currentTheta[lind]
+                    par <- .covParFromCov(rc, tcrossprod(Ub))
+                    break
+                }
+            }
+            if (!is.null(par)) {
+                reCovs[[i]] <- tryCatch(initialize(rc, par = par),
+                                        error = function(e) rc)
+            }
+        } else {
+            reCovs[[i]] <- tryCatch(initialize(rc, par = currentTheta[rng]),
+                                    error = function(e) rc)
+        }
         thetaIdx <- thetaIdx + ntheta
     }
     attr(object, "reCovs") <- reCovs

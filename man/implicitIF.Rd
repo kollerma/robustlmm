@@ -29,6 +29,10 @@ equations at the fit. The returned list is a building block for
 only want robust standard errors should call \code{vcov(object, type = "sandwich")}.
 }
 \details{
+Prior weights and offsets are supported: the score is evaluated in
+the same prior-weight-whitened coordinates the estimator iterates
+in (\eqn{U_e = \mathrm{diag}(\sqrt{w})}, residuals offset-corrected).
+
 This is the partial (\eqn{\sigma, \theta} held fixed) version. It is
 \emph{not} the Hampel influence function; the Hampel object is
 \code{\link{caseweightIF}}, which reuses the same Jacobian but with the

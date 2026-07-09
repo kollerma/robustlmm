@@ -1,4 +1,6 @@
-## Disable test
+## Disabled on the CRAN release branch (historical github-transition set:
+## slow / MC-random / platform-fragile tests kept out of the CRAN check;
+## they run in full on master and in CI). See feedback in project notes.
 quit()
 
 ## Empirical test of generateLongitudinalDatasets

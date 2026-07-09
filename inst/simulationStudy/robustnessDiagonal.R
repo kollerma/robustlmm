@@ -255,7 +255,7 @@ if (runningOnMinimalProcessedResults) {
 plot_robustnessDiagonal <-
     ggplot(plotDataRobustness, aes(Generator, value, color = Method)) +
     geom_hline(data = plotDataTruth, aes(yintercept = value)) +
-    lemon::geom_pointline(aes(group = Method)) +
+    ggh4x::geom_pointpath(aes(group = Method)) +
     xlab("") +
     ggh4x::facet_grid2(variable ~ type, scales = "free_y", independent = "y")
 
@@ -269,7 +269,7 @@ plot_coverageDiagonal <-
     geom_hline(yintercept = 0.95,
                color = "gray",
                linewidth = 0.5) +
-    lemon::geom_pointline(aes(group = Method)) +
+    ggh4x::geom_pointpath(aes(group = Method)) +
     xlab("") +
     facet_wrap( ~ variable)
 

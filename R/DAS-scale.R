@@ -87,11 +87,24 @@ G <- function(tau = rep(1, length(a)), a, s, rho, rho.sigma, pp) {
     if (any(naIdx <- is.na(M2))) {
         M2[naIdx] <- 0
     }
-    ## calculate s:
+    ## calculate s (sd of the "external" part of the linearised
+    ## residual -- the noise from the OTHER observations, excluding the
+    ## self leverage which calcTau handles via `a`). WS11: under Mallows
+    ## design weights the e-side noise carries H^2 = diag(eta^2) (the
+    ## GM-sandwich meat), so the eta^2 sits INSIDE the crossproduct:
+    ##   theta = FALSE: diag(A H^2 A') - eta^2 diagA^2  (self removed)
+    ##   theta = TRUE : diag(Kt' H^2 Kt)
+    ## Reduces to the scalar path at eta == 1. The b-side (M2, Epsi_b..)
+    ## is not eta-weighted; eta enters it only through Kt/L (hence M).
+    unweighted <- all(pp$eta == 1)
+    eta2 <- pp$eta^2
     if (theta) {
-        ret <- computeDiagonalOfCrossproductMatrix(M1)
+        ret <- if (unweighted) computeDiagonalOfCrossproductMatrix(M1)
+               else colSums(as.matrix(M1)^2 * eta2)
     } else {
-        ret <- pp$diagAAt - pp$diagA^2
+        ret <- if (unweighted) pp$diagAAt - pp$diagA^2
+               else as.numeric(as.matrix(pp$A())^2 %*% eta2) -
+                   eta2 * pp$diagA^2
     }
     ret <- pp$rho_e@Epsi2() * ret
     if (any(!.zeroB(pp=pp))) ret <- ret + drop(M2^2 %*% diag(pp$Epsi_bpsi_bt))
@@ -260,8 +273,186 @@ calcTau <- function(a, s, rho.e, rho.sigma.e, pp,
     tau
 }
 
+## ---------------------------------------------------------------------------
+## EXPERIMENTAL: Monte-Carlo DAS-tau calibration ("DASmc")
+##
+## Replaces the 4-d Gauss-Hermite fixed point of the s == 2 branch of
+## calcTau.nondiag() with a plain-Monte-Carlo fixed point that works for ANY
+## block dimension s >= 2.  Same linearization as the GH branch:
+##   btilde = Z1 - wgt_b(||Z1||^2) * Z1 %*% Lkk - Z2 %*% Sk,
+## with Z1 ~ N(0, I_s) the own-block spherical draw and Z2 ~ N(0, I_s)
+## the aggregated-rest draw (Sk = lchol of the rest covariance, see .S()).
+## Fixed point (identical to the GH branch, with MC expectations):
+##   T <- E[w_eta(d^2) btilde btilde'] / E[w_delta(d^2)],
+##   d^2_i whitened by chol(T) exactly as in the GH branch, i.e.
+##   backsolve(R, t(btilde)) with R = chol(T) upper: d^2 = b' (R R')^{-1} b.
+##   (This deliberately matches the GH convention, not the Mahalanobis
+##   d^2 = b' T^{-1} b used to whiten the DATA in rlmer.fit.DAS.nondiag;
+##   the two differ for non-diagonal T. Measured impact of the choice on
+##   fitted parameters: ~2e-5.)
+##
+## COMMON RANDOM NUMBERS: the MC sample is drawn ONCE per fit, seeded
+## deterministically from getOption("robustlmm.dasmc.seed"), and reused across
+## all fixed-point and outer iterations, so T is a deterministic smooth
+## function of (Lkk, Sk) and repeated fits are bit-identical.  The caller's
+## global RNG state is saved and restored (simulation seeds are untouched).
+##
+## Options (all documented in ?`robustlmm-options`):
+##   robustlmm.dastau.mc      (FALSE) master switch; also bypasses the
+##                            s > 2 -> DASvar fallback in .rlmerInit()
+##   robustlmm.dastau.mc.all  (FALSE) use MC also for s == 2 blocks
+##                            (to compare MC vs Gauss-Hermite)
+##   robustlmm.dasmc.nsim     (1e5)   number of MC draws
+##   robustlmm.dasmc.seed     (20260703) CRN seed
+## ---------------------------------------------------------------------------
+
+.dasMcEnabled <- function() isTRUE(getOption("robustlmm.dastau.mc", FALSE))
+
+## Draw the common-random-numbers sample for all block types that will use
+## the MC path.  Returns NULL if the MC path is off / not needed, else a list
+## indexed by block type: NULL (keep GH / 1-d path) or list(Z1, Z2) with
+## Z1, Z2 nsim x s matrices of iid N(0,1) draws.
+.buildDasMcSamples <- function(object) {
+    if (!.dasMcEnabled())
+        return(NULL)
+    dims <- object@dim
+    mcAll <- isTRUE(getOption("robustlmm.dastau.mc.all", FALSE))
+    useMC <- dims > 2 | (mcAll & dims == 2)
+    if (!any(useMC))
+        return(NULL)
+    nsim <- as.integer(getOption("robustlmm.dasmc.nsim", 1e5))
+    stopifnot(is.finite(nsim), nsim >= 100L)
+    ## save/restore the caller's RNG state: CRN must not disturb simulation
+    ## seeds set by the user before calling rlmer()
+    haveSeed <- exists(".Random.seed", envir = globalenv(), inherits = FALSE)
+    if (haveSeed) {
+        oldSeed <- get(".Random.seed", envir = globalenv())
+        on.exit(assign(".Random.seed", oldSeed, envir = globalenv()))
+    } else {
+        on.exit(suppressWarnings(
+            rm(".Random.seed", envir = globalenv())))
+    }
+    set.seed(as.integer(getOption("robustlmm.dasmc.seed", 20260703L)))
+    samples <- vector("list", length(dims))
+    for (type in seq_along(dims)) {
+        if (!useMC[type])
+            next
+        s <- dims[type]
+        ## moment-match the joint draw (Z1, Z2): exact zero mean and exact
+        ## identity sample second-moment matrix (including zero Z1/Z2
+        ## cross-moments).  This kills the leading O(nsim^-1/2) MC error in
+        ## E[btilde btilde'] -- for classical psi (wgt == 1) the fixed point
+        ## then reproduces Cov(btilde) EXACTLY; for nonlinear psi only the
+        ## higher-order radial-weight noise remains.  Without this, the
+        ## fixed-seed CRN error acts like a systematic calibration bias of
+        ## the same order as the effects under study.
+        W <- matrix(rnorm(nsim * 2L * s), nsim, 2L * s)
+        W <- sweep(W, 2L, colMeans(W))
+        W <- W %*% backsolve(chol(crossprod(W) / nsim),
+                             diag(2L * s))
+        samples[[type]] <- list(Z1 = W[, seq_len(s), drop = FALSE],
+                                Z2 = W[, s + seq_len(s), drop = FALSE])
+    }
+    attr(samples, "nsim") <- nsim
+    samples
+}
+
+## MC analogue of the s == 2 Gauss-Hermite branch of calcTau.nondiag() for one
+## block type; mirrors its structure exactly (warm start from TList(),
+## almost-equal-block caching, B/a fixed point, convergence test), with
+## MC expectations (equal weights 1/nsim) instead of GH quadrature weights.
+## Returns the list of Tbk matrices for the blocks of this type.
+.calcTauNondiagMcBlockType <- function(object, type, ind, bidx, s, skbs,
+                                       TkbsI, mcSample, max.iter,
+                                       rel.tol = 1e-4, verbose = 0) {
+    wgt <- object@rho.b[[type]]@wgt
+    wgt.sigma <- object@rho.sigma.b[[type]]@wgt
+    psi.sigma <- object@rho.sigma.b[[type]]@psi
+    skappa <- s * object@pp$kappa_b[type]
+    wgtDelta <- function(u) (psi.sigma(u) - psi.sigma(u - skappa)) / s
+    Z1 <- mcSample$Z1
+    Z2 <- mcSample$Z2
+    nsim <- nrow(Z1)
+    stopifnot(ncol(Z1) == s, ncol(Z2) == s)
+    ## radial score on the own-block draw (matches tmp0 of the GH branch;
+    ## .d() returns the squared norm for matrix input)
+    tmp0 <- wgt(.d(Z1, s)) * Z1
+    lastSk <- lastLkk <- matrix()
+    lastRet <- NA
+    Tbks <- vector("list", ncol(bidx))
+    ## cycle blocks
+    for (k in seq_len(ncol(bidx))) { ## 1:K
+        lTbk <- as.matrix(TkbsI[[ind[k]]])
+        lbidx <- bidx[, k]
+        Lkk <- as.matrix(object@pp$L[lbidx, lbidx])
+        Sk <- as.matrix(skbs[[ind[k]]])
+        ## check for almost equal blocks
+        diff <- if (any(dim(lastSk) != dim(Sk))) 1 else
+            abs(c(lastSk - Sk, lastLkk - Lkk))
+        if (any(diff >= rel.tol * max(diff, rel.tol))) {
+            ## Find Tbk for this new block...
+            lastSk <- Sk
+            lastLkk <- Lkk
+            if (verbose > 5)
+                cat("MC TbkI for k =", k, ":", lTbk, "\n")
+            btilde <- Z1 - tmp0 %*% Lkk - Z2 %*% Sk
+            conv <- FALSE
+            iter <- 0
+            lasta <- NA_real_
+            while (!conv && (iter <- iter + 1) < max.iter) {
+                lLTbk <- try(chol(lTbk), silent = TRUE)
+                if (is(lLTbk, "try-error")) {
+                    warning("chol(lTbk) failed: ", lLTbk, "\nlTbk was: ",
+                            paste(lTbk), "\nSetting it to Tb()\n")
+                    conv <- TRUE
+                    lTbk <- as.matrix(TkbsI[[ind[k]]])
+                } else {
+                    ## GH-branch whitening convention (see header above)
+                    d2 <- computeDiagonalOfCrossproductNumericMatrix(
+                        backsolve(lLTbk, t(btilde)))
+                    a <- mean(wgtDelta(d2))
+                    if (abs(a) < 1e-7) {
+                        if (is.na(lasta)) {
+                            warning("MC DAS-tau: denominator E[w_delta] ",
+                                    "degenerate at first iteration for block ",
+                                    "type ", type, "; keeping warm start.")
+                            conv <- TRUE
+                            lTbk <- as.matrix(TkbsI[[ind[k]]])
+                            lastRet <- lTbk
+                            next
+                        }
+                        a <- lasta
+                    } else {
+                        lasta <- a
+                    }
+                    B <- crossprod(btilde, wgt.sigma(d2) * btilde) / nsim
+                    B <- (B + t(B)) / 2
+                    lTbk1 <- B / a
+                    diff <- abs(c(lTbk - lTbk1))
+                    conv <- all(diff < rel.tol * max(diff, rel.tol))
+                    if (verbose > 5) {
+                        cat(sprintf("MC k=%i, iter=%i, conv=%s\n",
+                                    k, iter, conv))
+                        cat("Tbk:", lTbk1, "\n")
+                    }
+                    lTbk <- lTbk1
+                }
+            }
+            if (iter >= max.iter)
+                warning("MC DAS-tau fixed point for block type ", type,
+                        " did not converge in ", max.iter, " iterations.")
+            lastRet <- lTbk
+        }
+        ## add to result
+        Tbks[[k]] <- lastRet
+    }
+    Tbks
+}
+
+## ------------------ end Monte-Carlo DAS-tau calibration --------------------
+
 calcTau.nondiag <- function(object, ghZ12, ghZ34, ghw, skbs, kappas, max.iter,
-                            rel.tol = 1e-4, verbose = 0) {
+                            rel.tol = 1e-4, verbose = 0, mcSamples = NULL) {
     ## initial values
     TkbsI <- object@pp$TList()
 
@@ -280,8 +471,14 @@ calcTau.nondiag <- function(object, ghZ12, ghZ34, ghw, skbs, kappas, max.iter,
             next
         }
         ## block has not been dropped: calculate Tbk
+        ## experimental MC calibration path (any s >= 2), see above
+        useMC <- !is.null(mcSamples) && !is.null(mcSamples[[type]]) && s > 1
         ## catch 1d case
-        if (s == 1) {
+        if (useMC) {
+            Tbks <- c(Tbks, .calcTauNondiagMcBlockType(
+                object, type, ind, bidx, s, skbs, TkbsI, mcSamples[[type]],
+                max.iter, rel.tol = rel.tol, verbose = verbose))
+        } else if (s == 1) {
             bidx <- drop(bidx) ## is a vector (in terms of items of b.s)
             tmp <- calcTau(diag(object@pp$L)[bidx], unlist(skbs[ind]),
                            object@rho.b[[type]], object@rho.sigma.b[[type]],
@@ -362,8 +559,17 @@ calcTau.nondiag <- function(object, ghZ12, ghZ34, ghw, skbs, kappas, max.iter,
                 Tbks <- c(Tbks, list(lastRet))
             }
         } else {
-            warning("DAStau for blocks of dimension > 2 not defined, falling back to DASvar")
-            stop("yes, do as promised")
+            ## Not reachable through rlmer(): .rlmerInit() switches the
+            ## whole fit to method "DASvar" when a block of dimension > 2
+            ## is present and the Monte-Carlo option is off, and the MC
+            ## path above (useMC) handles it when the option is on.
+            ## Direct callers (e.g. tests/dastau-fallback.R) can still get
+            ## here; keep the defensive fallback to the closed-form DASvar
+            ## T_b, which is well-defined for any block dimension.
+            warning("DAStau for blocks of dimension > 2 not defined, ",
+                    "falling back to DASvar for block type ", type, ".")
+            TbksDASvar <- object@pp$TbList()
+            Tbks <- c(Tbks, TbksDASvar[ind])
         }
     }
 
@@ -390,11 +596,20 @@ updateSigma <- function(object, max.iter = 100, rel.tol = 1e-6, fit.effects = TR
     tau <- object@pp$tau_e()
 
     ## use iterative reweighting
+    ## WS11 step 4: the scale estimating equation
+    ##   sum_i eta_i tau_i^2 w_sigma(t_i) (t_i^2 - kappa) = 0
+    ## carries the Mallows design weight eta_i, so high-leverage
+    ## observations are downweighted in sigma-hat too (not only in
+    ## beta/u). eta_i factors out of the per-observation scale
+    ## expectation (kappa unchanged, sigma-hat stays consistent -- see
+    ## PLAN-WS11 2.1); this only changes which observations dominate the
+    ## estimate. eta == 1 is bit-identical.
+    etaW <- object@resp$eta
     fun <- if (object@method %in% c("DAStau", "DASvar")) {
         wgt <- rho.sigma.e@wgt
         tau2 <- tau*tau
         function(scale, r) {
-            lw <- wgt(r/tau/scale)
+            lw <- etaW * wgt(r/tau/scale)
             sqrt(sum(lw*r*r)/sum(lw*tau2)/kappa)
         }
     }

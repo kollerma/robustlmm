@@ -14,3 +14,6 @@ vignettes/jss.bst
 vignettes/jss.cls
 *.Rprof
 tests/*.pdf
+# knitted HTML lives next to the .Rmd / .md; only the .md is committed.
+inst/simulationStudy/inferenceStudy_results/*.html
+docker-check-results

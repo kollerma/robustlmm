@@ -37,7 +37,15 @@
 ##' with correlated random effects with more than one correlation term, this is
 ##' the only method available.
 ##'
-##' } }
+##' }
+##'
+##' \code{DAStau} supports blocks of random effects of dimension at most 2;
+##' for fits containing a larger block it falls back to \code{DASvar} with a
+##' warning. An \emph{experimental} option,
+##' \code{options(robustlmm.dastau.mc = TRUE)}, lifts this restriction via a
+##' Monte-Carlo calibration of the consistency factors; it is
+##' simulation-validated but not backed by a finite-sample theorem, see
+##' \code{\link{robustlmm-options}}. }
 ##'
 ##' \item{Weight functions:}{
 ##'
@@ -196,6 +204,28 @@
 ##'   magnitudes (a typically modest 1-2 percentage-point gain at
 ##'   matched gross-error sensitivity). Has no effect for diagonal
 ##'   \eqn{V_b} (block size 1).
+##' @param design.weights Mallows-type design weights for robustness to
+##'   high-leverage design points: \code{NULL} (default, exact
+##'   current behaviour), a numeric vector of deterministic weights
+##'   \eqn{\eta_i \in (0, 1]} of length \code{n}, or \code{"mcd"} to
+##'   compute \eqn{\eta_i = \min(1, \chi^2_{p^*}(0.975) / d_i^2)^{1/2}}
+##'   from robust squared Mahalanobis distances \eqn{d_i^2} of the
+##'   non-constant fixed-effects covariates
+##'   (\code{\link[robustbase]{covMcd}}); the \code{"mcd"} tuning
+##'   (severity \eqn{\gamma = 1}, cutoff \eqn{c = 0.975}) is the
+##'   simulation-backed default (see \code{vignette("rlmer")}). The
+##'   weights multiply the
+##'   e-side score contribution of each observation throughout the
+##'   estimator -- the \eqn{\beta}, \eqn{u}, \eqn{\sigma} and
+##'   \eqn{\theta} equations, the model \code{vcov}, the Satterthwaite
+##'   degrees of freedom and the influence
+##'   diagnostics -- bounding the influence of high-leverage design
+##'   points. For designs without continuous covariates \code{"mcd"}
+##'   reduces to \eqn{\eta \equiv 1} (the unmodified estimator). Active
+##'   design weights are supported for a \emph{single grouping factor}
+##'   only; \code{rlmer} stops with an error if the model has more than
+##'   one. Leverage robustness costs a little efficiency at the clean model
+##'   (about 1\% at the default tuning; see \code{vignette("rlmer")}).
 ##' @return object of class rlmerMod.
 ##' @seealso \code{\link[lme4]{lmer}}, \code{vignette("rlmer")}
 ##' @author Manuel Koller, with thanks to Vanda Lourenço for improvements.
@@ -236,13 +266,15 @@
 rlmer <- function(formula, data, ..., method = c("DAStau", "DASvar"),
                   setting, rho.e, rho.b, rho.sigma.e, rho.sigma.b,
                   rel.tol = 1e-8, max.iter = 40 * (r + 1)^2, verbose = 0,
-                  doFit = TRUE, init, size_obr = FALSE)
+                  doFit = TRUE, init, size_obr = FALSE,
+                  design.weights = NULL)
 {
     lcall <- match.call()
     pf <- parent.frame()
     method <- match.arg(method)
     lobj <- .rlmerInit(lcall, pf, formula, data, method, rho.e, rho.b, rho.sigma.e,
                        rho.sigma.b, rel.tol, max.iter, verbose, init, setting, ...)$obj
+    lobj@resp$eta <- .processDesignWeights(design.weights, lobj)
     lobj@pp <- as(lobj@pp, "rlmerPredD_DAS")
     lobj@pp$method <- lobj@method
     lobj@pp$initRho(lobj)
@@ -255,8 +287,74 @@ rlmer <- function(formula, data, ..., method = c("DAStau", "DASvar"),
                   size_obr = isTRUE(size_obr)))
 }
 
+## WS11 step 1: validate / compute the Mallows design weights eta.
+## Returns a length-n numeric in (0, 1]. "mcd" follows
+## PLAN-WS11-mallows.md section 2.2 with gamma = 1, cutoff 0.975:
+## eta_i = min(1, chi^2_{p*}(0.975) / d_i^2)^{1/2}, d_i^2 the robust
+## squared Mahalanobis distance of the non-constant columns of X.
+.processDesignWeights <- function(design.weights, lobj) {
+    n <- nrow(lobj@pp$X)
+    if (is.null(design.weights))
+        return(rep.int(1, n))
+    if (is.character(design.weights)) {
+        design.weights <- match.arg(design.weights, "mcd")
+        X <- as.matrix(lobj@pp$X)
+        nonconst <- apply(X, 2L, function(col) length(unique(col)) > 1L)
+        Xs <- X[, nonconst, drop = FALSE]
+        pstar <- ncol(Xs)
+        if (pstar == 0L) {
+            ## no continuous design information: exact no-op
+            eta <- rep.int(1, n)
+        } else if (n < 2L * (pstar + 1L)) {
+            warning("design.weights = \"mcd\": n = ", n,
+                    " too small for covMcd with ", pstar,
+                    " non-constant column(s); using eta = 1.")
+            eta <- rep.int(1, n)
+        } else {
+            mcd <- robustbase::covMcd(Xs)
+            d2  <- stats::mahalanobis(Xs, mcd$center, mcd$cov)
+            eta <- pmin(1, sqrt(stats::qchisq(0.975, df = pstar) /
+                                pmax(d2, .Machine$double.eps)))
+        }
+    } else {
+        eta <- as.numeric(design.weights)
+        if (length(eta) != n)
+            stop("design.weights must have length ", n,
+                 " (one weight per observation)")
+        if (any(!is.finite(eta)) || any(eta <= 0) || any(eta > 1))
+            stop("design.weights must be finite and in (0, 1]")
+    }
+    ## Mallows design weights are supported for a single grouping factor
+    ## only: the e-side weighting flows into the beta/u/sigma/theta
+    ## equations, the model vcov, the Satterthwaite df and the influence
+    ## diagnostics, all validated for one grouping factor (WS11; see
+    ## vignette("rlmer")). Fail loudly outside that scope -- when weights
+    ## are actually active -- rather than return a silently unvalidated
+    ## fit. (A no-op request, eta == 1 throughout, is left alone.)
+    if (any(eta < 1)) {
+        ngf <- length(lobj@flist)
+        if (ngf > 1L)
+            stop("design.weights (Mallows eta) currently supports a single ",
+                 "grouping factor, but this model has ", ngf, " (",
+                 paste(names(lobj@flist), collapse = ", "),
+                 "). Fit without design.weights, or reduce the model to one ",
+                 "grouping factor.", call. = FALSE)
+    }
+    eta
+}
+
+## Covariance structures (lme4 >= 2.0-0) that robustlmm can fit.
+## us/diag are estimated directly; cs/ar1 are estimated by projecting each
+## block's unstructured covariance update onto the structured manifold
+## (see .structuredCovInfo() and rlmer.fit.DAS.nondiag()). Both the
+## heterogeneous and homogeneous (equal-variance) forms are supported.
+.supportedCovClasses <- c("Covariance.us", "Covariance.diag",
+                          "Covariance.cs", "Covariance.ar1")
+
+## Covariance structures handled by the projection step.
+.projectedCovClasses <- c("Covariance.cs", "Covariance.ar1")
+
 ## Check for structured covariance matrices (lme4 >= 2.0-0)
-## robustlmm supports unstructured and diag(), but not cs() or ar1()
 .checkStructuredCovariance <- function(object) {
     if (!lme4::anyStructured(object)) {
         return(invisible(NULL))  # No structured covariances
@@ -268,15 +366,59 @@ rlmer <- function(formula, data, ..., method = c("DAStau", "DASvar"),
         return(invisible(NULL))  # No reCovs attribute (shouldn't happen)
     }
 
-    supportedClasses <- c("Covariance.us", "Covariance.diag")
     for (i in seq_along(reCovs)) {
         covClass <- class(reCovs[[i]])[1]
-        if (!covClass %in% supportedClasses) {
+        if (!covClass %in% .supportedCovClasses) {
             structName <- sub("Covariance\\.", "", covClass)
             stop("robustlmm does not yet support '", structName,
                  "()' covariance structure (from lme4 >= 2.0-0). ",
-                 "Supported: (f | g), (f || g), diag(f | g).",
+                 "Supported: (f | g), (f || g), diag(f | g), ",
+                 "cs(f | g), ar1(f | g).",
                  call. = FALSE)
+        }
+    }
+
+    ## cs / ar1 are fitted by an iterative projection onto the structured
+    ## manifold, validated only for a single grouping factor (balanced
+    ## repeated measures); the fit AND its inference are untested with more
+    ## than one grouping factor (crossed/nested). Warn rather than silently
+    ## return an unvalidated fit. diag is fitted directly and is exempt.
+    isProj <- vapply(reCovs, function(rc)
+        class(rc)[1L] %in% .projectedCovClasses, logical(1))
+    if (any(isProj) && length(object@flist) > 1L)
+        warning("Structured cs()/ar1() covariances are experimental and ",
+                "validated only for a single grouping factor; this model has ",
+                length(object@flist), " (",
+                paste(names(object@flist), collapse = ", "), "). The ",
+                "projected fit and its inference are not validated for more ",
+                "than one grouping factor; interpret the results with care.",
+                call. = FALSE)
+
+    ## A projected cs()/ar1() block of random-effect dimension nc is only
+    ## identifiable when every cluster carries MORE than nc observations: with
+    ## at most nc observations per cluster there is no within-cluster residual
+    ## degree of freedom to separate the structured random effect from the
+    ## residual, and the robust DAS correction matrices go singular (the fit
+    ## then dies deep inside the projection with a cryptic error). Detect this
+    ## "saturated" case from the model frame and stop with a clear message.
+    ## reCovs[[i]] aligns positionally with object@cnms / the random-effect
+    ## terms, so names(object@cnms)[i] is the grouping factor for term i.
+    gfNames <- names(object@cnms)
+    for (i in seq_along(reCovs)) {
+        if (!isProj[i])
+            next
+        nc <- reCovs[[i]]@nc
+        gf <- gfNames[i]
+        clusterSizes <- tabulate(object@flist[[gf]])
+        minObs <- if (length(clusterSizes)) min(clusterSizes) else 0L
+        if (minObs <= nc) {
+            structName <- sub("Covariance\\.", "", class(reCovs[[i]])[1L])
+            stop("Structured ", structName, "() covariance with random-effect ",
+                 "dimension nc=", nc, " requires more than nc observations per ",
+                 "cluster of '", gf, "' (the smallest cluster has ", minObs,
+                 "); the structured fit is not identifiable without ",
+                 "within-cluster replication. Add replication or use a smaller ",
+                 "structured dimension.", call. = FALSE)
         }
     }
     invisible(NULL)
@@ -402,9 +544,15 @@ rlmer <- function(formula, data, ..., method = c("DAStau", "DASvar"),
     lobj@rho.e <- rho.e
     lobj@rho.sigma.e <- rho.sigma.e
     if (method == "DAStau" & any(sapply(lobj@idx, nrow) > 2)) {
-        warning("Method 'DAStau' does not support blocks of size larger than 2. ",
-                "Falling back to method 'DASvar'.")
-        method <- "DASvar"
+        if (.dasMcEnabled()) {
+            ## experimental Monte-Carlo DAS-tau calibration: it handles
+            ## any block dimension, so do NOT fall back to DASvar (see
+            ## calcTau.nondiag / .buildDasMcSamples)
+        } else {
+            warning("Method 'DAStau' does not support blocks of size larger than 2. ",
+                    "Falling back to method 'DASvar'.")
+            method <- "DASvar"
+        }
     }
     lobj@method <- method
     return(list(obj = lobj, init = init))
@@ -486,12 +634,259 @@ getDefaultRhoB <- function(dimension, rho) {
     return(lobj)
 }
 
+## Length of the theta (relative Cholesky) vector for a Covariance
+## object. Reimplements lme4's getThetaLength() from the documented
+## structure (class, nc, hom) so robustlmm does not depend on the
+## unexported lme4 generic (lme4 < 2.0-2 does not export it).
+.covThetaLength <- function(reCov) {
+    nc <- reCov@nc
+    cls <- class(reCov)[1L]
+    if (cls == "Covariance.diag") {
+        nc
+    } else if (cls %in% .projectedCovClasses && isTRUE(reCov@hom)) {
+        2L * nc - (nc > 0L)          # homogeneous cs / ar1
+    } else {
+        nc * (nc + 1L) / 2L          # us, or heterogeneous cs / ar1
+    }
+}
+
+## Map structured parameters par = (sigma..., rho) to lme4's relative
+## Cholesky theta. This reimplements lme4's (unexported) getTheta() for
+## the cs and ar1 families -- the formulas are the analytic Cholesky of
+## the structured correlation matrix, identical across lme4 versions, so
+## the result is byte-compatible with what VarCorr() reconstructs from
+## the Covariance object's par slot (which we set via initialize()).
+.covGetTheta <- function(reCov, par) {
+    nc <- reCov@nc
+    if (nc <= 1L) {
+        return(par)
+    }
+    hom <- isTRUE(reCov@hom)
+    rho <- par[length(par)]
+    rho2 <- rho * rho
+    if (class(reCov)[1L] == "Covariance.ar1") {
+        v1 <- rho^(0L:(nc - 1L))
+        v2 <- rho^(0L:(nc - 2L)) * sqrt(1 - rho2)
+        if (hom) {
+            par[1L] * c(v1, v2)
+        } else {
+            par[sequence.default(from = 1L:nc, nvec = nc:1L)] *
+                c(v1, v2[sequence.default(from = 1L, nvec = (nc - 1L):1L)])
+        }
+    } else {                         # cs
+        a <- double(nc)
+        a. <- 0
+        for (j in 1L:nc) {
+            a[j] <- a.
+            a. <- a. + (1 - rho * a.)^2 / (1 - rho2 * a.)
+        }
+        v. <- sqrt(1 - rho2 * a)
+        v <- rbind(v., (rho - rho2 * a) / v.)
+        if (hom) {
+            par[1L] * v[1L:(2L * nc - 1L)]
+        } else {
+            par[sequence.default(from = 1L:nc, nvec = nc:1L)] *
+                rep(v, rbind(1L, (nc - 1L):0L))
+        }
+    }
+}
+
+## Structured parameters par = (sigma..., rho) of the nearest cs / ar1
+## covariance to a full nc x nc covariance Sigma: marginal variances are
+## kept (per-component for heterogeneous, pooled for homogeneous) and the
+## single correlation parameter rho is estimated from the sample
+## correlation matrix Cor = D^{-1} Sigma D^{-1} (D = diag of marginal sds).
+##
+## cs: rho is the average off-diagonal correlation -- which is also the
+## constrained estimator for the (linear) compound-symmetric structure
+## (Anderson 1973), so the projected fixed point is the constrained
+## estimating-equation solution.
+##
+## ar1: rho is the conditional maximiser of the working-Gaussian objective
+## over the AR(1) manifold given the marginal variances -- i.e. the
+## minimiser of the Stein/entropy loss tr(R(rho)^{-1} Cor) + (nc-1)
+## log(1 - rho^2), where R(rho)_{ij} = rho^|i-j|. This is the ECME / CM
+## step (Meng & Rubin 1993; Liu & Rubin 1994): it makes the projected
+## fixed point a stationary point of the constrained Gaussian objective,
+## unlike the earlier ad-hoc log-correlation least-squares fit (which is
+## not such a maximiser and cannot represent rho < 0). The 1-D problem is
+## solved by optimize() on (-1, 1).
+##
+## Returns NULL on a degenerate covariance (non-positive marginal variance).
+.covParFromCov <- function(reCov, Sigma) {
+    dvar <- diag(Sigma)
+    if (any(dvar <= 0)) {
+        return(NULL)
+    }
+    sdv <- sqrt(dvar)
+    Cor <- Sigma / outer(sdv, sdv)
+    if (class(reCov)[1L] == "Covariance.ar1") {
+        nc  <- nrow(Sigma)
+        lag <- abs(outer(seq_len(nc), seq_len(nc), "-"))
+        ## negative working-Gaussian log-likelihood profiled over rho
+        ## (Stein loss up to the rho-free constant), to be minimised:
+        steinLoss <- function(rho) {
+            R   <- rho ^ lag
+            sol <- tryCatch(sum(diag(solve(R, Cor))),
+                            error = function(e) NA_real_)
+            if (!is.finite(sol)) return(.Machine$double.xmax)
+            sol + (nc - 1) * log1p(-rho * rho)
+        }
+        opt <- stats::optimize(steinLoss, interval = c(-0.999, 0.999))
+        rho <- opt$minimum
+    } else {
+        rho <- mean(Cor[lower.tri(Cor)])
+    }
+    sigma <- if (isTRUE(reCov@hom)) sqrt(mean(dvar)) else sdv
+    c(sigma, rho)
+}
+
+## Lower bounds for a full nc x nc Cholesky factor in lme4's column-major
+## lower-triangular theta order: diagonal entries >= 0, off-diagonal
+## entries unconstrained. Matches getME(., "lower") for unstructured (us)
+## terms and is the correct theta-space bound for cs/ar1 as well (lme4's
+## getME(., "lower") returns the par-space bounds for those, which do not
+## align with robustlmm's Cholesky-space theta).
+.usThetaLower <- function(nc) {
+    unlist(lapply(seq_len(nc), function(j) c(0, rep(-Inf, nc - j))))
+}
+
+## Build the theta-space (Cholesky) lower bounds for a converted model.
+## For old lme4 (no reCovs) the lme4 bounds are already theta-space and
+## are returned unchanged.
+.structuredThetaLower <- function(from) {
+    reCovs <- attr(from, "reCovs")
+    deflt <- getME(from, "lower")
+    if (is.null(reCovs)) {
+        return(deflt)
+    }
+    ## Only cs/ar1 need a rebuild (their getME() bounds are par-space).
+    ## For us/diag the lme4 bounds are already correct theta-space bounds
+    ## and carry the theta names downstream code expects, so return them
+    ## unchanged -- this keeps non-structured fits byte-identical.
+    isProjected <- vapply(reCovs,
+                          function(rc) class(rc)[1L] %in% .projectedCovClasses,
+                          logical(1))
+    if (!any(isProjected)) {
+        return(deflt)
+    }
+    out <- numeric(0)
+    for (rc in reCovs) {
+        cls <- class(rc)[1L]
+        if (cls == "Covariance.diag") {
+            ## theta == diagonal variances, all >= 0
+            out <- c(out, rep(0, .covThetaLength(rc)))
+        } else if (cls %in% .projectedCovClasses) {
+            ## cs / ar1. theta is a Cholesky-derived vector; the par-space
+            ## bounds from getME() do not align with it. Constrain the
+            ## diagonal (Cholesky) entries to be non-negative to keep the
+            ## block covariance positive-definite during iteration, leaving
+            ## off-diagonal entries free. Heterogeneous structures store a
+            ## full lower triangle; homogeneous ones a reduced vector whose
+            ## leading entry is the (non-negative) scale.
+            nt <- .covThetaLength(rc)
+            nc <- rc@nc
+            if (nt == nc * (nc + 1L) / 2L) {
+                out <- c(out, .usThetaLower(nc))
+            } else {
+                out <- c(out, c(0, rep(-Inf, nt - 1L)))
+            }
+        } else {
+            ## us: full lower-triangular Cholesky
+            out <- c(out, .usThetaLower(rc@nc))
+        }
+    }
+    out
+}
+
+## Map robustlmm fitting blocks to their lme4 Covariance object, for the
+## structured families (cs, ar1) that need a projection step.
+##
+## Returns a list aligned with lobj@blocks: entry [[type]] is the
+## Covariance object when block `type` belongs to a cs/ar1 random effect,
+## and NULL otherwise (us/diag need no projection -- their natural
+## parametrisation already coincides with the unstructured Cholesky).
+##
+## The mapping is by theta index: each Covariance owns a contiguous range
+## of the global theta vector (in cnms order), and each block's theta
+## indices fall entirely inside exactly one such range. This is robust to
+## diag() terms, which expand into several 1x1 blocks.
+.structuredCovInfo <- function(lobj) {
+    info <- vector("list", length(lobj@blocks))
+    reCovs <- attr(lobj, "reCovs")
+    if (is.null(reCovs)) {
+        return(info)
+    }
+    ## contiguous theta range owned by each Covariance object
+    start <- 1L
+    ranges <- vector("list", length(reCovs))
+    for (i in seq_along(reCovs)) {
+        n <- .covThetaLength(reCovs[[i]])
+        ranges[[i]] <- start:(start + n - 1L)
+        start <- start + n
+    }
+    for (type in seq_along(lobj@blocks)) {
+        Ub <- lobj@blocks[[type]]
+        lind <- Ub[Ub != 0]
+        for (i in seq_along(reCovs)) {
+            if (all(lind %in% ranges[[i]])) {
+                if (class(reCovs[[i]])[1L] %in% .projectedCovClasses) {
+                    info[[type]] <- reCovs[[i]]
+                }
+                break
+            }
+        }
+    }
+    info
+}
+
+## Project an unstructured block covariance Sigma (= relative covariance
+## factor times its transpose) onto the structured manifold (cs / ar1)
+## defined by `reCov`, returning the structured theta vector.
+##
+## The block's scoring-equation update produces a full nc x nc Sigma. We
+## retract it onto the structured family by keeping the marginal variances
+## and estimating the structure's single correlation parameter rho from
+## the sample correlations:
+##   cs : rho is the average off-diagonal correlation;
+##   ar1: rho is the Stein-loss / ECME profile-rho minimiser over the
+##        AR(1) manifold given the marginal variances (see .covParFromCov;
+##        this replaced the earlier log-correlation least-squares fit,
+##        which could not represent rho < 0).
+## Variances become per-component (heterogeneous, sigma_i = sqrt(Sigma_ii))
+## or pooled (homogeneous, sigma = sqrt(mean diag)) to match the family's
+## par layout (sigma..., rho). getTheta() then rebuilds the structured
+## theta, so VarCorr() stays consistent. This is exact (identity) for a
+## Sigma already on the manifold.
+##
+## We deliberately do NOT use lme4's setTheta() retraction: it reads rho
+## from a single Cholesky column and distorts the marginal variances off
+## the manifold.
+##
+## Returns NULL on the rare degenerate case (a non-positive marginal
+## variance, or a theta-length mismatch) so the caller can keep the
+## previous block estimate and continue iterating.
+.projectCovToStructure <- function(reCov, Sigma, ntheta) {
+    par <- .covParFromCov(reCov, Sigma)
+    if (is.null(par)) {
+        return(NULL)
+    }
+    proj <- .covGetTheta(reCov, par)
+    if (length(proj) != ntheta || anyNA(proj)) {
+        return(NULL)
+    }
+    proj
+}
+
 ## DAS method
 rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@method,
                                   checkFalseConvergence = TRUE,
                                   size_obr = FALSE) {
     if (!.isREML(lobj))
         stop("can only do REML when using averaged DAS-estimate for sigma")
+
+    ## per-block projection onto cs/ar1 manifolds (NULL for us/diag)
+    structInfo <- .structuredCovInfo(lobj)
 
     ## Prepare for DAStau
     if (method == "DAStau") {
@@ -501,8 +896,20 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
         ghZ12 <- ghZ[, 1:2]
         ghZ34 <- ghZ[, 3:4]
         ghw <- apply(as.matrix(expand.grid(lobj@pp$ghw, lobj@pp$ghw, lobj@pp$ghw, lobj@pp$ghw)), 1, prod)
+        ## experimental Monte-Carlo DAS-tau calibration: draw the
+        ## common-random-numbers sample ONCE per fit; NULL if disabled
+        mcSamples <- .buildDasMcSamples(lobj)
+        if (!is.null(mcSamples)) {
+            mcTypes <- which(!vapply(mcSamples, is.null, logical(1)))
+            message("Using EXPERIMENTAL Monte-Carlo DAS-tau calibration ",
+                    "(robustlmm.dastau.mc) for block type(s) ",
+                    paste(mcTypes, collapse = ", "), " [dim ",
+                    paste(lobj@dim[mcTypes], collapse = ", "), "] with N = ",
+                    attr(mcSamples, "nsim"), " draws.")
+        }
     } else {
         ghZ <- ghw <- c()
+        mcSamples <- NULL
     }
 
     ## fit model using EM algorithm
@@ -537,7 +944,8 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
         T <- switch(method,
                     DASvar=lobj@pp$Tb(),
                     DAStau=calcTau.nondiag(lobj, ghZ12, ghZ34, ghw, .S(lobj), kappas, max.iter,
-                                           rel.tol = rel.tol, verbose = verbose),
+                                           rel.tol = rel.tol, verbose = verbose,
+                                           mcSamples = mcSamples),
                     stop("Non-diagonal case only implemented for DASvar and DAStau"))
         T <- as(T, "CsparseMatrix")
         ## compute robustness weights and add to t and bs
@@ -661,8 +1069,28 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
             Lind <- Ubtilde[pat]
             diagLind <- diag(Ubtilde)
             Ubtilde[pat] <- thetatilde[Lind]
-            ## update Ubtilde by deltaT
-            thetatilde[Lind] <- tcrossprod(Ubtilde, deltaT)[pat]
+            ## new (unstructured) relative covariance factor for this block
+            Unew <- tcrossprod(Ubtilde, deltaT)
+            if (is.null(structInfo[[type]])) {
+                ## unstructured / diagonal: update theta directly
+                thetatilde[Lind] <- Unew[pat]
+            } else {
+                ## structured covariance (cs / ar1): project the block's
+                ## covariance onto the structured manifold before the
+                ## convergence check, so the algorithm converges to the
+                ## structured fixed point. We project the covariance (not
+                ## the Cholesky theta) because homogeneous structures reuse
+                ## theta entries across Cholesky positions, so theta is not
+                ## a free lower triangle. The structured theta is written
+                ## to the block's contiguous theta range (lme4's canonical
+                ## order). On a degenerate projection keep the prior block.
+                rng <- min(Lind):max(Lind)
+                proj <- .projectCovToStructure(structInfo[[type]],
+                                               tcrossprod(Unew), length(rng))
+                if (!is.null(proj)) {
+                    thetatilde[rng] <- proj
+                }
+            }
             ## FIXME: check boundary conditions?
             ## check if varcomp is dropped
             if (all(thetatilde[diagLind] < 1e-7)) {
@@ -678,8 +1106,12 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
                     sum(diff) < rel.tol * max(diff, rel.tol), "\n")
             if (sum(diff) < rel.tol * max(diff, rel.tol)) {
                 convBlks[type] <- TRUE
-                ## check if estimating equations are satisfied
-                if (checkFalseConvergence) {
+                ## check if estimating equations are satisfied. Skipped for
+                ## structured (cs/ar1) blocks: the test compares the full
+                ## unstructured score (lhs vs rhs), which cannot vanish
+                ## within the constrained family, so it would always fire a
+                ## spurious false-convergence warning.
+                if (checkFalseConvergence && is.null(structInfo[[type]])) {
                     if (verbose > 3)
                         cat("checking estimating equations:", sum(abs(lhs - rhs)),
                             ">", sqrt(rel.tol), ":", sum(abs(lhs - rhs)) > sqrt(rel.tol), "\n")

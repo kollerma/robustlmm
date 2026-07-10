@@ -1,3 +1,7 @@
+## Disabled on the CRAN release branch to keep the overall check time
+## under the 10-minute CRAN limit; runs in full on master and in CI.
+quit()
+
 ## Nonsingular subsampling in ransac_lme4 (Koller and Stahel 2017,
 ## Algorithm 1). Each subsample is drawn full-rank BY CONSTRUCTION with a
 ## Gaxpy-variant LU decomposition that skips linearly-dependent

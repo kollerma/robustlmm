@@ -1,3 +1,7 @@
+## Disabled on the CRAN release branch to keep the overall check time
+## under the 10-minute CRAN limit; runs in full on master and in CI.
+quit()
+
 ## WS15 regression tests: cluster-level Cook's distance and robust
 ## leverage (hatvalues).
 ## 1. Per-observation cooks.distance unchanged (backward compatible).

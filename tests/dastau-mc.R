@@ -1,3 +1,7 @@
+## Disabled on the CRAN release branch to keep the overall check time
+## under the 10-minute CRAN limit; runs in full on master and in CI.
+quit()
+
 ## Regression tests for the EXPERIMENTAL Monte-Carlo DAS-tau calibration
 ## ("DASmc": options robustlmm.dastau.mc / robustlmm.dastau.mc.all /
 ## robustlmm.dasmc.nsim / robustlmm.dasmc.seed, see ?`robustlmm-options`).

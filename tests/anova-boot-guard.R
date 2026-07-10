@@ -1,3 +1,7 @@
+## Disabled on the CRAN release branch to keep the overall check time
+## under the 10-minute CRAN limit; runs in full on master and in CI.
+quit()
+
 ## Regression test for the bootstrap-VC-test influential-group guard
 ## (PLAN-3.5.0-stabilization.md item 3.1, C4). anova(test = "boot")
 ## simulates the null from fit0's estimates, so a contaminated group that

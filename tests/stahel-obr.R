@@ -1,3 +1,7 @@
+## Disabled on the CRAN release branch to keep the overall check time
+## under the 10-minute CRAN limit; runs in full on master and in CI.
+quit()
+
 ## Test the size_obr option for block-diagonal V_b.
 ##
 ## When size_obr = TRUE the size-controlling weight w_delta in

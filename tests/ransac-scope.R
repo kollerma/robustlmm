@@ -1,3 +1,7 @@
+## Disabled on the CRAN release branch to keep the overall check time
+## under the 10-minute CRAN limit; runs in full on master and in CI.
+quit()
+
 ## Stabilization regression tests for the RANSAC initial estimator
 ## (PLAN-3.5.0-stabilization.md item 4): two graduation claims that must
 ## not silently regress --

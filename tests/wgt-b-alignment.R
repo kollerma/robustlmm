@@ -1,3 +1,7 @@
+## Disabled on the CRAN release branch to keep the overall check time
+## under the 10-minute CRAN limit; runs in full on master and in CI.
+quit()
+
 ## Alignment of the random-effect robustness weights with the spherical
 ## random effects b_s, and the labeling that is built on top of it.
 ##

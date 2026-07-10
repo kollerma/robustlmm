@@ -1,3 +1,7 @@
+## Disabled on the CRAN release branch to keep the overall check time
+## under the 10-minute CRAN limit; runs in full on master and in CI.
+quit()
+
 ## Tests for lme4 >= 2.0-0 structured random-effect covariances:
 ##   diag() (Phase 1), cs() compound symmetric (Phase 2),
 ##   ar1() autoregressive (Phase 3).

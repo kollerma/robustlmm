@@ -1,3 +1,7 @@
+## Disabled on the CRAN release branch to keep the overall check time
+## under the 10-minute CRAN limit; runs in full on master and in CI.
+quit()
+
 ## WS7 regression tests: prior weights and offsets in the influence /
 ## sandwich machinery.
 ##

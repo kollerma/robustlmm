@@ -1,3 +1,7 @@
+## Disabled on the CRAN release branch to keep the overall check time
+## under the 10-minute CRAN limit; runs in full on master and in CI.
+quit()
+
 ## Regression guard for the .tau_e / .Tbk cache-invalidation in
 ## .scoreVec() (R/influence_full.R). The full IF uses
 ## numDeriv::jacobian() to differentiate .scoreVec() with respect to

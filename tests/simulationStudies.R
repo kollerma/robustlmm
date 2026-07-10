@@ -1,3 +1,7 @@
+## Disabled on the CRAN release branch to keep the overall check time
+## under the 10-minute CRAN limit; runs in full on master and in CI.
+quit()
+
 require(robustlmm)
 
 ## verify all scripts listed in argument of viewCopyOfSimulationStudy actually

@@ -1,3 +1,7 @@
+## Disabled on the CRAN release branch to keep the overall check time
+## under the 10-minute CRAN limit; runs in full on master and in CI.
+quit()
+
 ## Tests for confint.rlmerMod (Wald path + dispatch to confintROB).
 
 require(robustlmm)

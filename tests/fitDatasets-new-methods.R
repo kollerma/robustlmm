@@ -1,3 +1,7 @@
+## Disabled on the CRAN release branch to keep the overall check time
+## under the 10-minute CRAN limit; runs in full on master and in CI.
+quit()
+
 ## Smoke tests for the new fitDatasets_rlmer_* wrappers:
 ##   _DAStau_bisq, _DAStau_sizeOBR, _ransac, _ransac_bisq.
 

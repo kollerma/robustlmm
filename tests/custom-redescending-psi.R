@@ -1,3 +1,7 @@
+## Disabled on the CRAN release branch to keep the overall check time
+## under the 10-minute CRAN limit; runs in full on master and in CI.
+quit()
+
 ## Test: rlmer accepts user-supplied psi_func objects whose
 ## getRcppClass returns an empty vector (i.e. constructed via
 ## psiFunc + a no-op Rcpp slot rather than the built-in Rcpp

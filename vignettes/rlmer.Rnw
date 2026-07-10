@@ -1000,20 +1000,25 @@ lie on the boundary of the parameter cone, where the Wald statistic is
 not applicable; \code{test = "boot"} instead uses a parametric-bootstrap
 quasi-deviance test, evaluating both models' robust objective at a common
 scale (that of the smaller model) to avoid a sign-flip artefact when the
-fitted scales differ. This path is experimental. Two known issues have
-principled remedies that are not yet implemented: the parametric bootstrap
-is inconsistent when the tested parameter is on the boundary
-\citep{andrews2000}, which a shrinkage of the bootstrap-generating
-variance components toward the boundary repairs \citep{guedon2024}; and it
-is anti-conservative under group contamination (the contamination biases
-the null fit). For the latter, the experimental \code{null = "robust"}
-option is the practical mitigation: it generates the parametric bootstrap
-from a contamination-cleaned null fit (trimming the clusters the robust
-fit heavily downweights), which curbs the contamination-induced Type-I
+fitted scales differ. This path is experimental, with two known
+limitations. First, the parametric bootstrap is inconsistent when the
+tested parameter is on the boundary \citep{andrews2000}; the principled
+remedy---shrinking the bootstrap-generating variance components toward the
+boundary \citep{guedon2024}---is not yet implemented. Second, it is
+anti-conservative under group contamination, because the contamination
+biases the null fit that generates the bootstrap. Two responses to the
+latter are available. The experimental \code{null = "robust"} option
+generates the bootstrap from a contamination-cleaned null fit (trimming
+the clusters the robust fit heavily downweights), which curbs the Type-I
 inflation at larger $J$ while preserving power, at the cost of mild
-conservatism on clean data. The boundary inconsistency, and a
-finite-sample theorem for the robust null, remain open. Independently, the
-automatic robustness-weight warning flags the at-risk fits. The
+conservatism on clean data, and falls back to the plain parametric null
+when trimming would leave the design rank-deficient. More effectively,
+the robust score test of \S\ref{sec:methScore} (\code{test = "score"})
+bounds each cluster's influence and so needs no null cleaning at all, at
+the price of a narrower scope. The boundary inconsistency, and a
+finite-sample robustness theorem for the bootstrap, remain open.
+Independently, the automatic robustness-weight warning flags the at-risk
+fits. The
 cluster-level \code{cooks.distance} is not a reliable screen for this
 purpose: the robust fit absorbs a contaminated group into a heavily
 downweighted random effect, so the bounded influence saturates exactly
@@ -1076,9 +1081,13 @@ fit-then-refine-then-keep-the-lowest-scale scheme mirrors the fast-{S}
 algorithm of \citet{salibian2006fast}. Subsampling is stratified over the finest grouping
 factor so each subsample stays fittable, and, following the nonsingular
 subsampling of \citet{ks2017nonsingular} (the \code{setting = "KS2014"}
-default of \pkg{robustbase}), each drawn subsample is repaired to a
-full-rank fixed-effects design before it enters the scale competition, so
-a silently rank-deficient candidate (a dropped factor level) cannot win.
+default of \pkg{robustbase}), each subsample is drawn full-rank
+\emph{by construction}: an LU decomposition with column pivoting walks a
+random permutation of the observations and keeps only those that raise
+the fixed-effects rank, skipping any collinear with those already chosen,
+so a silently rank-deficient candidate (a dropped factor level) cannot
+enter the scale competition; on a design without collinearity this is
+just a uniform random subsample.
 The search stops early once
 the best score plateaus. A redescending $\rho_e$ preserves the support of
 a high-breakdown start only within the radius $r^\ast(c) = c\,
@@ -1089,6 +1098,11 @@ bisquare; found numerically for the recommended lqq redescender of
 \code{rlmer\_ransac(n\_starts = m)} fits from the $m$ best distinct
 starts and returns the interior, lowest-residual-scale fit, which guards
 against the phony random-effects attractor in which $|\wh\rho| \to 1$.
+Because a redescending $\rho_e$ can zero-weight observations back into a
+rank-deficient design during the refinement \citep[][Remark~2]%
+{ks2017nonsingular}, \code{rlmer\_ransac} re-seeds and re-fits from a
+fresh nonsingular start until the positive-weight fixed-effects design is
+full rank, up to \code{max\_tries}.
 
 \subsection{Mallows-type design weights}\label{sec:methMallows}
 
@@ -1152,5 +1166,18 @@ from the residual and \code{rlmer} stops with an informative error. Full
 consistency theory for the projected estimator is still open (most directly
 for the curved \code{ar1} structure), so \code{cs}/\code{ar1} fitting
 remains experimental; it requires \pkg{lme4}~$\geq$~2.0-0.
+
+One caveat of the default correction carries over to structured blocks.
+The \code{DAStau} consistency factors are computed by Gauss--Hermite
+quadrature only for random-effect blocks of dimension at most two; a
+larger block---which \code{ar1} readily produces---falls back to the
+closed-form \code{DASvar} correction, whose Gaussian linearisation leaves
+a small, non-vanishing bias in the fitted correlation. The experimental
+option \code{options(robustlmm.dastau.mc = TRUE)} restores a
+\code{DAStau}-type correction for such blocks by calibrating the
+consistency factors by Monte Carlo (over a deterministic, reproducible
+sample) rather than quadrature; in the companion simulation it removes
+the \code{DASvar} residual, but it is validated by simulation only, not
+by a finite-sample theorem.
 
 \end{document}

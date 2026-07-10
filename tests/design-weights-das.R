@@ -1,3 +1,7 @@
+## Disabled on the CRAN release branch to keep the overall check time
+## under the 10-minute CRAN limit; runs in full on master and in CI.
+quit()
+
 ## WS11 step 3 (DASvar) regression tests: the sigma/theta DAS machinery
 ## carries the Mallows design weights eta.
 ##

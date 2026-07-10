@@ -1,6 +1,6 @@
 # robustlmm NEWS
 
-## robustlmm 3.5.0 (2026-07-08)
+## robustlmm 3.5.0-1 (2026-07-10)
 
 Several foundations of the new inference toolchain -- the cluster
 sandwich `vcov`, Wald and bootstrap `confint`, prediction intervals,

@@ -1,3 +1,7 @@
+## Disabled on the CRAN release branch to keep the overall check time
+## under the 10-minute CRAN limit; runs in full on master and in CI.
+quit()
+
 ## WS16 step 4 regression tests: anova(fit, ddf = "satterthwaite").
 ##
 ## 1. Default anova() is unchanged (chi-square columns).

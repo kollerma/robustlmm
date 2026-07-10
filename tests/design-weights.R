@@ -1,3 +1,7 @@
+## Disabled on the CRAN release branch to keep the overall check time
+## under the 10-minute CRAN limit; runs in full on master and in CI.
+quit()
+
 ## WS11 steps 1-2 regression tests: Mallows design weights eta.
 ##
 ## Scope of these steps (PLAN-WS11-mallows.md §3.1-3.2): the

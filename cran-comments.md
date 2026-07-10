@@ -1,4 +1,13 @@
-# robustlmm 3.5.0
+# robustlmm 3.5.0-1
+
+## Resubmission
+
+This is a resubmission of 3.5.0, which was auto-rejected because the
+overall check time on the r-devel Windows builder was 17 min (> 10 min).
+The check time was dominated by the test suite; I have disabled the
+slow test files on the CRAN build (the full suite continues to run in
+CI). No code paths changed. The version was bumped from 3.5.0 to
+3.5.0-1 as requested.
 
 ## Summary
 

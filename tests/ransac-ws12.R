@@ -1,3 +1,7 @@
+## Disabled on the CRAN release branch to keep the overall check time
+## under the 10-minute CRAN limit; runs in full on master and in CI.
+quit()
+
 ## WS12 regression tests: adaptive K, stratified subsampling, basin gate.
 
 suppressMessages({require(robustlmm); require(lme4)})

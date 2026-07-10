@@ -1,3 +1,7 @@
+## Disabled on the CRAN release branch to keep the overall check time
+## under the 10-minute CRAN limit; runs in full on master and in CI.
+quit()
+
 ## WS16 step 3 regression tests: emm_basis.rlmerMod reports a finite
 ## Satterthwaite df (not Inf) for the default vcov, consistent with
 ## summary(fit, df = "satterthwaite"), and falls back to Inf for a

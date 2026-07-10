@@ -1,3 +1,7 @@
+## Disabled on the CRAN release branch to keep the overall check time
+## under the 10-minute CRAN limit; runs in full on master and in CI.
+quit()
+
 ## WS8 regression tests for the DAStau tau_b machinery.
 ##
 ## 1. Theta-score root consistency for DAStau, block-diagonal V_b:

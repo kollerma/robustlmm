@@ -883,8 +883,11 @@ fitDatasets_rlmer_ransac <-
             if (is.null(init$fit))
                 stop("ransac_lme4: no successful lmer fit across ",
                      K, " subsamples")
+            ## Starting VALUES, not the fit object: init$fit lives on the
+            ## RANSAC subsample, and an merMod passed as `init` supplies
+            ## the model too.  See .ransacInitList().
             rlmer(formula = datasets[["formula"]], data = data,
-                  method = "DAStau", init = init$fit,
+                  method = "DAStau", init = .ransacInitList(init$fit),
                   rho.e = rho.e, rho.b = rho.b,
                   rho.sigma.e = rho.sigma.e, rho.sigma.b = rho.sigma.b)
         }
@@ -924,8 +927,11 @@ fitDatasets_rlmer_ransac_bisq <-
             if (is.null(init$fit))
                 stop("ransac_lme4: no successful lmer fit across ",
                      K, " subsamples")
+            ## Starting VALUES, not the fit object: init$fit lives on the
+            ## RANSAC subsample, and an merMod passed as `init` supplies
+            ## the model too.  See .ransacInitList().
             rlmer(formula = datasets[["formula"]], data = data,
-                  method = "DAStau", init = init$fit,
+                  method = "DAStau", init = .ransacInitList(init$fit),
                   rho.e = rho.e, rho.b = rho.b,
                   rho.sigma.e = rho.sigma.e, rho.sigma.b = rho.sigma.b)
         }

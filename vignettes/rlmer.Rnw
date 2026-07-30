@@ -1,3 +1,4 @@
+% !Rnw weave = Sweave
 \documentclass[nojss]{jss}
 \usepackage{rlmer}
 
@@ -91,7 +92,7 @@ In this tutorial, we show how to fit robust linear mixed-effects models using \p
 
 \label{introduction}
 
-Linear mixed-effects models are powerful tools to model data with multiple levels of random variation, sometimes called variance components. Data with multiple levels of random variation may have contamination or outliers on any of these levels. To detect and deal with contamination, we developed a method that fits linear mixed-effects models robustly, using the Robust Scoring Equations estimator \citep{koller2014roblmm, koller2013diss}. We have implemented the methods in the \Rpns-package \pkg{robustlmm} \citep{robustlmm} that we introduce here.
+Linear mixed-effects models are powerful tools to model data with multiple levels of random variation, sometimes called variance components. Data with multiple levels of random variation may have contamination or outliers on any of these levels. To detect and deal with contamination, we developed a method that fits linear mixed-effects models robustly, using the Robust Scoring Equations estimator \citep{koller2022rse, koller2013diss}. We have implemented the methods in the \Rpns-package \pkg{robustlmm} \citep{vignette} that we introduce here.
 
 The variability introduced at the random effects level generally affects multiple observations simultaneously. In a one-way anova dataset, for example, a group level random effect influences the observed value of all the observations that belong to the corresponding group. If this group level random effect were an outlier with respect to the other group levels, this would lead to a whole group of outliers on the level of observations (see, e.g., plate~g in Figure~\ref{fig:penicillinContaminated}). When using classic estimation methods, even one such outlier might inflate the between-group variability estimate and distort the results (see example discussed in Section~\ref{usage}). In such a case it would be natural to assume that the group's random effect (or mean) is an outlier rather than all observations are outliers in the same direction. This concept of allowing potential contamination on different sources of variability leads to the ``random effects contamination model''. With this model, we make the assumption of long-tailed or ``gross error'' distributions for the random effects as well and not just for the random errors. The effect of the contamination is then propagated via the design matrices to the actual observations.
 
@@ -167,7 +168,7 @@ To reduce the complexity of the algorithms, our implementation makes additional 
 
 \subsection{Robustness approach}
 
-Robustness is achieved by robustification of the scoring equations. The scoring equations are the derivatives of the log-likelihood. To fit the model \eqref{eq:mixedModelSpherical}, either the log-likelihood can be maximized, or the roots of the scoring equations can be found.  Robust estimating equations are derived from the scoring equations by replacing the residuals and predicted spherical random effects with bounded functions. These bounded functions ensure that a single term (error or random effect) only has bounded influence on the estimating equations. To get robust and efficient estimating equations of $\sigma$ and $\vec\theta$, we apply the Design Adaptive Scale approach by \citet{ks2011}. The robust estimating equations are provided in Appendix~\ref{sec:eeq}. A detailed derivation and evaluation of the robust method is given in \citet{koller2013diss} and \citet{koller2014roblmm}.
+Robustness is achieved by robustification of the scoring equations. The scoring equations are the derivatives of the log-likelihood. To fit the model \eqref{eq:mixedModelSpherical}, either the log-likelihood can be maximized, or the roots of the scoring equations can be found.  Robust estimating equations are derived from the scoring equations by replacing the residuals and predicted spherical random effects with bounded functions. These bounded functions ensure that a single term (error or random effect) only has bounded influence on the estimating equations. To get robust and efficient estimating equations of $\sigma$ and $\vec\theta$, we apply the Design Adaptive Scale approach by \citet{ks2011}. The robust estimating equations are provided in Appendix~\ref{sec:eeq}. A detailed derivation and evaluation of the robust method is given in \citet{koller2013diss} and \citet{koller2022rse}.
 
 The robustified estimating equations no longer correspond to any likelihood or pseudo-likelihood.  Thus, information criteria like AIC and tests based on the log-likelihood statistic are unavailable for the robust method we present here.
 
@@ -226,7 +227,7 @@ We illustrate the use of the \pkg{robustlmm} package on a dataset originally pub
 
 \noindent The description implies that it is a balanced two-way anova dataset with two types of random effects: \emph{sample} with six levels and \emph{plate} with 24 levels. The random effects are completely crossed. The dataset is distributed as the \code{Penicillin} dataset in \pkg{lme4}.
 
-To emphasize the effect of the robust method, we modified the dataset slightly (as we did in \citet{koller2014roblmm}). We scaled down the first plate's observation values, and we moved one observation in plate f down to the lowest original observation. The modified dataset is shown in Figure~\ref{fig:penicillinContaminated}.
+To emphasize the effect of the robust method, we modified the dataset slightly (as we did in \citet{koller2022rse}). We scaled down the first plate's observation values, and we moved one observation in plate f down to the lowest original observation. The modified dataset is shown in Figure~\ref{fig:penicillinContaminated}.
 
 \begin{figure}[htbp!]
 \centering
@@ -415,7 +416,7 @@ structured \code{cs}/\code{ar1} covariances
 
 \label{furtherInformation}
 
-Detailed information on the properties of the robust method and validation using simulation studies can be found in compact form in \citet{koller2014roblmm} and more detailed in \citet{koller2013diss}. \citet{bates2011lme4} is a general introduction to mixed modeling using the \Rp package \pkg{lme4} \citep{lme4}. Because \pkg{lme4} and \pkg{robustlmm} are similar, this is also a good starting point for using \pkg{robustlmm}.
+Detailed information on the properties of the robust method and validation using simulation studies can be found in compact form in \citet{koller2022rse} and more detailed in \citet{koller2013diss}. \citet{bates2011lme4} is a general introduction to mixed modeling using the \Rp package \pkg{lme4} \citep{lme4}. Because \pkg{lme4} and \pkg{robustlmm} are similar, this is also a good starting point for using \pkg{robustlmm}.
 
 We avoided the topic of robust testing for linear mixed-effects models in this tutorial. The usual caveats of testing in mixed models apply for the methods presented here. Bootstrap presents itself as a simple (but data structure dependent) way to get $p$~values. One has to be careful, though, since the ordinary bootstrap quantiles are not robust \citep{salibian2008fast, singh1998breakdown}.
 
@@ -426,10 +427,6 @@ Development of \pkg{robustlmm} is hosted on GitHub at \url{https://github.com/ko
 The author would like to thank Kali Tal for providing editorial help with the manuscript. The author would also like to thank two anonymous reviewers for their helpful comments and suggestions on how to improve the paper. Finally, the author would like to thank Niels Hagenbuch for his comments and proof-reading.
 
 \clearpage
-%% Self-reference kept in the bibliography via \nocite; an in-text \citep
-%% inside \Abstract{} breaks the JSS class with recent hyperref/natbib
-%% ("Undefined control sequence cite.\@citeb \@extra@b@citeb").
-\nocite{vignette}
 \bibliography{rlmer}
 
 \clearpage
@@ -956,8 +953,8 @@ with $\vec w_i$ its column of $\bld W$. With \code{groups} the unit
 becomes the cluster, using the per-cluster influence $\bld\Xi = -\bld
 J_{\mathrm{par}}\inv \bld S$. Robust leverage (\code{hatvalues}) is the
 self-influence $A_{ii}$ in the random-effect-whitened convolution; it
-reduces to the classical \pkg{lme4} leverage when $\rho_e$ is the
-identity (\code{cPsi}).
+reduces to the classical \pkg{lme4} leverage in the classical case
+\code{rho.e = cPsi}, where $\psi_e$ is the identity.
 
 \subsection{Robust Satterthwaite degrees of freedom}\label{sec:methDf}
 
@@ -1116,12 +1113,15 @@ contribution of extreme covariates. With \code{"mcd"} they are
 where $d_i^2$ is the robust (minimum-covariance-determinant) Mahalanobis
 distance of the $p^\ast$ non-constant columns of $\bld X$, $\chi^2_{p^\ast, c}$ the
 $c$-quantile of the reference $\chi^2$, and $\gamma$ a severity exponent
-(defaults $c = 0.975$, $\gamma = 1$). The weight multiplies the
-$e$-side of every estimating equation: writing $\bld H = \diag(\eta_i)$,
-the residual score $\bld X\tr \bld U_e^{-\top} \bld\psi_e$ in
-\eqref{eq:robustEEq} becomes $\bld X\tr \bld U_e^{-\top} \bld H \bld\psi_e$
-(and likewise for the $\vec u$-, $\sigma$- and $\vec\theta$-equations),
-turning the RSE into a generalised $M$-estimator of Mallows type, whose
+(defaults $c = 0.975$, $\gamma = 1$). The weight acts on the $e$-side:
+writing $\bld H = \diag(\eta_i)$, the residual score $\bld X\tr \bld
+U_e^{-\top} \bld\psi_e$ in \eqref{eq:robustEEq} becomes $\bld X\tr \bld
+U_e^{-\top} \bld H \bld\psi_e$, and the $\vec u$- and $\sigma$-equations
+are weighted in the same way. The $b$-side is left unweighted: in the
+$\vec\theta$-equation $\eta$ does not multiply $\bld\psi_b$, but enters
+only through the $e$-side noise contribution to the consistency
+corrections, whose leverage terms carry $\bld H^2 = \diag(\eta_i^2)$.
+This turns the RSE into a generalised $M$-estimator of Mallows type, whose
 influence is bounded separately in the response (by $\bld\psi_e$) and in
 the design (by $\eta$), as for the Mallows \textsc{glm} estimators of
 \citet{cantoni2001robust}; the resulting gross-error sensitivity

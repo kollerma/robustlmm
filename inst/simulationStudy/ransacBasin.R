@@ -46,7 +46,7 @@ suppressMessages({
 })
 
 NREPS   <- 500L
-NCORES  <- 10L
+NCORES  <- 5L
 RANSACK <- 100L            # max RANSAC draws (adaptive early-stop on top)
 SEED0   <- 20260621L
 GENS    <- c("N/N", "N/CN", "CN/N", "CN/CN", "t3/t3", "skt3/skt3")

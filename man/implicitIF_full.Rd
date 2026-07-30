@@ -28,8 +28,8 @@ Extends \code{\link{implicitIF}} by adding the \eqn{\sigma}-DAS and
 \eqn{\theta}-DAS scoring equations to the implicit-derivative linear
 system. The Jacobian of the full score wrt \eqn{(\beta, u, \log
 \sigma, \theta)} is computed via \code{\link[numDeriv:jacobian]{numDeriv::jacobian}}
-with Richardson extrapolation, reusing the converged DAS scales on the
-non-\eqn{\theta} columns (they depend on \eqn{\theta} only); the
+with Richardson extrapolation, reusing the converged DAS scales on
+the non-\eqn{\theta} columns (they depend on \eqn{\theta} only); the
 Jacobian wrt the response is closed-form. Only \code{DASvar} and
 \code{DAStau} methods are supported (DAStau additionally requires
 block sizes \eqn{\le 2}).

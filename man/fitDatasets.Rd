@@ -170,8 +170,8 @@ try only a few datasets instead of all of them.}
 \item{...}{argument passed on to \code{\link{createRhoFunction}}.}
 
 \item{formula}{optional model formula to fit; defaults to the formula
-stored in \code{datasets}. Used by the structured-covariance wrappers to
-impose a \code{cs} / \code{ar1} covariance structure.}
+stored in \code{datasets}. Used by the structured-covariance wrappers
+to impose a \code{cs} / \code{ar1} covariance structure.}
 
 \item{init}{optional argument passed on to \code{\link{rlmer}}.}
 

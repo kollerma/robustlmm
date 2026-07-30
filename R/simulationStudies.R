@@ -24,7 +24,8 @@ viewCopyOfSimulationStudy <-
         "breakdownMC.R",
         "convergence.R",
         "robustnessDiagonal.R",
-        "robustnessBlockDiagonal.R"
+        "robustnessBlockDiagonal.R",
+        "robustnessBlockDiagonalExtended.R"
     ),
     destinationPath = getwd(),
     overwrite = FALSE) {

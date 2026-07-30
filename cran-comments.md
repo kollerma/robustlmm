@@ -1,53 +1,64 @@
-# robustlmm 3.5.0-1
-
-## Resubmission
-
-This is a resubmission of 3.5.0, which was auto-rejected because the
-overall check time on the r-devel Windows builder was 17 min (> 10 min).
-The check time was dominated by the test suite; I have disabled the
-slow test files on the CRAN build (the full suite continues to run in
-CI). No code paths changed. The version was bumped from 3.5.0 to
-3.5.0-1 as requested.
+# robustlmm 3.5.0-2
 
 ## Summary
 
-Major release. The full list of changes is in NEWS.md (which also
-lists what already shipped in 3.4-4/3.4-5); highlights:
+Patch release. Two bug fixes to behaviour that shipped in earlier CRAN
+versions; no new features, no interface changes, and no change to the
+defaults of unaffected functionality.
 
-* New inference tools for `rlmer()` fits: `anova()` methods,
-  Satterthwaite degrees of freedom in `summary()` and `emmeans`,
-  and cluster-level influence diagnostics -- completing the
-  inference layer begun in 3.4-4/3.4-5 (cluster-robust sandwich
-  `vcov()`, Wald/bootstrap `confint()`).
-* New estimation options (Mallows-type design weights, RANSAC-based
-  initial estimator, structured covariance support for
-  `diag`/`cs`/`ar1`). Features that are still experimental are clearly
-  marked as such in the documentation and are off by default; all
-  defaults of existing functionality are unchanged.
+* **`init = "ransac"` estimated the model on the RANSAC subsample
+  instead of on the user's data** (affects 3.4-5 and 3.5.0-1). An
+  `lmerMod` passed as `init` supplies the model as well as the starting
+  values, and the RANSAC start is by construction a fit on a subsample,
+  so the returned object was an estimate on roughly half the
+  observations. On the regression test's design, 510 of 1000
+  observations and 27 of 50 groups. Four entry points were affected
+  (`init = "ransac"`, `rlmer_ransac()`, `fitDatasets_rlmer_ransac()`
+  and `fitDatasets_rlmer_ransac_bisq()`); all are fixed and covered by
+  a new regression test. Users who ran any of them should refit; NEWS.md
+  says so explicitly.
+
+* **`calcTau()` refused to solve its fixed point from a starting value
+  above 1.** Defensive: no fit produced by the current code reaches
+  that condition (largest starting value observed over a randomised
+  search is 0.99948), so this is a no-op on current behaviour. It is
+  included because it is the mechanism by which the weighted-`tau` bug
+  fixed in 3.5.0 was able to reach `method = "DAStau"`.
+
+Documentation: `?rlmer` and the 3.5.0 vignette have been reworded to
+describe the RANSAC start as what it is -- a way to raise the breakdown
+point of the starting value, and so to make redescending
+psi-functions usable -- rather than by its effect on any particular
+failure mode. Simulation figures quoted in the vignette were re-measured
+under this version.
 
 ## Test environments
 
-* Local: macOS (arm64), R release, lme4 development version.
-* The full (slow) test suite runs in CI on GitHub Actions
-  (macOS native plus rocker-based Linux containers); the tests shipped
-  in the tarball are a trimmed subset so that the CRAN check stays
-  within a few minutes. The trimming only disables tests, it does not
-  alter any code paths.
+* Local: macOS (arm64), R 4.6.0 Patched.
+* Linux containers (rocker), R devel / release / oldrel.
+* win-builder, R devel and R release.
+
+As in 3.5.0-1, the tests shipped in the tarball are a trimmed subset so
+that the CRAN check stays well inside the time limit; the full suite
+runs in CI. The trimming disables test files only and does not alter
+any code path.
 
 ## R CMD check results
 
-0 errors | 0 warnings. Any NOTE about `tests/getME.Rout.save`
-differences only appears when checking against a development version
-of lme4 and does not occur with the CRAN release of lme4.
+0 errors | 0 warnings.
+
+Any NOTE about `tests/getME.Rout.save` differences appears only when
+checking against a development version of lme4 and does not occur with
+the CRAN release of lme4.
 
 ## Reverse dependencies
 
 CRAN reverse dependencies: confintROB, effects, insight,
-marginaleffects, misty. All five were checked against both the current
-CRAN robustlmm (3.4-5) and this submission (R CMD check, without
-vignettes): no new errors, warnings, or notes appeared with 3.5.0.
-The one failure observed (an insight test unrelated to robustlmm,
-involving panelr and lme4) is pre-existing and byte-identical under
-both versions. In addition, all changes to pre-existing functionality
-are additive and default-off, so the interfaces these packages use are
-unchanged.
+marginaleffects, misty.
+
+The changed code paths are reached only via `init = "ransac"`,
+`rlmer_ransac()` and the two `fitDatasets_rlmer_ransac*` wrappers, and
+via `calcTau()`'s starting value. None of the five reverse dependencies
+calls any of them: they use `rlmer()` at its defaults together with the
+extractor and inference methods, none of which changed. The `calcTau()`
+change is additionally a verified no-op on current behaviour.

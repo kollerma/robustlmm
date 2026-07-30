@@ -18,7 +18,7 @@
 
 suppressMessages({ library(robustlmm); library(lme4); library(parallel) })
 
-NREPS <- 200L; NCORES <- 10L; RANSACK <- 80L; NSTART <- 5L
+NREPS <- 200L; NCORES <- 5L; RANSACK <- 80L; NSTART <- 5L
 SEED0 <- 20260622L
 GENS  <- c("N/N", "N/CN", "CN/N", "CN/CN", "t3/t3", "skt3/skt3")
 

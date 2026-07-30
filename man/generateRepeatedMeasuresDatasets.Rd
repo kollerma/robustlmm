@@ -48,7 +48,7 @@ errors and spherical random effects, see
 }
 \value{
 A list with the same structure as the return value of
-\code{\link{generateMixedEffectDatasets}}.
+  \code{\link{generateMixedEffectDatasets}}.
 }
 \description{
 Generate balanced repeated-measures datasets with a structured
@@ -88,5 +88,5 @@ structured covariance in \code{trueTheta}. Structured covariances require
 }
 \seealso{
 \code{\link{generateMixedEffectDatasets}},
-\code{\link{generateLongitudinalDatasets}}
+  \code{\link{generateLongitudinalDatasets}}
 }

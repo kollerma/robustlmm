@@ -109,9 +109,8 @@ at \eqn{J = 18}, returning to nominal only by \eqn{J \gtrsim 50}.
 (experimental).} The parametric-bootstrap quasi-deviance path
 (\code{test = "boot"}) is experimental --- it is currently the only
 exposed variance-component path. It calibrates correctly under clean
-Gaussian and heavy-tailed errors
-but is markedly anti-conservative when a subset of subjects is
-contaminated. In a simulation study with 10\% of subjects
+Gaussian and heavy-tailed errors but is markedly anti-conservative
+when a subset of subjects is contaminated. In a simulation study with 10\% of subjects
 shifted by 5 standard errors (\code{shift_subj}), Type-I climbed
 to 0.13-0.24 (2.5-5x nominal) across \eqn{J \in \{8, 18, 50\}}.
 The mechanism: the bootstrap simulates from the fitted central

@@ -97,6 +97,18 @@ sPsi <- chgDefaults(smoothPsi, k = 1, s = 10)
 stopifnot(all.equal(rep(0, length(a)), testTau(smoothPsi, sPsi, 1, a, s), tolerance = 1e-2),
           all.equal(rep(0, length(a)), testTau(smoothPsi, sPsi, 2, a, s), tolerance = 1e-2))
 
+## calcTau's fixed point must not depend on the starting value.  It used
+## to: a start above 1 skipped the iteration entirely (`tau[i] <= 1` sat
+## in the loop condition) and the post-loop clamp returned exactly 1.
+## That is how the weighted-DASvar tau^2 bug (WS24) reached DAStau fits,
+## whose initial value is the DASvar formula.
+kappaT <- calcKappaTau(smoothPsi, 1)
+tauFrom <- function(init)
+    calcTau(a, s, smoothPsi, smoothPsi, rfm@pp, kappaT, rep(init, length(a)))
+stopifnot(all.equal(tauFrom(1), tauFrom(0.2), tolerance = 1e-5),
+          all.equal(tauFrom(1), suppressWarnings(tauFrom(2.5)), tolerance = 1e-5),
+          all(tauFrom(1) < 1))   # otherwise the check above is vacuous
+
 
 ## to save time in checks, also test init argument here:
 initList <- list(fixef=fixef(rfm), u=getME(rfm, "u"),

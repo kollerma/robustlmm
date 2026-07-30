@@ -7,7 +7,8 @@
 viewCopyOfSimulationStudy(
   study = c("sensitivityCurves.R", "consistencyAndEfficiencyDiagonal.R",
     "consistencyAndEfficiencyBlockDiagonal.R", "breakdown.R", "breakdownMC.R",
-    "convergence.R", "robustnessDiagonal.R", "robustnessBlockDiagonal.R"),
+    "convergence.R", "robustnessDiagonal.R", "robustnessBlockDiagonal.R",
+    "robustnessBlockDiagonalExtended.R"),
   destinationPath = getwd(),
   overwrite = FALSE
 )

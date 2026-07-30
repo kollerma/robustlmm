@@ -5,8 +5,10 @@
 \title{Redescending psi-functions from robustbase (bisquare, lqq,
   optimal, hampel, ggw)}
 \usage{
-makeRobustbasePsi(family = c("bisquare", "lqq", "optimal", "hampel", "ggw"),
-  cc = NULL)
+makeRobustbasePsi(
+  family = c("bisquare", "lqq", "optimal", "hampel", "ggw"),
+  cc = NULL
+)
 }
 \arguments{
 \item{family}{robustbase \code{\link[robustbase]{Mpsi}} family name,

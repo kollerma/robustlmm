@@ -1,3 +1,4 @@
+% !Rnw weave = Sweave
 \documentclass[nojss]{jss}
 \usepackage{rlmer}
 
@@ -534,13 +535,19 @@ random-effects covariance is interior (not a phony $|\hat\rho| \to 1$
 solution), and which start was \code{chosen} (the interior fit with the
 lowest residual scale).
 
-The defaults are settled and simulation-backed. The optional multi-start
-consensus (\code{n\_starts > 1}, recommended when a redescending
-$\psi$ risks the phony attractor) cuts the phony-correlation rate about
-fivefold across the contamination scenarios of
-\code{inst/simulationStudy/ransacConsensus.R} (pooled $0.149 \to 0.027$)
-at no cost in slope accuracy, and \code{ransacBasin.R} backs the
-separate basin-radius and phony-correlation checks. RANSAC handles a
+What the RANSAC start is for here is raising the breakdown point of the
+starting value, and thereby making redescending $\psi$-functions usable
+on general designs: their estimating equations are non-convex, so a
+low-breakdown start can be drawn to a bad local solution.
+
+The defaults are settled and simulation-backed. Across the
+contamination scenarios of
+\code{inst/simulationStudy/ransacConsensus.R}, measured with
+\textsf{robustlmm}~3.5.0-2, the optional multi-start consensus
+(\code{n\_starts > 1}) lowers the pooled phony-correlation rate from
+$0.178$ to $0.165$ at no cost in slope accuracy; over $1200$ paired
+fits the consensus is the interior one in all $15$ replicates where the
+two disagree. RANSAC handles a
 single, crossed or nested grouping structure---subsampling is stratified
 by the finest grouping factor so each subsample \code{lmer} stays
 fittable on designs with many small clusters---and the start is fully

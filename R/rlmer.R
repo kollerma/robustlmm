@@ -126,6 +126,20 @@
 ##' This is mainly used to verify the algorithms to reproduce the fit by
 ##' \code{\link[lme4]{lmer}} when starting from trivial initial values. } }
 ##'
+##' @section Prior weights: \code{weights} is passed through to
+##'   \code{\link[lme4]{lmer}} and has the usual meaning,
+##'   \eqn{\mathrm{Var}(e_i) = \sigma^2 / w_i}. \strong{Weighted
+##'   \code{method = "DASvar"} fits made with robustlmm 3.2-0 to 3.4-5
+##'   are wrong and should be refitted}: the Design Adaptive Scale
+##'   counted the prior weights twice, so \eqn{\hat\sigma}, the
+##'   variance components and every standard error derived from them
+##'   were biased by an amount that depended on the scale the weights
+##'   happened to be supplied on. The default \code{method = "DAStau"}
+##'   was affected only through its starting value, and in practice
+##'   only at \code{rho.e = rho.b = cPsi}. Unweighted fits are
+##'   unaffected in every version. See the 3.5.0 entry of
+##'   \code{news(package = "robustlmm")} for the magnitudes and the
+##'   measured exposure of each method.
 ##' @title Robust Scoring Equations Estimator for Linear Mixed Models
 ##' @param formula a two-sided linear formula object describing the
 ##'   fixed-effects part of the model, with the response on the left of a
@@ -182,14 +196,30 @@
 ##' @param init optional lmerMod- or rlmerMod-object to use for starting values,
 ##'   a list with elements \sQuote{fixef}, \sQuote{u}, \sQuote{sigma},
 ##'   \sQuote{theta}, the string \code{"ransac"}, or a function producing an
-##'   lmerMod object. When \code{init = "ransac"}, the high-breakdown RANSAC
+##'   lmerMod object.
+##'
+##'   \strong{An lmerMod or rlmerMod passed here supplies the model, not only
+##'   the starting values}: the working object is built from it, so
+##'   \code{formula} and \code{data} no longer have any effect. Pass such an
+##'   object only when it was fitted on the same data; a warning is issued if
+##'   its number of observations does not match \code{nrow(data)}. To start
+##'   from values obtained elsewhere while keeping the model given by
+##'   \code{formula} and \code{data}, use the list form. Its components are
+##'   optional --- whatever is omitted keeps the value from the internal
+##'   \code{lmer} initialisation, which is the right choice for \sQuote{u}
+##'   when the values come from a fit on different observations.
+##'
+##'   When \code{init = "ransac"}, the high-breakdown RANSAC
 ##'   start is obtained by calling \code{\link{ransac_lme4}(formula, data)} with
-##'   its default \code{K = 200} subsamples and \code{sub_frac = 0.5}; this is
-##'   useful to dodge phony local minima (e.g. random-effect correlations pinned
-##'   at \eqn{\pm 1}) with redescending psi-functions. The string form is random
+##'   its default \code{K = 200} subsamples and \code{sub_frac = 0.5}. Its
+##'   purpose is to raise the breakdown point of the starting value, which is
+##'   what makes redescending psi-functions usable: their estimating equations
+##'   are non-convex, so a low-breakdown start can be drawn to a bad local
+##'   solution. \code{\link{rlmer}} takes
+##'   \sQuote{fixef}, \sQuote{sigma} and \sQuote{theta} from that fit and fits
+##'   the model on the full \code{data}. The string form is random
 ##'   (not reproducible without an outer \code{set.seed}); for fine control of
-##'   \code{K}, \code{sub_frac}, or \code{seed}, use \code{\link{rlmer_ransac}}
-##'   or pass \code{init = ransac_lme4(formula, data, ...)$fit} explicitly.
+##'   \code{K}, \code{sub_frac}, or \code{seed}, use \code{\link{rlmer_ransac}}.
 ##' @param size_obr logical scalar; if \code{TRUE} (default \code{FALSE}),
 ##'   the size-controlling weight \code{w_delta} in the block-diagonal
 ##'   variance-components scoring equation is replaced by the
@@ -424,9 +454,39 @@ rlmer <- function(formula, data, ..., method = c("DAStau", "DASvar"),
     invisible(NULL)
 }
 
+## Starting values taken from a fit on a DIFFERENT set of observations
+## (a RANSAC subsample), in the form `.rlmerInit()`'s list branch wants.
+##
+## `fixef`, `sigma` and `theta` have lengths fixed by the model, not by
+## the number of observations, so they carry over.  `u` does not -- it
+## has one entry per random-effect coefficient of the fit it came from --
+## and it is deliberately omitted rather than zeroed: see the comment in
+## `.rlmerInit()`.  The high-breakdown start is for beta anyway.
+.ransacInitList <- function(fit) {
+    list(fixef = unname(fixef(fit)),
+         sigma = sigma(fit),
+         theta = unname(getME(fit, "theta")))
+}
+
 .rlmerInit <- function(lcall, pf, formula, data, method, rho.e, rho.b, rho.sigma.e,
                        rho.sigma.b, rel.tol, max.iter, verbose, init,
                        setting = c("RSEn", "RSEa"), ...) {
+    ## Resolve init = "ransac" to a PARAMETER LIST before the branches
+    ## below.  It must not resolve to the merMod that ransac_lme4()
+    ## returns: an merMod passed as `init` supplies the model as well as
+    ## the starting values -- `lobj <- as(init, "rlmerMod")` further down
+    ## takes the model frame from it and `formula`/`data` are ignored
+    ## from that point on -- and the RANSAC fit lives on the winning
+    ## SUBSAMPLE.  Resolving to the fit object therefore silently
+    ## estimated the model on roughly half the data (robustlmm 3.4-5 and
+    ## 3.5.0: 510 of 1000 observations, 27 of 50 clusters, on the
+    ## two-dimensional-block design of the regression test).
+    if (!missing(init) && !is.null(init) && identical(init, "ransac")) {
+        rr <- ransac_lme4(formula, data)
+        if (is.null(rr$fit))
+            stop("init = \"ransac\": no successful lmer fit across the RANSAC subsamples")
+        init <- .ransacInitList(rr$fit)
+    }
     if (missing(init) || is.null(init) || is.list(init)) {
         lcall2 <- lcall
         lcall2[setdiff(names(formals(rlmer)), names(formals(lmer)))] <- NULL
@@ -436,25 +496,63 @@ rlmer <- function(formula, data, ..., method = c("DAStau", "DASvar"),
         linit <- eval(lcall2, pf)
         .checkStructuredCovariance(linit)
         if (!missing(init) && is.list(init)) {
-            ## check sanity of input
-            stopifnot(length(init$fixef) == length(fixef(linit)),
-                      length(init$u) == length(getME(linit, "u")),
-                      length(init$sigma) == length(sigma(linit)),
-                      length(init$theta) == length(getME(linit, "theta")))
+            ## Components may be omitted; whatever is absent keeps the
+            ## value the full-data lmer initialisation produced.  When
+            ## `u` is omitted but `theta` is given -- the RANSAC case,
+            ## where `u` has the wrong length and cannot be carried over
+            ## -- the effects are re-solved instead, so the starting
+            ## point is self-consistent rather than a mixture of
+            ## supplied parameters and an lmer BLUP fitted under
+            ## different ones.  Note what that solve is: fitEffects()
+            ## is the robust IRLS step for (beta, u) JOINTLY, run to
+            ## convergence, so the supplied `fixef` is a warm start that
+            ## gets re-solved, not an anchor that is held.  Only sigma
+            ## and theta are held at the supplied values.
+            ##
+            ## Requiring the names to be exactly right is not pedantry:
+            ## since the components became optional, `list(fixed = ...)`
+            ## or `list()` would otherwise fall through silently to the
+            ## plain lmer start and return a fit that looks fine.  It
+            ## also removes the inconsistency of `$` partial matching,
+            ## under which `fixeff` resolved to `fixef` but `fixed` did
+            ## not.  Extraction below uses [[ ]], which matches exactly.
+            valid <- c("fixef", "u", "sigma", "theta")
+            nms <- names(init)
+            if (!length(init) || is.null(nms) || !all(nzchar(nms)) ||
+                !all(nms %in% valid) || anyDuplicated(nms))
+                stop("'init' list components must be named ",
+                     "'fixef', 'u', 'sigma' and/or 'theta'", call. = FALSE)
+            ## check sanity of whatever was supplied
+            if (!is.null(init[["fixef"]]))
+                stopifnot(length(init[["fixef"]]) == length(fixef(linit)))
+            if (!is.null(init[["u"]]))
+                stopifnot(length(init[["u"]]) == length(getME(linit, "u")))
+            if (!is.null(init[["sigma"]]))
+                stopifnot(length(init[["sigma"]]) == length(sigma(linit)))
+            if (!is.null(init[["theta"]]))
+                stopifnot(length(init[["theta"]]) == length(getME(linit, "theta")))
             ## convert object to rlmerMod
             linit <- as(linit, "rlmerMod")
-            ## set all of the initial parameters, but do not fit yet
-            setFixef(linit, unname(init$fixef))
-            setSigma(linit, init$sigma)
-            setTheta(linit, init$theta, fit.effects=FALSE, update.sigma=FALSE)
-            setU(linit, init$u)
+            ## set the supplied initial parameters, but do not fit yet
+            ## Order is load-bearing, not stylistic: the effects solve
+            ## triggered below reads beta and b from the object at call
+            ## time and its robustness weights depend on sigma, so beta
+            ## and sigma must already be set.  Reordering would start
+            ## the solve from stale values and fail silently.
+            if (!is.null(init[["fixef"]])) setFixef(linit, unname(init[["fixef"]]))
+            if (!is.null(init[["sigma"]])) setSigma(linit, init[["sigma"]])
+            if (!is.null(init[["theta"]])) {
+                ## fit.effects = TRUE re-solves (beta, u) at the sigma
+                ## and theta just set; update.sigma = FALSE keeps the
+                ## supplied sigma.  Only do this when `u` was not
+                ## supplied, so a fully specified init is used verbatim.
+                refitU <- is.null(init[["u"]])
+                setTheta(linit, init[["theta"]], fit.effects = refitU,
+                         update.sigma = FALSE)
+            }
+            if (!is.null(init[["u"]])) setU(linit, init[["u"]])
         }
         init <- linit
-    } else if (identical(init, "ransac")) {
-        rr <- ransac_lme4(formula, data)
-        if (is.null(rr$fit))
-            stop("init = \"ransac\": no successful lmer fit across the RANSAC subsamples")
-        init <- rr$fit
     } else if (is.function(init)) {
         init <- do.call(init,list(formula=formula, data=data, REML=TRUE, ...))
     } else if (!is(init, "merMod") && !is(init, "rlmerMod")) {
@@ -465,6 +563,41 @@ rlmer <- function(formula, data, ..., method = c("DAStau", "DASvar"),
     ## (the check for internally-fitted models is above)
     if (is(init, "merMod") && !is(init, "rlmerMod")) {
         .checkStructuredCovariance(init)
+    }
+    ## An merMod passed as `init` becomes the model: the conversion below
+    ## takes the model frame from it, so `formula` and `data` no longer
+    ## have any effect.  That is intended for a starting fit on the same
+    ## data, and silently wrong for one fitted on a subset.  Warn rather
+    ## than stop, because dropping rows with NAs is a legitimate reason
+    ## for the counts to differ; pass starting VALUES through the list
+    ## form of `init` if the model should come from `formula`/`data`.
+    if ((is(init, "merMod") || is(init, "rlmerMod")) &&
+        !missing(data) && is.data.frame(data)) {
+        ninit <- tryCatch(nobs(init), error = function(e) NA_integer_)
+        ## Compare against the rows the model would actually use, not
+        ## nrow(data): rows dropped for NAs are a legitimate reason for
+        ## the counts to differ and must not raise a false alarm.
+        ##
+        ## Counted from the model variables rather than via
+        ## model.frame(lme4::subbars(formula)).  `subbars` is exported by
+        ## every lme4 this package supports, but it now lives in
+        ## `reformulas` and lme4 emits a deprecation warning on every
+        ## call -- one that tells the user to ask the upstream
+        ## maintainer to stop.  A heuristic behind a warning is not worth
+        ## a warning of its own.
+        ndata <- tryCatch({
+            vars <- intersect(all.vars(formula), names(data))
+            if (!length(vars)) NA_integer_
+            else sum(stats::complete.cases(data[, vars, drop = FALSE]))
+        }, error = function(e) NA_integer_)
+        if (!is.na(ninit) && !is.na(ndata) && ninit != ndata)
+            warning(gettextf(
+                paste0("'init' was fitted on %d observations but 'formula' ",
+                       "and 'data' give %d; the fit will use the model from ",
+                       "'init', not from 'formula' and 'data'. If that is ",
+                       "not what you want (e.g. 'init' is a subsample fit), ",
+                       "pass starting values as a list, see ?rlmer."),
+                ninit, ndata), call. = FALSE)
     }
     lobj <- as(init, "rlmerMod")
     lobj@call <- lcall

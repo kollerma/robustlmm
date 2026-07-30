@@ -99,49 +99,50 @@ subsampling.
 }
 \section{Nonsingular subsampling}{
 
-With categorical predictors a rank-deficient subsample often does
-\emph{not} make \code{\link[lme4]{lmer}} error --- it silently drops
-the aliased (all-zero) fixed-effect columns of a dropped factor
-level --- so a degenerate candidate would otherwise enter the scale
-competition with the wrong number of parameters. Rather than draw and
-then repair, each subsample is drawn \emph{nonsingular by construction}
-using the nonsingular-subsampling algorithm of Koller and Stahel (2017,
-Algorithm 1; the method behind
-\code{robustbase::\link[robustbase]{lmrob.control}(setting = "KS2014")}).
-The draw units (clusters when a grouping factor is available, else single
-observations) are randomly permuted; a Gaxpy-variant LU decomposition
-with partial pivoting and column skipping (implemented in C++) then walks
-the permuted observations and greedily selects the first \eqn{p} that are
-linearly independent, \emph{skipping} any observation collinear with
-those already chosen. This yields a full-rank fixed-effects core whenever
-the full design has full column rank. Whole clusters carrying that core
-are the mandatory seed; further clusters are then added in the permuted
-order until the retained data are identifiable --- (i) a full-rank
-fixed-effects design [guaranteed by the core], (ii) at least two observed
-levels of every random-effects grouping factor, and (iii) non-constant
-numeric random-slope variables --- and finally up to the target subsample
-size. Because adding clusters never lowers the rank or removes a level
-this is monotone and terminates. \code{n_singular} counts the collinear
-candidate observations skipped by the LU across all draws (a measure of
-the collinearity encountered); it is \code{0} on a purely continuous,
-full-rank design, where the algorithm selects exactly the first \eqn{p}
-permuted observations, so the draw is a uniform random cluster subsample
---- statistically identical to plain random subsampling. Note that a
-nonsingular \emph{start} does not guarantee the fit stays nonsingular
-through the \code{\link{rlmer}} refinement: a redescending psi can
-zero-weight observations back into a rank-deficient design (Koller and
-Stahel 2017, Remark 2), which \code{\link{rlmer_ransac}} checks for and
-warns about.
+  With categorical predictors a rank-deficient subsample often does
+  \emph{not} make \code{\link[lme4]{lmer}} error --- it silently drops
+  the aliased (all-zero) fixed-effect columns of a dropped factor
+  level --- so a degenerate candidate would otherwise enter the scale
+  competition with the wrong number of parameters. Rather than draw and
+  then repair, each subsample is drawn \emph{nonsingular by
+  construction} using the nonsingular-subsampling algorithm of Koller
+  and Stahel (2017, Algorithm 1; the method behind
+  \code{robustbase::\link[robustbase]{lmrob.control}(setting =
+  "KS2014")}). The draw units (clusters when a grouping factor is
+  available, else single observations) are randomly permuted; a
+  Gaxpy-variant LU decomposition with partial pivoting and column
+  skipping (implemented in C++) then walks the permuted observations and
+  greedily selects the first \eqn{p} that are linearly independent,
+  \emph{skipping} any observation collinear with those already chosen.
+  This yields a full-rank fixed-effects core whenever the full design
+  has full column rank. Whole clusters carrying that core are the
+  mandatory seed; further clusters are then added in the permuted order
+  until the retained data are identifiable --- (i) a full-rank
+  fixed-effects design [guaranteed by the core], (ii) at least two
+  observed levels of every random-effects grouping factor, and (iii)
+  non-constant numeric random-slope variables --- and finally up to the
+  target subsample size. Because adding clusters never lowers the rank
+  or removes a level this is monotone and terminates. \code{n_singular}
+  counts the collinear candidate observations skipped by the LU across
+  all draws (a measure of the collinearity encountered); it is
+  \code{0} on a purely continuous, full-rank design, where the algorithm
+  selects exactly the first \eqn{p} permuted observations, so the draw
+  is a uniform random cluster subsample --- statistically identical to
+  plain random subsampling. Note that a nonsingular \emph{start} does
+  not guarantee the fit stays nonsingular through the \code{\link{rlmer}}
+  refinement: a redescending psi can zero-weight observations back into
+  a rank-deficient design (Koller and Stahel 2017, Remark 2), which
+  \code{\link{rlmer_ransac}} checks for and warns about.
 }
 
-\references{
-Koller, M. and Stahel, W. A. (2017) Nonsingular subsampling for
-regression S estimators with categorical predictors.
-\emph{Computational Statistics} \bold{32}(2), 631--646.
-}
 \examples{
   set.seed(1)
   res <- ransac_lme4(Reaction ~ Days + (Days | Subject),
                       data = sleepstudy, K = 30)
   res$scale
+}
+\references{
+Koller, M. and Stahel, W. A. (2017) Nonsingular subsampling for
+regression S estimators with categorical predictors.
+\emph{Computational Statistics} \bold{32}(2), 631--646.
 }

@@ -41,3 +41,5 @@ inst/simulationStudy/datasets_robustnessBlockDiagonal-processed\.Rdata
 inst/simulationStudy/datasets_consistencyAndEfficiencyDiagonal-processed\.Rdata
 inst/simulationStudy/datasets_consistencyAndEfficiencyBlockDiagonal-processed\.Rdata
 ^research$
+inst/simulationStudy/datasets_robustnessBlockDiagonalExtended-processed\.Rdata
+inst/simulationStudy/robustnessBlockDiagonalExtendedRansacRefit\.R

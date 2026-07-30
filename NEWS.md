@@ -1,5 +1,67 @@
 # robustlmm NEWS
 
+## robustlmm 3.5.0-2 (2026-07-30)
+
+### Bug fixes
+
+- `calcTau()` no longer refuses to solve its fixed point when the
+  starting value exceeds 1. The `tau <= 1` constraint sat in the loop
+  condition, so a start above 1 skipped the iteration entirely and the
+  post-loop clamp returned exactly 1; it now starts from
+  `min(tau, 1)`. This is what let the weighted-`tau` bug of 3.5.0 reach
+  `method = "DAStau"` (see that release's entry for who should refit;
+  that part was fixed in 3.5.0, this guard was not). No fit produced by
+  the current code reaches the condition -- the largest starting value
+  observed over a randomised search is 0.99948 -- so the change is
+  defensive and is a no-op on current behaviour; `tests/tau.R` now pins
+  the fixed point to be independent of the starting value.
+
+- **`init = "ransac"` estimated the model on the RANSAC subsample
+  instead of on your data, in 3.4-5 and 3.5.0-1.** If you have used
+  `init = "ransac"`, `rlmer_ransac()` or
+  `fitDatasets_rlmer_ransac`/`_ransac_bisq` with either version, refit:
+  the returned object was an estimate on roughly half the observations.
+  Nothing else is affected, and no other `init` form is affected.
+
+  An `lmerMod` passed as `init` supplies the *model*, not only the
+  starting values -- the working object is built from it, so `formula`
+  and `data` stop mattering from that point on. That is correct and
+  efficient for a starting fit on the same data, which is what the
+  argument was designed for. But `ransac_lme4()$fit` is fitted on the
+  winning RANSAC subsample, so resolving `init = "ransac"` to that
+  object silently dropped the rest of the data. On a two-dimensional
+  random-effect block with `m = 50` clusters and `n = 1000`
+  observations, the fit used 510 observations and 27 of the 50 clusters.
+
+  `rlmer()` now takes `fixef`, `sigma` and `theta` from the RANSAC fit
+  and estimates the model on the full `data`. `u` is deliberately not
+  carried over: it has one entry per random-effect coefficient of the
+  fit it came from, and zeroing it instead is not a neutral choice --
+  combined with a `theta` from elsewhere it drives the random-effect
+  covariance onto the boundary (`theta = 0`). Instead the effects are
+  re-solved at the supplied `sigma` and `theta`. That solve is the
+  robust IRLS step for `beta` and `u` *jointly*, run to convergence, so
+  the RANSAC `fixef` acts as a warm start rather than as a value that is
+  held fixed; `sigma` and `theta` are the parameters actually held.
+
+  Two supporting changes. The components of the list form of `init` are
+  now optional; anything omitted keeps the value from the internal
+  `lmer` initialisation, which is what makes the above expressible.
+  And passing an `lmerMod` fitted on a different number of observations
+  than `data` has rows now warns, since that is the same silent
+  data-loss trap in user code. It is a warning rather than an error
+  because dropping rows with `NA`s is a legitimate reason for the counts
+  to differ.
+
+  Four call sites were affected, in three independent copies of the
+  pattern: `init = "ransac"`, `rlmer_ransac()`, and the inline start in
+  `fitDatasets_rlmer_ransac` and `fitDatasets_rlmer_ransac_bisq` (which
+  do not route through `rlmer_ransac()`). All four are fixed.
+
+  Found while running the estimator against the simulation design of
+  Sugasawa, Hui and Welsh (2026, *JCGS* 35(2):720-733). Regression test:
+  `tests/ransac-init-fullwdata.R`, which covers all four entry points.
+
 ## robustlmm 3.5.0-1 (2026-07-10)
 
 Several foundations of the new inference toolchain -- the cluster
@@ -296,6 +358,77 @@ several of the 3.4-5 foundations.
 
 ### Bug fixes and improvements
 
+- **`method = "DASvar"` fits that use prior `weights` were wrong, in
+  every release from 3.2-0 to 3.4-5.** If you have fitted a weighted
+  model with `method = "DASvar"` and any of those versions, refit it.
+  Unweighted fits are not affected, in any version. The default
+  `method = "DAStau"` is affected far more narrowly --- see the end of
+  this entry.
+
+  Some history, because it bears on who is exposed. `rlmer()` refused
+  `weights` outright from 1.1 (2013) to 3.1-2 (2022) --- *"Argument
+  weights is unsave to use at the moment"* --- and 1.0 accepted them
+  only with an explicit *"Argument weights is untested"* warning.
+  3.2-0 removed that guard and enabled the argument, but never
+  documented it: `weights` is not in `rlmer()`'s formals and has no
+  entry in `?rlmer`; it reaches `lmer()` through `...`. So from 3.2-0
+  on, weighted fits were accepted in silence, with `tests/weights.R`
+  pinning them against `lmer` --- and were wrong. They are documented,
+  and correct, from 3.5.0.
+
+  The Design Adaptive Scale `tau_e` counted the prior weights twice.
+  The residuals entering it are already whitened by
+  `U_e = diag(sqrt(w))`, so the leading term of `tau^2` is 1 by
+  construction; the formula used `w` there instead. Because prior
+  weights are identified only up to a common factor, this was not a
+  fixed bias: multiplying `weights` by a constant `c` no longer
+  multiplied `sigma` by `sqrt(c)`, so the answer depended on the
+  arbitrary scale the weights happened to be supplied on. On
+  `Dyestuff` with `weights = 0.01` throughout, `sigma` came out 12
+  times too large; with `weights = 100`, 11 times too small. With
+  weights varying over the more usual range [0.25, 4] on a
+  250-observation one-way design the error was 14% low for
+  `method = "DASvar"` and 5% low for `method = "DAStau"`, and the
+  default `vcov` covered the slope 79.8% of the time at a nominal
+  95%. Nothing was reported to the user: the fitting warnings this
+  produced were collected into `fit@optinfo$warnings` and never
+  printed.
+
+  What changes on a refit: `sigma`, `VarCorr`, every standard error,
+  and therefore `summary`, `confint`, `vcov` and the `anova` tables.
+  Under a robust `rho` the fixed-effect estimates also move slightly,
+  because the robustness weights are evaluated at `r / (sigma * tau)`.
+  Repaired coverage on the design above is 94.5%.
+
+  **How much of this reaches `method = "DAStau"`, the default.** Far
+  less. DAStau does not use the DASvar formula as its answer, only as
+  the starting value of its fixed-point iteration, and the starting
+  value mattered only because `calcTau` refused to iterate at all when
+  it came in above 1 (fixed in 3.5.0-2, not here). Whenever the fit re-enters
+  `calcTau` even once more, it warm-starts below 1 and converges to the
+  correct value, so the damage undoes itself. Over a grid of 3 designs
+  x 6 weight regimes x 2 `rho` x 2 starting values, `method = "DASvar"`
+  is wrong in 70 of 70 weighted arms (by up to 109%) while
+  `method = "DAStau"` is wrong in 10 of 72 --- all ten of them at
+  `rho.e = rho.b = cPsi`, which is the diagnostic setting that makes
+  `rlmer()` reproduce `lmer()`, not a setting for robust estimation.
+  With the default `smoothPsi` there was no affected arm at all (36 of
+  36 clean, worst deviation 1.3e-07): the outer loop re-enters
+  `calcTau` 13 times on the check dataset, and only the first entry
+  sees an inflated start. So in practice: refit weighted `DASvar` fits
+  unconditionally, and weighted `DAStau` fits if you ran them at
+  `cPsi`. This is measured over a finite grid, not proved --- if a
+  weighted `DAStau` fit matters to you, refitting under 3.5.0 and
+  comparing costs less than reasoning about it.
+
+  The fix is pinned by `tests/weights.R`, which now runs both
+  `method = "DAStau"` and `method = "DASvar"` against `lmer` at
+  `rho.e = rho.b = cPsi` -- the setting in which `rlmer()` reduces to
+  REML and must reproduce `lmer` exactly. Previously it exercised the
+  default method only, which is why this went unnoticed. Versions
+  before 3.2-0 are unaffected because they refused `weights` outright;
+  3.2-0 is where `weights` became a supported argument.
+
 - Random-effect robustness weights (`getME(., "w_b_vector")`,
   `"w_sigma_b_vector"`) are now aligned with the spherical random
   effects (`"b_s"`). Previously they were concatenated per covariance
@@ -442,6 +575,27 @@ extends several of them (see above).
   RANSAC high-breakdown start: equivalent to `init = ransac_lme4(formula,
   data)$fit` with default `K = 200`, `sub_frac = 0.5`. Errors with
   a clear message if no subsample fit succeeds.
+
+- **`size_obr = FALSE`** for `rlmer()`, an opt-in experiment, off by
+  default. When `TRUE`, the size-controlling weight `w_delta` in the
+  block-diagonal variance-components scoring equation is replaced by
+  the Hampel-OBR form
+  $w_\tau(d) = \min(1, b_\tau / |d - s\kappa - a|)$ (Stahel 1987;
+  Hampel et al. 1986), with $b_\tau$ from the `rho.sigma.b` tuning
+  constant and $a$ fixed by Fisher consistency under $\chi^2_s$. It
+  has no effect for diagonal $V_b$ (block size 1). Documented in
+  `?rlmer`, tested by `tests/stahel-obr.R`, and available to
+  simulation studies as `fitDatasets_rlmer_DAStau_sizeOBR`.
+
+  **Setting it `TRUE` is not a recommendation.** The default
+  finite-difference `w_delta` is not Hampel-OBR-optimal at the central
+  model, and this option does recover asymptotic OBR efficiency for
+  the variance-component magnitudes, but the gain at matched
+  gross-error sensitivity is a typically modest 1-2 percentage points.
+  The default is unchanged and Proposal-II remains the default
+  everywhere. The option exists so the comparison can be made rather
+  than argued about; the shape weight, by contrast, is already
+  OBR-optimal and was left alone.
 
 ### Regression suite
 

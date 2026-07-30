@@ -93,16 +93,32 @@ terms is returned (used to speed up tests). When \code{doFit = TRUE}, the
 default, the model is fit immediately.}
 
 \item{init}{optional lmerMod- or rlmerMod-object to use for starting values,
-a list with elements \sQuote{fixef}, \sQuote{u}, \sQuote{sigma},
-\sQuote{theta}, the string \code{"ransac"}, or a function producing an
-lmerMod object. When \code{init = "ransac"}, the high-breakdown RANSAC
-start is obtained by calling \code{\link{ransac_lme4}(formula, data)} with
-its default \code{K = 200} subsamples and \code{sub_frac = 0.5}; this is
-useful to dodge phony local minima (e.g. random-effect correlations pinned
-at \eqn{\pm 1}) with redescending psi-functions. The string form is random
-(not reproducible without an outer \code{set.seed}); for fine control of
-\code{K}, \code{sub_frac}, or \code{seed}, use \code{\link{rlmer_ransac}}
-or pass \code{init = ransac_lme4(formula, data, ...)$fit} explicitly.}
+  a list with elements \sQuote{fixef}, \sQuote{u}, \sQuote{sigma},
+  \sQuote{theta}, the string \code{"ransac"}, or a function producing an
+  lmerMod object.
+
+  \strong{An lmerMod or rlmerMod passed here supplies the model, not only
+  the starting values}: the working object is built from it, so
+  \code{formula} and \code{data} no longer have any effect. Pass such an
+  object only when it was fitted on the same data; a warning is issued if
+  its number of observations does not match \code{nrow(data)}. To start
+  from values obtained elsewhere while keeping the model given by
+  \code{formula} and \code{data}, use the list form. Its components are
+  optional --- whatever is omitted keeps the value from the internal
+  \code{lmer} initialisation, which is the right choice for \sQuote{u}
+  when the values come from a fit on different observations.
+
+  When \code{init = "ransac"}, the high-breakdown RANSAC
+  start is obtained by calling \code{\link{ransac_lme4}(formula, data)} with
+  its default \code{K = 200} subsamples and \code{sub_frac = 0.5}. Its
+  purpose is to raise the breakdown point of the starting value, which is
+  what makes redescending psi-functions usable: their estimating equations
+  are non-convex, so a low-breakdown start can be drawn to a bad local
+  solution. \code{\link{rlmer}} takes
+  \sQuote{fixef}, \sQuote{sigma} and \sQuote{theta} from that fit and fits
+  the model on the full \code{data}. The string form is random
+  (not reproducible without an outer \code{set.seed}); for fine control of
+  \code{K}, \code{sub_frac}, or \code{seed}, use \code{\link{rlmer_ransac}}.}
 
 \item{size_obr}{logical scalar; if \code{TRUE} (default \code{FALSE}),
 the size-controlling weight \code{w_delta} in the block-diagonal
@@ -277,6 +293,23 @@ The \code{lmerNoFit} function can be used to get trivial starting values.
 This is mainly used to verify the algorithms to reproduce the fit by
 \code{\link[lme4]{lmer}} when starting from trivial initial values. } }
 }
+\section{Prior weights}{
+ \code{weights} is passed through to
+  \code{\link[lme4]{lmer}} and has the usual meaning,
+  \eqn{\mathrm{Var}(e_i) = \sigma^2 / w_i}. \strong{Weighted
+  \code{method = "DASvar"} fits made with robustlmm 3.2-0 to 3.4-5
+  are wrong and should be refitted}: the Design Adaptive Scale
+  counted the prior weights twice, so \eqn{\hat\sigma}, the
+  variance components and every standard error derived from them
+  were biased by an amount that depended on the scale the weights
+  happened to be supplied on. The default \code{method = "DAStau"}
+  was affected only through its starting value, and in practice
+  only at \code{rho.e = rho.b = cPsi}. Unweighted fits are
+  unaffected in every version. See the 3.5.0 entry of
+  \code{news(package = "robustlmm")} for the magnitudes and the
+  measured exposure of each method.
+}
+
 \examples{
 ## dropping of VC
 system.time(print(rlmer(Yield ~ (1|Batch), Dyestuff2, method="DASvar")))

@@ -1,3 +1,4 @@
+% !Rnw weave = Sweave
 \documentclass[nojss]{jss}
 \usepackage{rlmer}
 %\VignetteIndexEntry{Replication Code For Simulation Studies}

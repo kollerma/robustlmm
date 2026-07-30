@@ -255,6 +255,20 @@ calcTau <- function(a, s, rho.e, rho.sigma.e, pp,
         if (!check) {
             it <- 0
             conv <- FALSE
+            ## tau <= 1 is a constraint on the ANSWER, not on where the
+            ## iteration may start: `tau[i] <= 1` in the loop condition
+            ## below also blocked the very first step whenever the
+            ## starting value came in above 1, so the fixed point was
+            ## never solved and the post-loop clamp pinned tau at
+            ## exactly 1.  That is how the weighted-DASvar tau^2 bug
+            ## (WS24, fixed in 3.5.0) leaked into DAStau fits as well:
+            ## the DASvar formula is also DAStau's initial value, and
+            ## the double-counted prior weights pushed it above 1 for
+            ## every observation with w_i > 1.  Starting the iteration
+            ## from min(tau, 1) keeps the constraint and is a no-op
+            ## whenever the initial value already satisfies it, which
+            ## it now always does.
+            if (tau[i] > 1) tau[i] <- 1
             while(!conv && (it <- it + 1) < max.it && tau[i] <= 1) {
                 tau0 <- tau[i]
                 tau[i] <- fun(tau0, a_i, s_i)

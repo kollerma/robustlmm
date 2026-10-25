@@ -24,8 +24,8 @@
 ## observed statistics (the convention of the other results files here:
 ## per-replicate estimates and decisions, not raw bootstrap draws) plus
 ## the summary rates of the adversarial sweep (small J, uncentered x,
-## slope-direction and observation-level contamination) cited in
-## ?anova.rlmerMod. Original prototype study: robust-score-test.R +
+## slope-direction and observation-level contamination), also cited in
+## the 3.5.0 feature vignette (via vignettes/precompute-3.5.0.R). Original prototype study: robust-score-test.R +
 ## robust-score-test-phase2.R in the robustlmm-open-problems archive
 ## (statistic verified identical to the package implementation in
 ## robust-score-test-package-crosscheck.R).

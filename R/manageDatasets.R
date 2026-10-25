@@ -1,5 +1,5 @@
 ##' This method can be used to bind multiple datasets generated using different
-##' random genrators into one large dataset. The underlying dataset needs to be
+##' random generators into one large dataset. The underlying dataset needs to be
 ##' the same.
 ##' @title Bind Generated Datasets
 ##' @param ... multiple datasets to be bound together

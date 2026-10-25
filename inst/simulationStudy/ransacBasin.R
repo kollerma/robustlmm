@@ -39,6 +39,16 @@
 ##    => the warning text overclaims "possibly phony basin"; reword to the
 ##    beta-support guarantee, and/or add a direct rho-phony check
 ##    (warn when |rho-hat| -> 1 / the RE covariance is near-singular).
+## ---- RE-RUN 2026-09-04: half-weight radius (robustlmm > 3.5.0-2) --------
+## ransac_basin_radius() now returns r* = s_1/2 sigma / max_j ||x_j|| with
+## s_1/2 = 1.410 for the bisquare (sleepstudy r*: 6.6 -> 4.0), replacing
+## the support-preservation radius c sigma / (2 max||x_j||). Same design
+## (500 reps/gen, K<=100, 5 cores, 21.3 min): pooled P(warn | phony) =
+## 0.438, P(warn | not phony) = 0.563 (with the old radius at 3.5.0-2:
+## 0.227 / 0.327). The gate fires about twice as often but stays
+## non-discriminating for the rho-phony failure, so finding 2 stands; the
+## radius only changes the diagnostic, not the fits (phony rates and slope
+## RMSE per generator are identical to the 3.5.0-2 run).
 ## ----------------------------------------------------------------------
 
 suppressMessages({

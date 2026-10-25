@@ -33,7 +33,7 @@ linear function outside.
 The \bold{smoothed Huber \eqn{\psi}{psi}-function} is very similar to the
 regular Huber \eqn{\psi}{psi}-function. Instead of a sharp bend like the
 Huber function, the smoothed Huber function bends smoothly. The first tuning
-contant, k, can be compared to the tuning constant of the original Huber
+constant, k, can be compared to the tuning constant of the original Huber
 function. The second tuning constant, s, determines the smoothness of the
 bend.
 }

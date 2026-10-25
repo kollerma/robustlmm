@@ -13,7 +13,7 @@ quit()
 ## 5. Pairwise anova(fit0, fit1, ddf=) F-test; DenDF == summary df of the
 ##    single restricted coefficient.
 ## 6. vcov_type = "sandwich" + ddf = "satterthwaite" warns and falls back
-##    to the chi-square table.
+##    to the sandwich's default reference (ddf = "auto").
 
 suppressMessages(require(robustlmm))
 
@@ -59,10 +59,15 @@ ap <- anova(fit0, fit, ddf = "satterthwaite")
 stopifnot("DenDF" %in% colnames(ap),
           abs(ap["fit1", "DenDF"] - sw["gidB", "df"]) < 1e-6)
 
-## 6. sandwich + ddf -> warning + chi-square fallback
+## 6. sandwich + ddf -> warning + the sandwich's default reference
+warned <- FALSE
 as <- withCallingHandlers(
     anova(fit, vcov_type = "sandwich", ddf = "satterthwaite"),
-    warning = function(w) invokeRestart("muffleWarning"))
-stopifnot(identical(colnames(as), c("Df", "Chisq", "Pr(>Chisq)")))
+    warning = function(w) {
+        if (grepl("only available with", conditionMessage(w))) warned <<- TRUE
+        invokeRestart("muffleWarning")
+    })
+aa <- anova(fit, vcov_type = "sandwich")
+stopifnot(warned, identical(as, aa))
 
 cat("anova-satterthwaite-df.R: all checks passed\n")

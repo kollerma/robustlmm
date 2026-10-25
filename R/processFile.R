@@ -189,7 +189,7 @@ getValuesOrNa <-
 ##'   to save.
 ##' @return The list of all processed results merged together.
 ##'
-##'   To help reproduciblility, the output of \code{toLatex(sessionInfo(),
+##'   To help reproducibility, the output of \code{toLatex(sessionInfo(),
 ##'   locale = FALSE)} is stored in the \code{sessionInfo} attribute.
 ##' @author Manuel Koller
 ##' @export
@@ -444,7 +444,7 @@ createSessionInfoString <- function() {
 ##'   to save.
 ##' @return The list of all processed results merged together.
 ##'
-##'   To help reproduciblility, the output of \code{toLatex(sessionInfo(),
+##'   To help reproducibility, the output of \code{toLatex(sessionInfo(),
 ##'   locale = FALSE)} is stored in the \code{sessionInfo} attribute.
 ##' @seealso \code{\link{saveDatasets}}, \code{\link{processFile}}
 ##' @author Manuel Koller

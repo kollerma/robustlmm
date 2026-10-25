@@ -10,7 +10,7 @@ quit()
 ##    critical value (half-width / se) matches exactly.
 ## 3. The t-based CI is wider than the z-based CI (finite df).
 ## 4. vcov_type = "sandwich" + df = "satterthwaite" warns and falls back
-##    to the z-quantile (identical to the plain sandwich CI).
+##    to the sandwich's default (identical to the plain sandwich CI).
 ## 5. A crossed-RE fit now gets finite (CGM multiway) df (WS17), so its
 ##    t-based CI is wider than the z-based CI -- no fallback, no error.
 
@@ -44,13 +44,13 @@ stopifnot(max(abs(critt - qt(1 - a, sw[, "df"]))) < 1e-8)
 ## 3. t CI wider than z CI everywhere
 stopifnot(all((cit[, 2] - cit[, 1]) > (ciz[, 2] - ciz[, 1])))
 
-## 4. sandwich + satterthwaite -> warning + z fallback
+## 4. sandwich + satterthwaite -> warning + the sandwich's default
 cs <- withCallingHandlers(
     confint(fit, method = "Wald", vcov_type = "sandwich",
             df = "satterthwaite"),
     warning = function(w) invokeRestart("muffleWarning"))
-cs_z <- confint(fit, method = "Wald", vcov_type = "sandwich")
-stopifnot(max(abs(cs - cs_z)) < 1e-12)
+cs_a <- confint(fit, method = "Wald", vcov_type = "sandwich")
+stopifnot(max(abs(cs - cs_a)) < 1e-12)
 
 ## 5. crossed REs -> finite df via the CGM multiway covariance (WS17):
 ##    t-based CI wider than z, computed without error

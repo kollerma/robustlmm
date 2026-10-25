@@ -9,7 +9,7 @@ ransac_lme4(
   data,
   K = 200L,
   sub_frac = 0.5,
-  scale_fn = robustbase::Qn,
+  scale_fn = NULL,
   adaptive = TRUE,
   patience = 50L,
   K_min = 50L,
@@ -33,7 +33,14 @@ count.}
 \item{sub_frac}{fraction of the data per subsample (default 0.5).}
 
 \item{scale_fn}{function from a numeric residual vector to a
-scalar scale. Default \code{\link[robustbase]{Qn}}.}
+scalar scale, used to rank the candidate fits. The default
+(\code{NULL}) is the bisquare M-scale of the residuals about zero
+(breakdown point 1/2). It is centred: a candidate whose predictions
+are off by a constant scores worse than the correct one, which
+\code{\link[robustbase]{Qn}} (the default before version 3.5.1) cannot
+detect; \code{scale_fn = robustbase::Qn} reproduces the earlier
+ranking. See the section \dQuote{Ranking RANSAC candidates} of
+\code{vignette("simulationStudies")}.}
 
 \item{adaptive}{logical (default \code{TRUE}); stop drawing
 subsamples once the best score has not improved by more than
@@ -87,6 +94,19 @@ For \code{K} random subsamples of the data, fit a classical
 scale of residuals computed on the \emph{full} data, and return
 the lmer fit minimising that score.
 
+The residuals are conditional: clusters in the subsample keep their
+predicted random effects, the others get none. A contaminated cluster
+inside the subsample is therefore absorbed by its own random effect, and
+under cluster-level contamination the start's between-cluster
+coefficients can be poor (see the section \dQuote{Ranking RANSAC
+candidates} of \code{vignette("simulationStudies")}).
+
+The breakdown point any start can give the fixed effects is limited
+by the design: with categorical predictors many observations lie on one
+hyperplane through the origin, and the ceiling drops (to about 1/4 for
+a balanced two-level factor with an intercept); see
+\code{\link{design_breakdown}}.
+
 The motivation is that for redescending psi-functions
 (e.g. \code{\link{lqqPsi}}, the recommended redescender, or the
 faster-redescending \code{\link{bisquarePsi}}) the \code{\link{rlmer}}
@@ -133,6 +153,12 @@ subsampling.
   refinement: a redescending psi can zero-weight observations back into
   a rank-deficient design (Koller and Stahel 2017, Remark 2), which
   \code{\link{rlmer_ransac}} checks for and warns about.
+}
+
+\section{Lifecycle}{
+
+  \strong{Experimental.} The interface and the results may change in a
+  later version.
 }
 
 \examples{

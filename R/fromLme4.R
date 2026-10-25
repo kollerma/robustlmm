@@ -187,17 +187,14 @@ globalVariables("forceSymmetric", add=TRUE)
 ##' linearised model-based covariance). With \code{type = "sandwich"},
 ##' returns the robust cluster-sandwich \code{\link{vcov_sandwich}}.
 ##'
-##' The cluster sandwich is exact for a single (nested) grouping factor;
-##' for crossed factors it is approximate (a warning is issued, see
-##' \code{\link{vcov_sandwich}}).
-##'
-##' \strong{Small-J caveat for the sandwich.} The G1 correction is
-##' necessary but not sufficient at very small \eqn{J}: in a
-##' simulation study sandwich CI coverage drops to ~0.89 at \eqn{J =
-##'   8} (vs. nominal 0.95). \code{vcov_sandwich} emits a warning for
-##' \eqn{J < 20}; for inference at small \eqn{J} prefer \code{type =
-##'   "default"} or pair the sandwich CI with a bootstrap calibration
-##' (e.g. \code{confintROB}).
+##' The cluster sandwich is exact when every grouping factor is nested
+##' within the clusters and approximate for crossed factors (with a
+##' warning). With few clusters the default G1 sandwich is biased down for
+##' between-cluster coefficients; \code{correction = "CR2"} is the
+##' bias-reduced version, which \code{\link[=anova.rlmerMod]{anova}} and
+##' \code{\link[=confint.rlmerMod]{confint}} use for \code{vcov_type =
+##' "sandwich"} (see \code{\link{vcov_sandwich}}). \code{vcov_sandwich}
+##' warns for \eqn{J < 20} with \code{"G1"} or \code{"none"}.
 ##'
 ##' @param object An \code{rlmerMod} object.
 ##' @param type \code{"default"} (the lme4-inherited linearised vcov; the
@@ -208,20 +205,27 @@ globalVariables("forceSymmetric", add=TRUE)
 ##'   grouping factor), a character string naming a grouping factor of the
 ##'   model, or a length-\code{n} vector of cluster memberships.
 ##' @param correction When \code{type = "sandwich"}, \code{"G1"} (default,
-##'   applies the \eqn{J/(J-1)} small-sample scaling) or \code{"none"}.
+##'   applies the \eqn{J/(J-1)} small-sample scaling), \code{"none"},
+##'   \code{"CR2"} (bias-reduced) or \code{"CR3"} (approximate
+##'   leave-one-cluster-out jackknife); see \code{\link{vcov_sandwich}}.
 ##' @param ... Additional arguments passed to the default \code{vcov}
 ##'   method (only used when \code{type = "default"}).
 ##' @return A \eqn{p \times p} covariance matrix for \eqn{\hat{\beta}}.
 ##' @seealso \code{\link{vcov_sandwich}}
 ##' @importFrom stats vcov
+##' @section Lifecycle:
+##'   Stable.
 ##' @export
 vcov.rlmerMod <- function(object,
                           type = c("default", "sandwich"),
                           cluster = NULL,
-                          correction = c("G1", "none"),
+                          correction = c("G1", "none", "CR2", "CR3"),
                           ...) {
     type <- match.arg(type)
     if (type == "default") {
+        if (!is.null(cluster) || !missing(correction))
+            stop("'cluster' and 'correction' are used only with ",
+                 "type = \"sandwich\"", call. = FALSE)
         return(.vcov_merMod_default(object, ...))
     }
     correction <- match.arg(correction)
@@ -388,6 +392,8 @@ reFormHack <- function(re.form,ReForm,REForm,REform) {
 ##' @seealso \code{\link[=vcov.rlmerMod]{vcov}}
 ##' @importFrom stats predict qnorm
 ##' @importFrom reformulas mkReTrms findbars
+##' @section Lifecycle:
+##'   Stable.
 ##' @export
 ## FIXME: the point-prediction path .predictRlmerPoint is slightly
 ##        modified from lme4 version 1.0-6. Newer versions have an
@@ -403,6 +409,7 @@ predict.rlmerMod <- function(object, newdata=NULL,
                              level = 0.95,
                              ...) {
     interval <- match.arg(interval)
+    .check_level(level)
     ## Forward to .predictRlmerPoint preserving the user's missingness
     ## pattern -- otherwise unconditionally passing type = type would
     ## trigger the "type argument ignored" warning even when the caller
@@ -478,7 +485,10 @@ predict.rlmerMod <- function(object, newdata=NULL,
     if (is.null(newdata) && is.null(REform)) {
         ## raw predict() call, just return fitted values (inverse-link if appropriate)
         if (isLMM(object) || isNLMM(object)) {
-            pred <- fitted(object)
+            ## not fitted(): that is already padded for na.exclude and
+            ## would be padded a second time below
+            pred <- object@resp$mu
+            names(pred) <- rownames(model.frame(object))
         } else { ## inverse-link
             pred <-  switch(type,response=object@resp$mu, ## fitted(object),
                             link=object@resp$eta)  ## fixme: getME() ?

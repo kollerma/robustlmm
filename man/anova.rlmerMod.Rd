@@ -9,11 +9,13 @@
   ...,
   test = c("Wald", "boot", "score"),
   null = c("parametric", "robust"),
+  nuisance = c("threshold", "raw"),
   vcov_type = c("default", "sandwich"),
-  ddf = c("none", "satterthwaite"),
+  ddf = c("auto", "none", "satterthwaite", "cluster"),
   nsim = 1000L,
   seed = NULL,
-  verbose = FALSE
+  verbose = FALSE,
+  cluster = NULL
 )
 }
 \arguments{
@@ -21,40 +23,50 @@
 
 \item{...}{A second \code{rlmerMod} object for pairwise comparison.}
 
-\item{test}{One of \code{"Wald"} (default; closed form for nested
-fixed-effects-only tests), \code{"boot"} (parametric bootstrap
-quasi-deviance; the default valid path for variance-component
-tests), or \code{"score"} (experimental one-sided robust score
-test for a single added variance component, calibrated by a
-score-only parametric bootstrap; see Details for its scope and
-validation record).}
+\item{test}{\code{"Wald"} (default; nested fixed-effects models),
+\code{"boot"} (parametric bootstrap; the default for
+variance-component tests) or \code{"score"} (experimental; see
+Details).}
 
-\item{null}{Bootstrap null generation for \code{test = "boot"}.
-\code{"parametric"} (default) generates from \code{fit0}'s robust
-estimates (the exact current behaviour). \code{"robust"} is an
-experimental contamination-robust null that generates from a cleaned
-null fit (see Details); it only affects the variance-component
-bootstrap path and is ignored for the Wald paths.}
+\item{null}{Bootstrap generator for \code{test = "boot"}:
+\code{"parametric"} (default) generates from \code{fit0}'s estimates,
+\code{"robust"} (experimental) from a refit without heavily
+downweighted groups (see Details).}
 
-\item{vcov_type}{Forwarded to \code{\link[=vcov.rlmerMod]{vcov}}
-for the Wald paths; ignored for the bootstrap.}
+\item{nuisance}{How the \code{test = "boot"} generator treats variance
+components of the null model estimated close to zero:
+\code{"threshold"} (default) sets a component to zero when its
+relative variance is below \eqn{\sqrt{2\log J}} times its standard
+error at zero (\eqn{J} the number of groups), which keeps the
+bootstrap consistent when a nuisance component is zero (Guedon, Baey
+and Kuhn 2024); \code{"raw"} uses the estimates as they are (the
+behaviour before version 3.5.1). Compound-symmetric and AR(1) blocks are
+never thresholded. See the section \dQuote{Near-zero nuisance variance
+components in the bootstrap test} of \code{vignette("simulationStudies")}.}
 
-\item{ddf}{Denominator degrees of freedom for the Wald paths.
-\code{"none"} (default) reports the chi-square table as before;
-\code{"satterthwaite"} reports an F-test with a Satterthwaite
-denominator df (the multivariate \code{lmerTest::contestMD}
-generalisation, built on the robust IF-based covariance of the
-variance parameters). It requires \code{vcov_type =
-"default"} and a single grouping factor; otherwise it warns and
-falls back to the chi-square table.}
+\item{vcov_type}{Covariance for the Wald paths, passed to
+\code{\link[=vcov.rlmerMod]{vcov}}.}
 
-\item{nsim}{Bootstrap replicates when \code{test = "boot"} or
-\code{test = "score"}; default 1000 for \code{"boot"} and 199
-for \code{"score"} (whose null-only refits are ~4x cheaper).}
+\item{ddf}{Reference distribution for the Wald paths. \code{"auto"}
+(default): \code{"none"} for \code{vcov_type = "default"} and
+\code{"cluster"} for \code{vcov_type = "sandwich"}. \code{"none"}:
+\eqn{\chi^2}. \code{"satterthwaite"}: \eqn{F} with robust
+Satterthwaite denominator degrees of freedom (default covariance and a
+single grouping factor only; otherwise the default reference, with a
+warning). \code{"cluster"}: the CR2 sandwich with approximate Hotelling
+degrees of freedom (sandwich only; see Details).}
 
-\item{seed}{Optional RNG seed for reproducibility of the bootstrap.}
+\item{nsim}{Bootstrap replicates; default 1000 for \code{test = "boot"}
+and 199 for \code{test = "score"}.}
+
+\item{seed}{Optional RNG seed for the bootstrap.}
 
 \item{verbose}{Bootstrap progress messages.}
+
+\item{cluster}{For \code{vcov_type = "sandwich"}, the clusters, passed
+to \code{\link{vcov_sandwich}}; needed for models with several
+grouping factors, e.g. \code{cluster = "school"} for
+\code{(1 | school/class)}.}
 }
 \value{
 An \code{"anova"} data.frame; the bootstrap path attaches
@@ -66,145 +78,108 @@ An \code{"anova"} data.frame; the bootstrap path attaches
 \description{
 Three modes.
 \describe{
-  \item{Single fit \code{anova(fit)}}{returns a per-term robust Wald
-    chi-square table from \code{vcov(fit, type = vcov_type)}. Each
-    term is tested marginally as
-    \eqn{T_t = \hat\beta_t^\top \hat V_t^{-1} \hat\beta_t \sim
-      \chi^2_{k_t}} under \eqn{H_0: \beta_t = 0}.}
-  \item{Nested fits differing only in fixed effects (default
-    \code{test = "Wald"})}{robust Wald restriction test on the
-    extra coefficients. The same \eqn{V} used by the single-fit
-    table is used here; \code{vcov_type = "sandwich"} carries through.}
-  \item{Nested fits differing in random-effects structure}{the
-    Wald and score asymptotics are invalid (boundary problem; see
-    Self-Liang 1987 and Koller 2026 paper 2). \code{test = "Wald"}
-    warns and switches to the parametric bootstrap automatically;
-    \code{test = "boot"} is the default valid path. The bootstrap
-    simulates \code{nsim} datasets from the fitted central LMM at
-    \code{fit0}'s estimates, refits both rlmer models per
-    replicate, and uses the quasi-deviance difference
-    \eqn{D = 2 \sum [\rho_e(r_i^{(0)}/\hat\sigma_0) -
-      \rho_e(r_i^{(1)}/\hat\sigma_1)]} as the discrepancy
-    statistic (Heritier and Ronchetti 1994; Cantoni and Ronchetti
-    2001; Heritier, Cantoni, Copt and Victoria-Feser 2009 sec. 5).
-    For the special case of a \emph{single added variance
-    component} the experimental \code{test = "score"} offers a
-    contamination-robust alternative (see Details).}
+  \item{Single fit \code{anova(fit)}}{a per-term robust Wald table:
+    each term is tested with \eqn{\hat\beta_t^\top \hat V_t^{-1}
+    \hat\beta_t}, \eqn{\hat V} from \code{vcov(fit, type = vcov_type)},
+    against \eqn{\chi^2} (default covariance) or a small-sample
+    \eqn{F} reference (sandwich; see \code{ddf}).}
+  \item{Nested fits differing only in the fixed effects}{a robust Wald
+    test of the extra coefficients with the same covariance.}
+  \item{Nested fits differing in the random effects}{Wald asymptotics
+    fail on the boundary of the parameter space (Self and Liang 1987),
+    so \code{test = "Wald"} switches to \code{test = "boot"}: a
+    parametric bootstrap from \code{fit0}'s estimates of the
+    quasi-deviance difference \eqn{D = 2 \sum_i
+    [\rho_e(r_i^{(0)}/\hat\sigma_0) - \rho_e(r_i^{(1)}/\hat\sigma_0)]}
+    (Heritier and Ronchetti 1994; Cantoni and Ronchetti 2001; Heritier
+    et al. 2009).
+    \code{test = "score"} is an experimental robust score test for
+    added independent variance components.}
 }
+Only pairwise comparisons are implemented.
 }
 \details{
-Only pairwise comparison is implemented; chains \code{anova(fit0,
-fit1, fit2, ...)} are not yet supported.
+\strong{Sandwich covariance.} With few clusters the G1 cluster sandwich
+is biased down for between-cluster terms, and \eqn{\chi^2} tests based
+on it are anti-conservative. For \code{vcov_type = "sandwich"} the
+default reference is therefore the bias-reduced CR2 sandwich
+(\code{\link{vcov_sandwich}}; Bell and McCaffrey 2002) with the
+approximate Hotelling \eqn{F}-test of Pustejovsky and Tipton (2018),
+\eqn{F = (\eta - k + 1) W / (\eta k)} on \eqn{(k, \eta - k + 1)}
+degrees of freedom. It is much closer to its nominal level but can stay
+somewhat anti-conservative for between-cluster terms; see the section
+\dQuote{Small-sample references for the cluster sandwich} of
+\code{vignette("simulationStudies")}. CR2 needs every random effect
+nested within one cluster; otherwise the G1 sandwich with
+\eqn{F(k, J - 1)} is used, and the table heading says which. A term
+that a single cluster informs on its own (e.g. a factor level present
+in one cluster) gets no reference distribution (\code{NA}), with a
+warning.
 
-\strong{Small-J caveat for the sandwich.} \code{vcov_type =
-  "sandwich"} is markedly anti-conservative at small \eqn{J}: in
-a simulation study the pairwise Wald Type-I rate reached
-0.15-0.20 (vs. nominal 0.05) at \eqn{J = 8} and was still elevated
-at \eqn{J = 18}, returning to nominal only by \eqn{J \gtrsim 50}.
-\code{vcov_sandwich} emits a warning for \eqn{J < 20}; prefer
-\code{vcov_type = "default"} for hypothesis tests at small
-\eqn{J}.
+\strong{Bootstrap test (experimental).} \code{test = "boot"} holds its
+level under error contamination but is anti-conservative when whole
+groups are contaminated, because the bootstrap is generated from
+estimates those groups have biased. It warns when the null fit heavily
+downweights a group (smallest random-effect robustness weight below
+0.5). \code{null = "robust"} generates from a refit without the heavily
+downweighted groups instead (the observed statistic still uses all the
+data); it falls back to the plain generator when no group or more than
+half of the groups are flagged, when removing them would leave the
+design rank-deficient, or when the refit fails, and the table heading
+says which applied. When both fits put the tested variance on the
+boundary, \eqn{D} sits at its atom at zero and the p-value is 1. See the
+ANOVA section of \code{vignette("robustlmm-3.5.0")}.
 
-\strong{Subject-contamination caveat for the bootstrap
-(experimental).} The parametric-bootstrap quasi-deviance path
-(\code{test = "boot"}) is experimental --- it is currently the only
-exposed variance-component path. It calibrates correctly under clean
-Gaussian and heavy-tailed errors but is markedly anti-conservative
-when a subset of subjects is contaminated. In a simulation study with 10\% of subjects
-shifted by 5 standard errors (\code{shift_subj}), Type-I climbed
-to 0.13-0.24 (2.5-5x nominal) across \eqn{J \in \{8, 18, 50\}}.
-The mechanism: the bootstrap simulates from the fitted central
-LMM at \code{fit0}'s estimates, so any bias \code{fit0}'s
-\eqn{\hat\sigma_0, \hat\theta_0} picked up from the contaminated
-subjects propagates into a too-narrow bootstrap null. As an automatic
-guard, \code{anova(test = "boot")} now inspects the null fit's own
-random-effects robustness weights and \strong{warns} when a group is
-heavily downweighted (smallest weight below \eqn{0.5}) --- a direct
-signal that the fit treated that group as an outlier, so the bootstrap
-null may be poisoned. (The robust fit absorbs a contaminated group
-into a downweighted random effect, which is why
-\code{\link[=cooks.distance.rlmerMod]{cooks.distance}} --- an
-\emph{influence} measure --- does \emph{not} reliably flag it here:
-the downweighting that removes the bias also removes the influence.)
-When the warning fires, treat the p-value with caution.
-
-\strong{Experimental robust null (\code{null = "robust"}).} As a
-mitigation for the subject-contamination anti-conservativeness above,
-the bootstrap path accepts \code{null = "robust"}: instead of
-generating the parametric bootstrap from \code{fit0}'s raw estimates,
-it generates from a \emph{contamination-cleaned} null fit. Clusters the
-robust fit heavily downweights (smallest per-cluster random-effect
-weight below a tuned threshold, the same signal the automatic guard
-uses) are flagged, \code{fit0} is refitted with those clusters removed,
-and the bootstrap is generated from the resulting de-biased
-\eqn{(\hat\sigma, \hat\theta, \hat\beta)} (with the generator's
-\eqn{U_b = \Lambda(\theta)} rebuilt at the full cleaned \eqn{\hat\theta}
-vector). The observed discrepancy \eqn{D} is still
-taken from the original untrimmed fits, so the test uses all the data;
-only the bootstrap null generation is cleaned. If no cluster is
-flagged, more than half the clusters are flagged, trimming would leave
-the design rank-deficient (a dropped contrast level, a collapsed
-grouping factor, or a constant random-slope covariate --- checked by
-the same nonsingular-subsampling test used by the RANSAC initial
-estimator), or the trimmed refit fails, the call falls back to the
-plain parametric null (so on clean data \code{null = "robust"} closely
-matches \code{null = "parametric"}); the table heading states which
-case applied. In simulation this reduces the contamination-induced
-Type-I inflation at larger \eqn{J} while preserving power, at the cost
-of mild conservatism on clean data. It is \strong{experimental},
-validated by simulation rather than a finite-sample theorem; the table
-heading notes when the robust null was applied.
-
-\strong{Experimental robust score test (\code{test = "score"}).}
-For the common special case where the alternative adds exactly
-\emph{one independent scalar variance component} relative to the
-null --- e.g. \code{(1|g)} vs \code{(1|g) + (0 + x|g)}, or diagonal
-structures adding one component --- \code{test = "score"} runs a
-one-sided robust score test computed from the robust \emph{null}
-fit only and calibrated by a score-only parametric bootstrap that
-refits just the null model per replicate (roughly 4x cheaper than
-\code{test = "boot"}'s double refits; hence the smaller default
-\code{nsim = 199}). Per cluster \eqn{j}, the whitened marginal
-residuals \eqn{\tilde r_j = V_j^{-1/2}(y_j - X_j \hat\beta_0)} and
-the whitened tested direction \eqn{v_j = V_j^{-1/2} z_j} (with
-\eqn{V_j} the null fit's marginal covariance and \eqn{z_j} the
-added term's design column) give the bounded contribution
-\eqn{s_j = (v_j^\top \psi(\tilde r_j))^2 - \kappa_1 \|v_j\|^2}
-(\eqn{\psi} the fit's \code{rho.e} psi-function, \eqn{\kappa_1 =
-E[\psi(Z)^2]}); the statistic is the self-normalised cluster sum
-\eqn{S = \sum_j s_j / \sqrt{\sum_j (s_j - \bar s)^2}}, and the
-one-sided p-value is \eqn{(1 + \#\{S^* \ge S\})/(n_{\mathrm{eff}} +
-1)}. Because each \eqn{s_j} is psi-bounded, whole-cluster
-contamination shifts the statistic and its bootstrap reference law
-together instead of inflating the test: in simulation (Gaussian
-balanced designs, one scalar tested component; not a theorem)
-contaminated-null Type-I was 0.035 vs 0.115 for \code{test =
-"boot"} with 10\% of clusters shifted at \eqn{J = 50}, clean-null
-Type-I 0.045, and power 0.920 vs 0.900 --- with no null cleaning
-needed (raw vs cleaned generating parameters changed at most 1-2
-decisions in 600+ paired replicates, so \code{null = "robust"} is
-ignored and no downweighted-group warning is issued for this
-path). Across an adversarial sweep the pattern held: \eqn{J = 18}
-clean/contaminated 0.055/0.015, uncentered-\eqn{x} designs
-clean/contaminated 0.045/0.075, 5\% single-observation outliers
-0.060. \emph{Scope}: both fits on the same data with identical
-fixed effects and a single shared grouping factor, and the
-alternative adds exactly one uncorrelated scalar component
-(\code{length(theta)} differs by 1); anything else ---
-multi-component or correlated-slope alternatives, crossed or
-nested factors --- stops with an error, use \code{test = "boot"}
-there. \emph{Caveat}: contamination aligned with the tested
-direction is indistinguishable from the alternative for any test
-with power; inspect the attached per-cluster contributions
-(\code{attr(., "boot")$s_j}; the largest values identify the
-clusters driving the statistic) and cluster diagnostics
-(\code{cooks.distance(fit, groups = )},
-\code{\link[=hatvalues.rlmerMod]{hatvalues}}) when a rejection is
-suspect. \strong{Experimental}: simulation-validated, not proven;
-the deviance bootstrap \code{test = "boot"} remains the default
-variance-component path.
+\strong{Score test (experimental).} \code{test = "score"} uses the
+robust null fit only. Per cluster \eqn{j} it forms the bounded
+contribution \eqn{s_j = (v_j^\top \psi(\tilde r_j))^2 - \kappa_1
+\|v_j\|^2}, with \eqn{\tilde r_j} the whitened marginal residuals,
+\eqn{v_j} the whitened design column of a tested component and
+\eqn{\kappa_1 = E[\psi(Z)^2]}{kappa_1 = E[psi(Z)^2]}, and calibrates
+the statistic by a parametric bootstrap that refits only the null
+model. One added
+component is tested with the self-normalised sum of the \eqn{s_j};
+several are tested jointly with the cone (chi-bar) statistic of the
+whitened score vector, with a warning when the tested directions are
+nearly collinear. Scope: both fits on the same data, with the same fixed
+effects and a single grouping factor, and an alternative that adds
+uncorrelated scalar components; otherwise it stops with an error.
+Contamination aligned with a tested direction cannot be distinguished
+from the alternative; the per-cluster contributions
+(\code{attr(., "boot")$s_j}) show which clusters drive a rejection.
+Simulation results: the ANOVA section of
+\code{vignette("robustlmm-3.5.0")} (one component) and the section
+\dQuote{Several added variance components} of
+\code{vignette("simulationStudies")}.
 }
+\section{Lifecycle}{
+
+  The Wald tests are stable. Experimental, and subject to change:
+  \code{test = "score"}, and for \code{test = "boot"} the options
+  \code{null = "robust"} and \code{nuisance = "threshold"} (its
+  default).
+}
+
 \references{
+Self SG, Liang KY (1987). Asymptotic properties of maximum
+  likelihood estimators and likelihood ratio tests under nonstandard
+  conditions. \emph{Journal of the American Statistical Association}
+  82(398), 605--610.
+
+Guedon T, Baey C, Kuhn E (2024). \emph{Bootstrap test
+  procedure for variance components in nonlinear mixed effects models
+  in the presence of nuisance parameters and a singular Fisher
+  information matrix}. arXiv:2306.10779.
+
+Bell RM, McCaffrey DF (2002). Bias reduction in standard
+  errors for linear regression with multi-stage samples. \emph{Survey
+  Methodology} 28(2), 169--181.
+
+Pustejovsky JE, Tipton E (2018). Small-sample methods for
+  cluster-robust variance estimation and hypothesis testing in fixed
+  effects models. \emph{Journal of Business & Economic Statistics}
+  36(4), 672--683.
+
 Heritier S, Ronchetti E (1994). \emph{Robust
   bounded-influence tests in general parametric models}. JASA
   89(427): 897--904.

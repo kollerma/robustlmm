@@ -17,7 +17,7 @@
 ## reason). The convention here is to use sigma_hat from fit0 (the
 ## null) throughout.
 .quasi_deviance <- function(fit, scale = .sigma(fit)) {
-    r_std <- residuals(fit) / scale
+    r_std <- fit@resp$wtres / scale
     2 * sum(fit@rho.e@rho(r_std))
 }
 
@@ -43,17 +43,83 @@
          nested = all(nms0 %in% nms1))
 }
 
-## Per-term robust Wald test from a single rlmer fit. ddf = "none"
-## (default) gives the chi-square table; ddf = "satterthwaite" gives an
-## F-test with a Satterthwaite denominator df per term (default vcov).
+## Small-J cluster-sandwich reference (theory-methods F3): the CR2
+## (bias-reduced) sandwich with the approximate-Hotelling F test of
+## Pustejovsky and Tipton (2018) -- Bell-McCaffrey t for one df. When CR2 is
+## not defined (random effects not nested within clusters) the G1 sandwich
+## with F(k, J - 1) is used instead.
+.cluster_vcov <- function(fit, cluster = NULL) {
+    ## only the "random effects not nested within the clusters" condition
+    ## falls back to G1; any other error surfaces. Warnings of the CR2
+    ## attempt are held back until it succeeds (the G1 fallback re-issues
+    ## the cluster warnings).
+    held <- list()
+    V <- tryCatch(withCallingHandlers(
+                      .vcov_sandwich(fit, cluster = cluster, correction = "CR2"),
+                      warning = function(w) {
+                          held[[length(held) + 1L]] <<- w
+                          invokeRestart("muffleWarning")
+                      }),
+                  rlmer_cr_not_nested = function(e) NULL)
+    if (is.null(V))
+        return(.vcov_sandwich(fit, cluster = cluster, correction = "G1"))
+    for (w in held) warning(w)
+    V
+}
+## Reference used by ddf = "auto" for vcov_type = "sandwich" (F3/F3b
+## decision in research/theory-methods).
+.ddf_auto_sandwich <- "cluster"
+
+## F statistic and denominator df for the Wald statistic W of L beta = 0
+## (L: k x p) with a .cluster_vcov() covariance. A contrast without an
+## estimable sandwich variance (eta = NA; .vcov_sandwich has warned) or
+## with eta <= k - 1 gets NA; fewer than one denominator df warns.
+.cluster_Fref <- function(W, L, V, label = "") {
+    k <- nrow(rbind(L))
+    if (identical(attr(V, "correction"), "CR2")) {
+        eta <- .cr2_df(V, L)
+        df2 <- eta - k + 1
+        if (is.finite(eta) && df2 <= 0)
+            warning(sprintf(paste0("%s: the cluster sandwich has %.2g ",
+                                   "effective degrees of freedom for %d ",
+                                   "numerator df; no F reference (NA)."),
+                            label, eta, k), call. = FALSE)
+        if (!is.finite(df2) || df2 <= 0)
+            return(list(F = NA_real_, df2 = NA_real_))
+        if (df2 < 1)
+            warning(sprintf(paste0("%s: %.2g denominator df -- the ",
+                                   "clusters carry almost no information ",
+                                   "on this term."), label, df2),
+                    call. = FALSE)
+        return(list(F = W * df2 / (eta * k), df2 = df2))
+    }
+    list(F = W / k, df2 = attr(V, "n.clusters") - 1)
+}
+.cluster_heading <- function(V) {
+    if (identical(attr(V, "correction"), "CR2"))
+        sprintf(paste0("  vcov_type = \"sandwich\" (CR2, %d clusters); ",
+                       "denominator df: approximate Hotelling ",
+                       "(Bell-McCaffrey for 1 df)"),
+                attr(V, "n.clusters"))
+    else
+        sprintf(paste0("  vcov_type = \"sandwich\" (G1: CR2 needs random ",
+                       "effects nested within clusters); denominator df: ",
+                       "J - 1 = %d"), attr(V, "n.clusters") - 1L)
+}
+
+## Per-term robust Wald test from a single rlmer fit. ddf = "none" gives the
+## chi-square table; ddf = "satterthwaite" an F-test with a Satterthwaite
+## denominator df per term (default vcov); ddf = "cluster" the small-J
+## cluster-sandwich F-test (.cluster_vcov / .cluster_Fref).
 .anova_single_wald <- function(fit, vcov_type = "default",
-                               ddf = "none", IF = NULL) {
+                               ddf = "none", IF = NULL, cluster = NULL) {
     mm     <- model.matrix(fit)
     assign <- attr(mm, "assign")
     tlabs  <- attr(terms(fit), "term.labels")
     hasInt <- attr(terms(fit), "intercept") == 1L
 
-    V  <- as.matrix(vcov(fit, type = vcov_type))
+    V  <- if (ddf == "cluster") .cluster_vcov(fit, cluster)
+          else as.matrix(vcov(fit, type = vcov_type, cluster = cluster))
     bh <- .fixef(fit)
     names(bh) <- colnames(mm)
 
@@ -68,22 +134,29 @@
     Df    <- integer(length(unique_aids))
     Chisq <- numeric(length(unique_aids))
     DenDF <- rep(NA_real_, length(unique_aids))
+    Fval  <- Chisq / pmax(Df, 1L)
     for (k in seq_along(unique_aids)) {
         idx <- which(assign == unique_aids[k])
         Df[k] <- length(idx)
         Vk <- V[idx, idx, drop = FALSE]
         bk <- bh[idx]
         Chisq[k] <- as.numeric(crossprod(bk, solve(Vk, bk)))
-        if (ddf == "satterthwaite") {
+        Fval[k]  <- Chisq[k] / Df[k]
+        if (ddf %in% c("satterthwaite", "cluster")) {
             L <- matrix(0, length(idx), p)
             L[cbind(seq_along(idx), idx)] <- 1
+        }
+        if (ddf == "satterthwaite") {
             fd <- tryCatch(.satterthwaite_Fdenom(fit, L, IF = IF),
                            error = function(e) list(df2 = NA_real_))
             DenDF[k] <- fd$df2
+        } else if (ddf == "cluster") {
+            fr <- .cluster_Fref(Chisq[k], L, V, label = term_names[k])
+            Fval[k]  <- fr$F
+            DenDF[k] <- fr$df2
         }
     }
-    if (ddf == "satterthwaite") {
-        Fval <- Chisq / Df
+    if (ddf %in% c("satterthwaite", "cluster")) {
         Pr   <- stats::pf(Fval, Df, DenDF, lower.tail = FALSE)
         out  <- data.frame(NumDF = Df, DenDF = DenDF,
                            `F value` = Fval, `Pr(>F)` = Pr,
@@ -92,6 +165,7 @@
         return(structure(out,
             heading = c(
                 "Robust Wald F-test for fixed effects (rlmer)",
+                if (ddf == "cluster") .cluster_heading(V) else
                 "  denominator df: Satterthwaite (IF-based), vcov_type = \"default\""),
             class = c("anova", "data.frame")))
     }
@@ -108,7 +182,7 @@
 ## Robust Wald restriction test for two nested rlmer fits that differ
 ## only in the fixed-effects design.
 .anova_pair_wald <- function(fit0, fit1, vcov_type = "default",
-                             ddf = "none", IF = NULL) {
+                             ddf = "none", IF = NULL, cluster = NULL) {
     extras <- .extra_fixed_cols(fit0, fit1)
     if (!extras$nested)
         stop("Models are not nested: fit0's fixed-effect columns ",
@@ -116,7 +190,8 @@
     if (length(extras$extra) == 0L)
         stop("Models share the same fixed-effect design; nothing to ",
              "test.", call. = FALSE)
-    V1   <- as.matrix(vcov(fit1, type = vcov_type))
+    V1   <- if (ddf == "cluster") .cluster_vcov(fit1, cluster)
+            else as.matrix(vcov(fit1, type = vcov_type, cluster = cluster))
     bh1  <- .fixef(fit1)
     nms1 <- colnames(fit1@pp$X)
     idx  <- match(extras$extra, nms1)
@@ -125,12 +200,19 @@
     Chi  <- as.numeric(crossprod(bk, solve(Vk, bk)))
     Df   <- length(idx)
     p0 <- fit0@pp$p; p1 <- fit1@pp$p
-    if (ddf == "satterthwaite") {
+    if (ddf %in% c("satterthwaite", "cluster")) {
         L <- matrix(0, length(idx), p1)
         L[cbind(seq_along(idx), idx)] <- 1
-        fd <- tryCatch(.satterthwaite_Fdenom(fit1, L, IF = IF),
-                       error = function(e) list(df2 = NA_real_))
-        Fval <- Chi / Df
+        if (ddf == "cluster") {
+            fr <- .cluster_Fref(Chi, L, V1,
+                                label = paste(extras$extra, collapse = ", "))
+            fd <- list(df2 = fr$df2)
+            Fval <- fr$F
+        } else {
+            fd <- tryCatch(.satterthwaite_Fdenom(fit1, L, IF = IF),
+                           error = function(e) list(df2 = NA_real_))
+            Fval <- Chi / Df
+        }
         Pr   <- stats::pf(Fval, Df, fd$df2, lower.tail = FALSE)
         out  <- data.frame(npar = c(p0, p1),
                            NumDF = c(NA_integer_, Df),
@@ -144,6 +226,7 @@
                 "Robust Wald restriction F-test (rlmer)",
                 sprintf("  H0: %s = 0",
                         paste(extras$extra, collapse = " = ")),
+                if (ddf == "cluster") .cluster_heading(V1) else
                 "  denominator df: Satterthwaite (IF-based), vcov_type = \"default\""),
             class = c("anova", "data.frame")))
     }
@@ -404,13 +487,152 @@
 ## parameters, y* = X beta0 + Z Lambda(theta0) (sigma0 z_b) + sigma0
 ## eps. Consumes exactly rnorm(q0) followed by rnorm(n), so extracting
 ## this helper leaves the callers' RNG streams (and hence seeded
-## p-values) bit-identical.
-.boot_sim_data <- function(data_obs, yname, Xb0, Z0, Ub0, sig0, n, q0) {
-    b_sim <- sig0 * as.numeric(Ub0 %*% rnorm(q0))
-    eps   <- rnorm(n, sd = sig0)
+## p-values) bit-identical. The draw itself is .sim_parametric(), the
+## generator of simulate(type = "parametric"): the callers add the offset
+## of the null model to Xb0 and pass its prior weights w, so the errors
+## have variance sigma0^2 / w, as the refits assume.
+.boot_sim_data <- function(data_obs, yname, Xb0, Z0, Ub0, sig0, n, q0,
+                           w = NULL) {
     d_sim <- data_obs
-    d_sim[[yname]] <- Xb0 + as.numeric(Z0 %*% b_sim) + eps
+    d_sim[[yname]] <- .sim_parametric(Xb0, Z0, Ub0, sig0, n, q0, w)
     d_sim
+}
+
+## ------------------------------------------------------------------
+## Thresholded bootstrap generator (Guedon, Baey and Kuhn 2024).
+##
+## When a nuisance variance component of the null model is estimated
+## near zero, generating the bootstrap from the raw estimate makes the
+## quasi-deviance bootstrap inconsistent: the null law of the statistic
+## depends on whether the nuisance component lies on the boundary, and
+## a small positive estimate puts the generator off the boundary. The
+## remedy is to set such components to exactly zero before generating,
+## with a threshold c_J -> 0 such that sqrt(J) c_J -> infinity (J the
+## number of groups). Machine-checked in the robustlmm theory notes
+## (Topic4.FaceSelection: zero_selected, positive_retained;
+## Topic4.ShrinkBootstrap: gbk_deviance_size). The weaker condition
+## J c_J -> infinity is not sufficient
+## (Topic4.FaceSelection.note_condition_insufficient).
+##
+## The threshold acts on the variance scale, where a zero component is
+## sqrt(J)-tight (the standard-deviation scale theta is only
+## J^(1/4)-tight at zero). Component c of a block is set to zero when
+## its relative variance tau_c = (L L')_cc is below lambda_J * se_c,
+## where se_c = sqrt(2 / sum_j ||z_jc||^4) is the Gaussian standard
+## error of tau_c at zero (z_jc = the design column of component c in
+## group j) and lambda_J = sqrt(2 log J). The retained components keep
+## their covariance; their Cholesky factor is rebuilt by a QR of the
+## retained rows of L (valid also when that covariance is singular).
+## cs / ar1 blocks are left unchanged: their structure ties the
+## components together.
+## ------------------------------------------------------------------
+.boot_threshold_theta <- function(fit0, theta,
+                                  lambda = function(J) sqrt(2 * log(J))) {
+    theta_new <- theta
+    thnames <- names(getME(fit0, "theta"))
+    Z <- t(fit0@pp$Zt)
+    struct <- tryCatch(.structuredCovInfo(fit0),
+                       error = function(e) vector("list", length(fit0@blocks)))
+    zeroed <- character(0)
+    info <- vector("list", length(fit0@blocks))
+    for (b in seq_along(fit0@blocks)) {
+        if (!is.null(struct[[b]])) next
+        B <- as.matrix(fit0@blocks[[b]])
+        d <- NROW(B)
+        idx <- fit0@idx[[b]]
+        J <- NCOL(idx)
+        if (J < 2L) next
+        nz <- B != 0
+        L <- matrix(0, d, d)
+        L[nz] <- theta[B[nz]]
+        tau <- rowSums(L^2)
+        z4 <- vapply(seq_len(d), function(cc) {
+            zc <- Z[, idx[cc, ], drop = FALSE]
+            sum(Matrix::colSums(zc^2)^2)
+        }, numeric(1))
+        se <- sqrt(2 / z4)
+        lam <- lambda(J)
+        zero <- is.finite(se) & tau < lam * se
+        info[[b]] <- list(tau = tau, se = se, lambda = lam, J = J,
+                          zero = zero, names = thnames[diag(B)])
+        if (!any(zero)) next
+        keep <- !zero
+        Lnew <- matrix(0, d, d)
+        if (any(keep)) {
+            k <- sum(keep)
+            ## tol = 0: no column pivoting, which would permute the
+            ## retained components when their covariance is singular
+            R <- qr.R(qr(t(L[keep, , drop = FALSE]), tol = 0))
+            R <- R[seq_len(k), seq_len(k), drop = FALSE]
+            sgn <- sign(diag(R))
+            sgn[sgn == 0] <- 1
+            Lnew[keep, keep] <- t(sgn * R)
+        }
+        ## the rebuilt factor must fit the block's theta pattern
+        if (any(Lnew[!nz] != 0)) next
+        theta_new[B[nz]] <- Lnew[nz]
+        zeroed <- c(zeroed, thnames[diag(B)][zero])
+    }
+    list(theta = theta_new, zeroed = zeroed, info = info)
+}
+
+## Data frame for the bootstrap refits: fit0's model frame plus every
+## column that only fit1 uses (e.g. the covariate of an added random
+## slope). Before this, refits of fit1 failed whenever fit1 used a
+## variable absent from fit0. A variable that enters a model only
+## transformed (the frame of (0 + log(z) | g) stores "log(z)", not z) is
+## taken from the fit's data, row-matched to the model frame.
+.boot_data_frame <- function(fit0, fit1) {
+    f0 <- fit0@frame
+    f1 <- fit1@frame
+    if (nrow(f0) != nrow(f1))
+        stop("anova(test = \"boot\"): the two fits use different ",
+             "observations (", nrow(f0), " vs ", nrow(f1), " rows); ",
+             "fit both models to the same data.", call. = FALSE)
+    for (v in setdiff(names(f1), names(f0)))
+        f0[[v]] <- f1[[v]]
+    ## variables of the formulas, and of the `weights` and `offset`
+    ## arguments, which the refits evaluate in the bootstrap data as well
+    argVars <- function(fit)
+        c(all.vars(fit@call$weights), all.vars(fit@call$offset))
+    need <- setdiff(unique(c(all.vars(formula(fit0)), all.vars(formula(fit1)),
+                             argVars(fit0), argVars(fit1))),
+                    names(f0))
+    if (!length(need)) return(f0)
+    env <- environment(formula(fit1))
+    d <- tryCatch(eval(fit1@call$data, env), error = function(e) NULL)
+    if (is.data.frame(d)) {
+        idx <- match(rownames(f0), rownames(d))
+        if (anyNA(idx)) {
+            idx <- if (nrow(d) == nrow(f0)) seq_len(nrow(d)) else NULL
+        }
+        if (!is.null(idx))
+            for (v in intersect(need, names(d))) f0[[v]] <- d[[v]][idx]
+    }
+    ## anything else must be found by the refit's formula environment
+    miss <- need[!need %in% names(f0) &
+                 !vapply(need, exists, logical(1), envir = env)]
+    if (length(miss))
+        stop("anova(test = \"boot\"): cannot find ",
+             paste(miss, collapse = ", "), ", which the models use only ",
+             "transformed; fit both models with `data` containing it.",
+             call. = FALSE)
+    f0
+}
+
+## Message before a long bootstrap (see .slowMessage): the workload is
+## nsim * refits * the workload measure of the fit, `refits` being the
+## number of robust refits per replicate.
+.bootMessage <- function(fit, nsim, refits, what, avoid)
+    .slowMessage(nsim * refits * .satterthwaite_df_workload(fit),
+                 "robustlmm.message.boot.max", 1e7,
+                 sprintf("%s with %d replicates", what, as.integer(nsim)),
+                 avoid)
+
+## Prior weights of the null model for the generator; NULL if all one
+.boot_prior_weights <- function(fit) {
+    w <- fit@resp$weights
+    if (all(w == 1)) NULL else w
 }
 
 ## Quiet bootstrap refit at a warm start; NULL on error.
@@ -420,7 +642,11 @@
         error = function(e) NULL)
 
 .anova_pair_boot <- function(fit0, fit1, nsim = 1000L, seed = NULL,
-                             verbose = FALSE, robust.null = FALSE) {
+                             verbose = FALSE, robust.null = FALSE,
+                             nuisance = "threshold") {
+    .bootMessage(fit1, nsim, 2, "anova(test = \"boot\")",
+                 paste0("Reduce 'nsim', or use test = \"score\" where it ",
+                        "applies (one refit per replicate)."))
     if (!is.null(seed)) set.seed(seed)
     sig0_obs <- .sigma(fit0)
     D_obs <- .quasi_deviance(fit0, scale = sig0_obs) -
@@ -432,7 +658,7 @@
     Z0     <- t(pp0$Zt)
     n      <- pp0$n; q0 <- pp0$q
     yname  <- as.character(formula(fit0)[[2L]])
-    data_obs <- fit0@frame
+    data_obs <- .boot_data_frame(fit0, fit1)
     th1    <- getME(fit1, "theta")
 
     ## Generating parameters for the bootstrap null. Plain parametric:
@@ -449,13 +675,25 @@
         beta0 <- .fixef(fit0)
         Ub0   <- pp0$U_b
     }
-    Xb0    <- as.numeric(X %*% beta0)
+    ## Nuisance variance components estimated near zero are set to zero
+    ## in the generator (see .boot_threshold_theta).
+    thr <- NULL
+    if (identical(nuisance, "threshold")) {
+        th_gen <- if (!is.null(rn_info) && !is.null(rn_info$theta))
+                      rn_info$theta else th0
+        thr <- .boot_threshold_theta(fit0, th_gen)
+        if (length(thr$zeroed))
+            Ub0@x <- thr$theta[pp0$Lind]
+    }
+    Xb0    <- as.numeric(X %*% beta0) + fit0@resp$offset
+    w0     <- .boot_prior_weights(fit0)
 
     D_boot <- rep(NA_real_, nsim)
     n_fail <- 0L
     t0     <- Sys.time()
     for (r in seq_len(nsim)) {
-        d_sim <- .boot_sim_data(data_obs, yname, Xb0, Z0, Ub0, sig0, n, q0)
+        d_sim <- .boot_sim_data(data_obs, yname, Xb0, Z0, Ub0, sig0, n, q0,
+                                w0)
         f0_s <- .boot_refit(fit0, d_sim, th0)
         f1_s <- .boot_refit(fit1, d_sim, th1)
         if (is.null(f0_s) || is.null(f1_s)) {
@@ -479,10 +717,21 @@
         warning("Bootstrap p-value based on only ", length(D_clean),
                 " effective replicates; consider raising nsim for a ",
                 "stable tail estimate.", call. = FALSE)
-    pval <- mean(D_clean >= D_obs)
+    ## D is a likelihood-ratio-type difference with an atom at 0 (both fits
+    ## put the tested variance on the boundary). There its computed value is
+    ## rounding noise of either sign (|D| < 0.01 in practice, while genuine
+    ## positive values are O(1)), and comparing noise with noise made the
+    ## p-value arbitrary. Treat D <= D_TIE as exactly 0: an observed D at the
+    ## atom gets p = 1. This also maps the occasional clearly negative D (the
+    ## larger robust fit in a worse local solution, about 1 in 2000
+    ## replicates in T2) to 0: it carries no evidence against the null
+    ## either.
+    D_TIE <- 0.01
+    D_eff <- function(D) ifelse(D <= D_TIE, 0, D)
+    pval <- mean(D_eff(D_clean) >= D_eff(D_obs))
     list(D_obs = D_obs, D_boot = D_clean,
          p.value = pval, n_fail = n_fail, nsim = nsim,
-         robust.null = rn_info)
+         robust.null = rn_info, threshold = thr)
 }
 
 ## ------------------------------------------------------------------
@@ -558,83 +807,85 @@
         .score_stop("both models must be fitted to the same data")
     if (!identical(colnames(fit0@pp$X), colnames(fit1@pp$X)))
         .score_stop("the fixed-effects designs differ; test = ",
-                    "\"score\" tests a single added variance ",
-                    "component only")
+                    "\"score\" tests added variance components only")
     th0 <- getME(fit0, "theta")
     th1 <- getME(fit1, "theta")
-    if (length(th1) != length(th0) + 1L)
-        .score_stop("the alternative must add exactly one variance ",
-                    "parameter (scalar component) relative to the ",
-                    "null; got length(theta) ", length(th0), " vs ",
-                    length(th1), ". Multi-component or ",
-                    "correlated-slope alternatives are out of scope")
+    q_add <- length(th1) - length(th0)
+    if (q_add < 1L)
+        .score_stop("the alternative must add at least one variance ",
+                    "parameter relative to the null; got length(theta) ",
+                    length(th0), " vs ", length(th1))
     cn0 <- fit0@cnms
     cn1 <- fit1@cnms
     Gp1 <- fit1@Gp
     nl  <- length(levels(fit1@flist[[1L]]))
     gname <- names(fit1@flist)[1L]
 
-    ## Which of fit1's b-columns belong to the added scalar block?
-    add_cols <- NULL
-    add_name <- NULL
-    if (length(cn1) == length(cn0) + 1L) {
-        ## case (a): the alternative has one extra 1-column term,
-        ## e.g. (1|g) vs (1|g) + (0 + x|g)
-        for (k in seq_along(cn1)) {
-            if (length(cn1[[k]]) != 1L) next
-            if (identical(unname(cn1[-k]), unname(cn0))) {
-                add_cols <- (Gp1[k] + 1L):Gp1[k + 1L]
-                add_name <- cn1[[k]]
-                break
-            }
-        }
-    } else if (length(cn1) == length(cn0)) {
-        ## case (b): one term gains one column under a diagonal
-        ## structure, e.g. (1|g) vs diag(x|g). b-layout within a term
-        ## is level-major: the length(cnms[[k]]) coordinates of one
-        ## level are consecutive.
-        deleted_pos <- function(small, big) {
-            if (length(big) != length(small) + 1L) return(NA_integer_)
-            for (pos in seq_along(big))
-                if (identical(big[-pos], small)) return(pos)
-            NA_integer_
-        }
-        differs <- which(!vapply(seq_along(cn1), function(k)
-            identical(cn1[[k]], cn0[[k]]), logical(1)))
-        if (length(differs) == 1L) {
-            k   <- differs
-            pos <- deleted_pos(cn0[[k]], cn1[[k]])
-            nc1 <- length(cn1[[k]])
-            if (!is.na(pos) && Gp1[k + 1L] - Gp1[k] == nc1 * nl) {
-                add_cols <- Gp1[k] + (seq_len(nl) - 1L) * nc1 + pos
-                add_name <- cn1[[k]][pos]
-            }
-        }
-    }
-    if (is.null(add_cols))
+    ## The added components are fit1's component names that fit0 does not
+    ## have (one grouping factor, so names identify components). Removing
+    ## them from fit1's terms must give fit0's terms exactly, and each
+    ## added component must carry exactly one variance parameter (its own
+    ## scalar block): q_add components for q_add extra theta entries. A
+    ## correlated slope adds two parameters (variance and covariance) for
+    ## one component and is rejected here.
+    added <- setdiff(unlist(cn1), unlist(cn0))
+    reduced <- Filter(length, lapply(cn1, setdiff, added))
+    if (!length(added) || !identical(unname(reduced), unname(cn0)))
         .score_stop("could not identify a single added scalar ",
-                    "random-effect column in the alternative model ",
-                    "(models must be nested with exactly one added ",
-                    "independent component)")
+                    "random-effect column, or a set of them, in the ",
+                    "alternative model (models must be nested, the ",
+                    "alternative adding independent components)")
+    if (length(added) != q_add)
+        .score_stop("each added component must carry exactly one variance ",
+                    "parameter (an independent scalar block); got ",
+                    length(added), " added component(s) for ", q_add,
+                    " added parameters (length(theta) ", length(th0),
+                    " vs ", length(th1), "). Correlated-slope ",
+                    "alternatives are out of scope")
 
-    ## The added block must be structurally uncorrelated with every
-    ## other random effect: no structural nonzero of fit1's Lambda
-    ## pattern may couple the added b-coordinates to any other
-    ## b-coordinate (a correlated-slope alternative would).
+    ## b-columns of each added component; b-layout within a term is
+    ## level-major: the length(cnms[[k]]) coordinates of one level are
+    ## consecutive.
+    add_cols <- lapply(added, function(nm) {
+        for (k in seq_along(cn1)) {
+            pos <- match(nm, cn1[[k]])
+            if (is.na(pos)) next
+            nc1 <- length(cn1[[k]])
+            if (Gp1[k + 1L] - Gp1[k] != nc1 * nl) return(NULL)
+            return(Gp1[k] + (seq_len(nl) - 1L) * nc1 + pos)
+        }
+        NULL
+    })
+    if (any(vapply(add_cols, is.null, logical(1))))
+        .score_stop("could not identify the added random-effect columns ",
+                    "in the alternative model")
+
+    ## Each added component must be structurally uncorrelated with every
+    ## other random effect: no structural nonzero of fit1's Lambda pattern
+    ## may couple its b-coordinates to any other b-coordinate.
     Ub1 <- methods::as(methods::as(fit1@pp$U_b, "generalMatrix"),
                        "TsparseMatrix")
-    in_add_i <- (Ub1@i + 1L) %in% add_cols
-    in_add_j <- (Ub1@j + 1L) %in% add_cols
-    if (any(in_add_i != in_add_j))
-        .score_stop("the added random-effect column is correlated ",
-                    "with other random effects in the alternative ",
-                    "model; only an independent (uncorrelated) added ",
-                    "component is in scope")
+    for (cols in add_cols) {
+        in_i <- (Ub1@i + 1L) %in% cols
+        in_j <- (Ub1@j + 1L) %in% cols
+        if (any(in_i != in_j))
+            .score_stop("an added random-effect column is correlated ",
+                        "with other random effects in the alternative ",
+                        "model; only independent (uncorrelated) added ",
+                        "components are in scope")
+    }
 
     Z1 <- t(fit1@pp$Zt)
-    z_add <- Matrix::rowSums(Z1[, add_cols, drop = FALSE])
-    list(z_add = as.numeric(z_add),
-         label = paste0("(", add_name, " | ", gname, ")"))
+    labels <- paste0("(", added, " | ", gname, ")")
+    if (q_add == 1L) {
+        z_add <- Matrix::rowSums(Z1[, add_cols[[1L]], drop = FALSE])
+        return(list(z_add = as.numeric(z_add), label = labels))
+    }
+    z_add <- vapply(add_cols, function(cols)
+        as.numeric(Matrix::rowSums(Z1[, cols, drop = FALSE])),
+        numeric(nrow(Z1)))
+    colnames(z_add) <- added
+    list(z_add = z_add, label = labels)
 }
 
 ## The score statistic S and the per-cluster contributions s_j, from
@@ -673,6 +924,95 @@
     list(S = S, s_j = s_j)
 }
 
+## ------------------------------------------------------------------
+## Several added components (q >= 2): cone (chi-bar) statistic of the
+## whitened robust score.
+##
+## Per cluster j and tested direction k, s_jk = (v_jk' psi(rt_j))^2 -
+## kappa_1 ||v_jk||^2 exactly as in the scalar statistic. With
+## U = sum_j s_j, W = sum_j (s_j - sbar)(s_j - sbar)' and the sensitivity
+## M = d E[U] / d lambda (lambda = the added variances), the local model
+## is U ~ N(M lambda, W) with lambda >= 0, and the statistic is
+##     T = ||b||^2 - min_{lambda >= 0} ||b - A lambda||^2
+##       = ||Pi_K b||^2,   b = W^{-1/2} U,  A = W^{-1/2} M,
+## the squared norm of the projection of b onto the cone K = A R^q_+
+## (the cone statistic of the robustlmm theory notes, Topic 4; its
+## locally uniform limit and the consistency of the parametric
+## bootstrap at an invertible whitening are machine-checked there,
+## Topic4.GbkChiBar). Under r ~ N(0, I + lambda v_l v_l'),
+##     M_kl = sum_j [ a (v_jk'v_jl)^2 + c sum_i v_jki^2 v_jli^2 ],
+## a = (E psi')^2 and c = E[Z psi(Z) psi'(Z)] - (E psi')^2 (Z ~ N(0,1);
+## E[psi psi''] = -E[psi'^2] + E[Z psi psi'] by parts). For psi(z) = z,
+## c = 0 and M is the Gaussian score information.
+## ------------------------------------------------------------------
+.score_multi_consts <- function(rho) {
+    psi <- rho@psi
+    dpsi <- rho@Dpsi
+    Ed <- rho@EDpsi()
+    Ezpp <- stats::integrate(function(z) z * psi(z) * dpsi(z) *
+                                 stats::dnorm(z), -Inf, Inf)$value
+    c(a = Ed^2, c = Ezpp - Ed^2)
+}
+
+## ||Pi_K b||^2 for K = A R^q_+ by exact enumeration of the active sets.
+.cone_proj_sq <- function(A, b) {
+    q <- ncol(A)
+    best <- sum(b^2)                       # residual at lambda = 0
+    for (m in seq_len(2^q - 1L)) {
+        S <- which(bitwAnd(m, 2^(seq_len(q) - 1L)) > 0)
+        AS <- A[, S, drop = FALSE]
+        lam <- tryCatch(solve(crossprod(AS), crossprod(AS, b)),
+                        error = function(e) NULL)
+        if (is.null(lam) || any(lam < 0)) next
+        res <- sum((b - AS %*% lam)^2)
+        if (res < best) best <- res
+    }
+    sum(b^2) - best
+}
+
+.anova_score_stat_multi <- function(fit0, Zadd, consts = NULL) {
+    if (is.null(consts)) consts <- .score_multi_consts(fit0@rho.e)
+    sig  <- .sigma(fit0)
+    beta <- .fixef(fit0)
+    r    <- as.numeric(fit0@resp$y - fit0@resp$offset -
+                       fit0@pp$X %*% beta)
+    psi  <- fit0@rho.e@psi
+    kap1 <- fit0@rho.e@Epsi2()
+    Mz   <- Matrix::crossprod(fit0@pp$Zt, fit0@pp$U_b)
+    idx  <- split(seq_along(r), fit0@flist[[1L]])
+    q    <- ncol(Zadd)
+    Msens <- matrix(0, q, q)
+    s <- t(vapply(idx, function(ii) {
+        Mi <- as.matrix(Mz[ii, , drop = FALSE])
+        Mi <- Mi[, colSums(abs(Mi)) > 0, drop = FALSE]
+        Vi <- diag(length(ii)) + tcrossprod(Mi)   # V_j / sigma^2
+        ee <- eigen(Vi, symmetric = TRUE)
+        W  <- ee$vectors %*% (t(ee$vectors) / sqrt(ee$values)) / sig
+        rt <- as.numeric(W %*% r[ii])
+        V  <- W %*% Zadd[ii, , drop = FALSE]      # columns v_jk
+        pr <- psi(rt)
+        G  <- crossprod(V)                         # v_jk' v_jl
+        H  <- crossprod(V^2)                       # sum_i v_jki^2 v_jli^2
+        Msens <<- Msens + consts[["a"]] * G^2 + consts[["c"]] * H
+        as.numeric(crossprod(V, pr))^2 - kap1 * colSums(V^2)
+    }, numeric(q)))
+    if (q == 1L) s <- t(s)
+    U  <- colSums(s)
+    Sc <- sweep(s, 2L, colMeans(s))
+    Wc <- crossprod(Sc)
+    ev <- eigen(Wc, symmetric = TRUE)
+    if (any(ev$values <= 0))
+        return(list(T = NA_real_, s_j = s, U = U, W = Wc, M = Msens,
+                    min_eig_cor = 0))
+    Wmh <- ev$vectors %*% (t(ev$vectors) / sqrt(ev$values))   # W^{-1/2}
+    d <- sqrt(diag(Wc))
+    min_eig_cor <- min(eigen(Wc / tcrossprod(d), symmetric = TRUE,
+                             only.values = TRUE)$values)
+    T <- .cone_proj_sq(Wmh %*% Msens, as.numeric(Wmh %*% U))
+    list(T = T, s_j = s, U = U, W = Wc, M = Msens,
+         min_eig_cor = min_eig_cor)
+}
+
 ## Parametric SCORE bootstrap: simulate nsim datasets from fit0's
 ## estimates with the same generation machinery as .anova_pair_boot,
 ## refit ONLY the null model per replicate, and recompute S*. p-value
@@ -680,6 +1020,10 @@
 .anova_pair_score <- function(fit0, fit1, nsim = 199L, seed = NULL,
                               verbose = FALSE) {
     scope <- .anova_score_scope(fit0, fit1)
+    if (is.matrix(scope$z_add))
+        return(.anova_pair_score_multi(fit0, scope, nsim = nsim,
+                                       seed = seed, verbose = verbose))
+    .bootMessage(fit0, nsim, 1, "anova(test = \"score\")", "Reduce 'nsim'.")
     if (!is.null(seed)) set.seed(seed)
     obs <- .anova_score_stat(fit0, scope$z_add)
     if (!is.finite(obs$S))
@@ -696,13 +1040,15 @@
     sig0  <- .sigma(fit0)
     beta0 <- .fixef(fit0)
     yname <- as.character(formula(fit0)[[2L]])
-    data_obs <- fit0@frame
-    Xb0   <- as.numeric(X %*% beta0)
+    data_obs <- .boot_data_frame(fit0, fit0)
+    Xb0   <- as.numeric(X %*% beta0) + fit0@resp$offset
+    w0    <- .boot_prior_weights(fit0)
 
     S_boot <- rep(NA_real_, nsim)
     t0     <- Sys.time()
     for (r in seq_len(nsim)) {
-        d_sim <- .boot_sim_data(data_obs, yname, Xb0, Z0, Ub0, sig0, n, q0)
+        d_sim <- .boot_sim_data(data_obs, yname, Xb0, Z0, Ub0, sig0, n, q0,
+                                w0)
         f0_s <- .boot_refit(fit0, d_sim, th0)
         if (is.null(f0_s)) next
         S_boot[r] <- tryCatch(.anova_score_stat(f0_s, scope$z_add)$S,
@@ -730,182 +1076,211 @@
          label = scope$label)
 }
 
+## Parametric score bootstrap for q >= 2 added components: as in the
+## scalar case, refit only the null model per replicate and recompute T*.
+.anova_pair_score_multi <- function(fit0, scope, nsim = 199L, seed = NULL,
+                                    verbose = FALSE) {
+    .bootMessage(fit0, nsim, 1, "anova(test = \"score\")", "Reduce 'nsim'.")
+    if (!is.null(seed)) set.seed(seed)
+    Zadd   <- scope$z_add
+    q      <- ncol(Zadd)
+    if (q > 6L)
+        stop("test = \"score\" supports at most 6 added components; got ",
+             q, ".", call. = FALSE)
+    consts <- .score_multi_consts(fit0@rho.e)
+    obs <- .anova_score_stat_multi(fit0, Zadd, consts)
+    if (!is.finite(obs$T))
+        stop("test = \"score\": the covariance of the per-cluster score ",
+             "contributions is singular; the tested directions cannot be ",
+             "separated. Use test = \"boot\".", call. = FALSE)
+    if (obs$min_eig_cor < 0.01)
+        warning("test = \"score\": the score contributions of the tested ",
+                "components are nearly collinear (smallest eigenvalue of ",
+                "their correlation matrix ", signif(obs$min_eig_cor, 2),
+                "); near a singular whitening the cone statistic's ",
+                "calibration is unreliable. Consider test = \"boot\".",
+                call. = FALSE)
+
+    pp0   <- fit0@pp
+    th0   <- getME(fit0, "theta")
+    X     <- pp0$X
+    Z0    <- t(pp0$Zt)
+    Ub0   <- pp0$U_b
+    n     <- pp0$n; q0 <- pp0$q
+    sig0  <- .sigma(fit0)
+    beta0 <- .fixef(fit0)
+    yname <- as.character(formula(fit0)[[2L]])
+    data_obs <- .boot_data_frame(fit0, fit0)
+    Xb0   <- as.numeric(X %*% beta0) + fit0@resp$offset
+    w0    <- .boot_prior_weights(fit0)
+
+    T_boot <- rep(NA_real_, nsim)
+    t0     <- Sys.time()
+    for (r in seq_len(nsim)) {
+        d_sim <- .boot_sim_data(data_obs, yname, Xb0, Z0, Ub0, sig0, n, q0,
+                                w0)
+        f0_s <- .boot_refit(fit0, d_sim, th0)
+        if (is.null(f0_s)) next
+        T_boot[r] <- tryCatch(.anova_score_stat_multi(f0_s, Zadd, consts)$T,
+                              error = function(e) NA_real_)
+        if (verbose && r %% 50L == 0L) {
+            elapsed <- as.numeric(Sys.time() - t0, units = "secs")
+            message(sprintf("  score boot rep %d/%d, elapsed %.1fs",
+                            r, nsim, elapsed))
+        }
+    }
+    T_clean <- T_boot[!is.na(T_boot)]
+    n_fail  <- nsim - length(T_clean)
+    if (length(T_clean) < 10L)
+        stop("Score bootstrap: only ", length(T_clean), " of ", nsim,
+             " replicates succeeded; need >= 10 to compute a p-value.",
+             call. = FALSE)
+    if (length(T_clean) < 100L)
+        warning("Score-bootstrap p-value based on only ",
+                length(T_clean), " effective replicates; consider ",
+                "raising nsim for a stable tail estimate.",
+                call. = FALSE)
+    pval <- (1 + sum(T_clean >= obs$T)) / (length(T_clean) + 1)
+    list(S_obs = obs$T, s_j = obs$s_j, S_boot = T_clean,
+         p.value = pval, n_fail = n_fail, nsim = nsim,
+         label = scope$label, q = q, min_eig_cor = obs$min_eig_cor)
+}
+
 ##' Analysis of variance for an rlmer fit.
 ##'
 ##' Three modes.
 ##' \describe{
-##'   \item{Single fit \code{anova(fit)}}{returns a per-term robust Wald
-##'     chi-square table from \code{vcov(fit, type = vcov_type)}. Each
-##'     term is tested marginally as
-##'     \eqn{T_t = \hat\beta_t^\top \hat V_t^{-1} \hat\beta_t \sim
-##'       \chi^2_{k_t}} under \eqn{H_0: \beta_t = 0}.}
-##'   \item{Nested fits differing only in fixed effects (default
-##'     \code{test = "Wald"})}{robust Wald restriction test on the
-##'     extra coefficients. The same \eqn{V} used by the single-fit
-##'     table is used here; \code{vcov_type = "sandwich"} carries through.}
-##'   \item{Nested fits differing in random-effects structure}{the
-##'     Wald and score asymptotics are invalid (boundary problem; see
-##'     Self-Liang 1987 and Koller 2026 paper 2). \code{test = "Wald"}
-##'     warns and switches to the parametric bootstrap automatically;
-##'     \code{test = "boot"} is the default valid path. The bootstrap
-##'     simulates \code{nsim} datasets from the fitted central LMM at
-##'     \code{fit0}'s estimates, refits both rlmer models per
-##'     replicate, and uses the quasi-deviance difference
-##'     \eqn{D = 2 \sum [\rho_e(r_i^{(0)}/\hat\sigma_0) -
-##'       \rho_e(r_i^{(1)}/\hat\sigma_1)]} as the discrepancy
-##'     statistic (Heritier and Ronchetti 1994; Cantoni and Ronchetti
-##'     2001; Heritier, Cantoni, Copt and Victoria-Feser 2009 sec. 5).
-##'     For the special case of a \emph{single added variance
-##'     component} the experimental \code{test = "score"} offers a
-##'     contamination-robust alternative (see Details).}
+##'   \item{Single fit \code{anova(fit)}}{a per-term robust Wald table:
+##'     each term is tested with \eqn{\hat\beta_t^\top \hat V_t^{-1}
+##'     \hat\beta_t}, \eqn{\hat V} from \code{vcov(fit, type = vcov_type)},
+##'     against \eqn{\chi^2} (default covariance) or a small-sample
+##'     \eqn{F} reference (sandwich; see \code{ddf}).}
+##'   \item{Nested fits differing only in the fixed effects}{a robust Wald
+##'     test of the extra coefficients with the same covariance.}
+##'   \item{Nested fits differing in the random effects}{Wald asymptotics
+##'     fail on the boundary of the parameter space (Self and Liang 1987),
+##'     so \code{test = "Wald"} switches to \code{test = "boot"}: a
+##'     parametric bootstrap from \code{fit0}'s estimates of the
+##'     quasi-deviance difference \eqn{D = 2 \sum_i
+##'     [\rho_e(r_i^{(0)}/\hat\sigma_0) - \rho_e(r_i^{(1)}/\hat\sigma_0)]}
+##'     (Heritier and Ronchetti 1994; Cantoni and Ronchetti 2001; Heritier
+##'     et al. 2009).
+##'     \code{test = "score"} is an experimental robust score test for
+##'     added independent variance components.}
 ##' }
+##' Only pairwise comparisons are implemented.
 ##'
-##' Only pairwise comparison is implemented; chains \code{anova(fit0,
-##' fit1, fit2, ...)} are not yet supported.
+##' \strong{Sandwich covariance.} With few clusters the G1 cluster sandwich
+##' is biased down for between-cluster terms, and \eqn{\chi^2} tests based
+##' on it are anti-conservative. For \code{vcov_type = "sandwich"} the
+##' default reference is therefore the bias-reduced CR2 sandwich
+##' (\code{\link{vcov_sandwich}}; Bell and McCaffrey 2002) with the
+##' approximate Hotelling \eqn{F}-test of Pustejovsky and Tipton (2018),
+##' \eqn{F = (\eta - k + 1) W / (\eta k)} on \eqn{(k, \eta - k + 1)}
+##' degrees of freedom. It is much closer to its nominal level but can stay
+##' somewhat anti-conservative for between-cluster terms; see the section
+##' \dQuote{Small-sample references for the cluster sandwich} of
+##' \code{vignette("simulationStudies")}. CR2 needs every random effect
+##' nested within one cluster; otherwise the G1 sandwich with
+##' \eqn{F(k, J - 1)} is used, and the table heading says which. A term
+##' that a single cluster informs on its own (e.g. a factor level present
+##' in one cluster) gets no reference distribution (\code{NA}), with a
+##' warning.
 ##'
-##' \strong{Small-J caveat for the sandwich.} \code{vcov_type =
-##'   "sandwich"} is markedly anti-conservative at small \eqn{J}: in
-##' a simulation study the pairwise Wald Type-I rate reached
-##' 0.15-0.20 (vs. nominal 0.05) at \eqn{J = 8} and was still elevated
-##' at \eqn{J = 18}, returning to nominal only by \eqn{J \gtrsim 50}.
-##' \code{vcov_sandwich} emits a warning for \eqn{J < 20}; prefer
-##' \code{vcov_type = "default"} for hypothesis tests at small
-##' \eqn{J}.
+##' \strong{Bootstrap test (experimental).} \code{test = "boot"} holds its
+##' level under error contamination but is anti-conservative when whole
+##' groups are contaminated, because the bootstrap is generated from
+##' estimates those groups have biased. It warns when the null fit heavily
+##' downweights a group (smallest random-effect robustness weight below
+##' 0.5). \code{null = "robust"} generates from a refit without the heavily
+##' downweighted groups instead (the observed statistic still uses all the
+##' data); it falls back to the plain generator when no group or more than
+##' half of the groups are flagged, when removing them would leave the
+##' design rank-deficient, or when the refit fails, and the table heading
+##' says which applied. When both fits put the tested variance on the
+##' boundary, \eqn{D} sits at its atom at zero and the p-value is 1. See the
+##' ANOVA section of \code{vignette("robustlmm-3.5.0")}.
 ##'
-##' \strong{Subject-contamination caveat for the bootstrap
-##' (experimental).} The parametric-bootstrap quasi-deviance path
-##' (\code{test = "boot"}) is experimental --- it is currently the only
-##' exposed variance-component path. It calibrates correctly under clean
-##' Gaussian and heavy-tailed errors but is markedly anti-conservative
-##' when a subset of subjects is contaminated. In a simulation study with 10\% of subjects
-##' shifted by 5 standard errors (\code{shift_subj}), Type-I climbed
-##' to 0.13-0.24 (2.5-5x nominal) across \eqn{J \in \{8, 18, 50\}}.
-##' The mechanism: the bootstrap simulates from the fitted central
-##' LMM at \code{fit0}'s estimates, so any bias \code{fit0}'s
-##' \eqn{\hat\sigma_0, \hat\theta_0} picked up from the contaminated
-##' subjects propagates into a too-narrow bootstrap null. As an automatic
-##' guard, \code{anova(test = "boot")} now inspects the null fit's own
-##' random-effects robustness weights and \strong{warns} when a group is
-##' heavily downweighted (smallest weight below \eqn{0.5}) --- a direct
-##' signal that the fit treated that group as an outlier, so the bootstrap
-##' null may be poisoned. (The robust fit absorbs a contaminated group
-##' into a downweighted random effect, which is why
-##' \code{\link[=cooks.distance.rlmerMod]{cooks.distance}} --- an
-##' \emph{influence} measure --- does \emph{not} reliably flag it here:
-##' the downweighting that removes the bias also removes the influence.)
-##' When the warning fires, treat the p-value with caution.
-##'
-##' \strong{Experimental robust null (\code{null = "robust"}).} As a
-##' mitigation for the subject-contamination anti-conservativeness above,
-##' the bootstrap path accepts \code{null = "robust"}: instead of
-##' generating the parametric bootstrap from \code{fit0}'s raw estimates,
-##' it generates from a \emph{contamination-cleaned} null fit. Clusters the
-##' robust fit heavily downweights (smallest per-cluster random-effect
-##' weight below a tuned threshold, the same signal the automatic guard
-##' uses) are flagged, \code{fit0} is refitted with those clusters removed,
-##' and the bootstrap is generated from the resulting de-biased
-##' \eqn{(\hat\sigma, \hat\theta, \hat\beta)} (with the generator's
-##' \eqn{U_b = \Lambda(\theta)} rebuilt at the full cleaned \eqn{\hat\theta}
-##' vector). The observed discrepancy \eqn{D} is still
-##' taken from the original untrimmed fits, so the test uses all the data;
-##' only the bootstrap null generation is cleaned. If no cluster is
-##' flagged, more than half the clusters are flagged, trimming would leave
-##' the design rank-deficient (a dropped contrast level, a collapsed
-##' grouping factor, or a constant random-slope covariate --- checked by
-##' the same nonsingular-subsampling test used by the RANSAC initial
-##' estimator), or the trimmed refit fails, the call falls back to the
-##' plain parametric null (so on clean data \code{null = "robust"} closely
-##' matches \code{null = "parametric"}); the table heading states which
-##' case applied. In simulation this reduces the contamination-induced
-##' Type-I inflation at larger \eqn{J} while preserving power, at the cost
-##' of mild conservatism on clean data. It is \strong{experimental},
-##' validated by simulation rather than a finite-sample theorem; the table
-##' heading notes when the robust null was applied.
-##'
-##' \strong{Experimental robust score test (\code{test = "score"}).}
-##' For the common special case where the alternative adds exactly
-##' \emph{one independent scalar variance component} relative to the
-##' null --- e.g. \code{(1|g)} vs \code{(1|g) + (0 + x|g)}, or diagonal
-##' structures adding one component --- \code{test = "score"} runs a
-##' one-sided robust score test computed from the robust \emph{null}
-##' fit only and calibrated by a score-only parametric bootstrap that
-##' refits just the null model per replicate (roughly 4x cheaper than
-##' \code{test = "boot"}'s double refits; hence the smaller default
-##' \code{nsim = 199}). Per cluster \eqn{j}, the whitened marginal
-##' residuals \eqn{\tilde r_j = V_j^{-1/2}(y_j - X_j \hat\beta_0)} and
-##' the whitened tested direction \eqn{v_j = V_j^{-1/2} z_j} (with
-##' \eqn{V_j} the null fit's marginal covariance and \eqn{z_j} the
-##' added term's design column) give the bounded contribution
-##' \eqn{s_j = (v_j^\top \psi(\tilde r_j))^2 - \kappa_1 \|v_j\|^2}
-##' (\eqn{\psi} the fit's \code{rho.e} psi-function, \eqn{\kappa_1 =
-##' E[\psi(Z)^2]}); the statistic is the self-normalised cluster sum
-##' \eqn{S = \sum_j s_j / \sqrt{\sum_j (s_j - \bar s)^2}}, and the
-##' one-sided p-value is \eqn{(1 + \#\{S^* \ge S\})/(n_{\mathrm{eff}} +
-##' 1)}. Because each \eqn{s_j} is psi-bounded, whole-cluster
-##' contamination shifts the statistic and its bootstrap reference law
-##' together instead of inflating the test: in simulation (Gaussian
-##' balanced designs, one scalar tested component; not a theorem)
-##' contaminated-null Type-I was 0.035 vs 0.115 for \code{test =
-##' "boot"} with 10\% of clusters shifted at \eqn{J = 50}, clean-null
-##' Type-I 0.045, and power 0.920 vs 0.900 --- with no null cleaning
-##' needed (raw vs cleaned generating parameters changed at most 1-2
-##' decisions in 600+ paired replicates, so \code{null = "robust"} is
-##' ignored and no downweighted-group warning is issued for this
-##' path). Across an adversarial sweep the pattern held: \eqn{J = 18}
-##' clean/contaminated 0.055/0.015, uncentered-\eqn{x} designs
-##' clean/contaminated 0.045/0.075, 5\% single-observation outliers
-##' 0.060. \emph{Scope}: both fits on the same data with identical
-##' fixed effects and a single shared grouping factor, and the
-##' alternative adds exactly one uncorrelated scalar component
-##' (\code{length(theta)} differs by 1); anything else ---
-##' multi-component or correlated-slope alternatives, crossed or
-##' nested factors --- stops with an error, use \code{test = "boot"}
-##' there. \emph{Caveat}: contamination aligned with the tested
-##' direction is indistinguishable from the alternative for any test
-##' with power; inspect the attached per-cluster contributions
-##' (\code{attr(., "boot")$s_j}; the largest values identify the
-##' clusters driving the statistic) and cluster diagnostics
-##' (\code{cooks.distance(fit, groups = )},
-##' \code{\link[=hatvalues.rlmerMod]{hatvalues}}) when a rejection is
-##' suspect. \strong{Experimental}: simulation-validated, not proven;
-##' the deviance bootstrap \code{test = "boot"} remains the default
-##' variance-component path.
+##' \strong{Score test (experimental).} \code{test = "score"} uses the
+##' robust null fit only. Per cluster \eqn{j} it forms the bounded
+##' contribution \eqn{s_j = (v_j^\top \psi(\tilde r_j))^2 - \kappa_1
+##' \|v_j\|^2}, with \eqn{\tilde r_j} the whitened marginal residuals,
+##' \eqn{v_j} the whitened design column of a tested component and
+##' \eqn{\kappa_1 = E[\psi(Z)^2]}{kappa_1 = E[psi(Z)^2]}, and calibrates
+##' the statistic by a parametric bootstrap that refits only the null
+##' model. One added
+##' component is tested with the self-normalised sum of the \eqn{s_j};
+##' several are tested jointly with the cone (chi-bar) statistic of the
+##' whitened score vector, with a warning when the tested directions are
+##' nearly collinear. Scope: both fits on the same data, with the same fixed
+##' effects and a single grouping factor, and an alternative that adds
+##' uncorrelated scalar components; otherwise it stops with an error.
+##' Contamination aligned with a tested direction cannot be distinguished
+##' from the alternative; the per-cluster contributions
+##' (\code{attr(., "boot")$s_j}) show which clusters drive a rejection.
+##' Simulation results: the ANOVA section of
+##' \code{vignette("robustlmm-3.5.0")} (one component) and the section
+##' \dQuote{Several added variance components} of
+##' \code{vignette("simulationStudies")}.
 ##'
 ##' @param object An \code{rlmerMod} object.
 ##' @param ... A second \code{rlmerMod} object for pairwise comparison.
-##' @param test One of \code{"Wald"} (default; closed form for nested
-##'   fixed-effects-only tests), \code{"boot"} (parametric bootstrap
-##'   quasi-deviance; the default valid path for variance-component
-##'   tests), or \code{"score"} (experimental one-sided robust score
-##'   test for a single added variance component, calibrated by a
-##'   score-only parametric bootstrap; see Details for its scope and
-##'   validation record).
-##' @param null Bootstrap null generation for \code{test = "boot"}.
-##'   \code{"parametric"} (default) generates from \code{fit0}'s robust
-##'   estimates (the exact current behaviour). \code{"robust"} is an
-##'   experimental contamination-robust null that generates from a cleaned
-##'   null fit (see Details); it only affects the variance-component
-##'   bootstrap path and is ignored for the Wald paths.
-##' @param vcov_type Forwarded to \code{\link[=vcov.rlmerMod]{vcov}}
-##'   for the Wald paths; ignored for the bootstrap.
-##' @param ddf Denominator degrees of freedom for the Wald paths.
-##'   \code{"none"} (default) reports the chi-square table as before;
-##'   \code{"satterthwaite"} reports an F-test with a Satterthwaite
-##'   denominator df (the multivariate \code{lmerTest::contestMD}
-##'   generalisation, built on the robust IF-based covariance of the
-##'   variance parameters). It requires \code{vcov_type =
-##'   "default"} and a single grouping factor; otherwise it warns and
-##'   falls back to the chi-square table.
-##' @param nsim Bootstrap replicates when \code{test = "boot"} or
-##'   \code{test = "score"}; default 1000 for \code{"boot"} and 199
-##'   for \code{"score"} (whose null-only refits are ~4x cheaper).
-##' @param seed Optional RNG seed for reproducibility of the bootstrap.
+##' @param test \code{"Wald"} (default; nested fixed-effects models),
+##'   \code{"boot"} (parametric bootstrap; the default for
+##'   variance-component tests) or \code{"score"} (experimental; see
+##'   Details).
+##' @param null Bootstrap generator for \code{test = "boot"}:
+##'   \code{"parametric"} (default) generates from \code{fit0}'s estimates,
+##'   \code{"robust"} (experimental) from a refit without heavily
+##'   downweighted groups (see Details).
+##' @param nuisance How the \code{test = "boot"} generator treats variance
+##'   components of the null model estimated close to zero:
+##'   \code{"threshold"} (default) sets a component to zero when its
+##'   relative variance is below \eqn{\sqrt{2\log J}} times its standard
+##'   error at zero (\eqn{J} the number of groups), which keeps the
+##'   bootstrap consistent when a nuisance component is zero (Guedon, Baey
+##'   and Kuhn 2024); \code{"raw"} uses the estimates as they are (the
+##'   behaviour before version 3.5.1). Compound-symmetric and AR(1) blocks are
+##'   never thresholded. See the section \dQuote{Near-zero nuisance variance
+##'   components in the bootstrap test} of \code{vignette("simulationStudies")}.
+##' @param vcov_type Covariance for the Wald paths, passed to
+##'   \code{\link[=vcov.rlmerMod]{vcov}}.
+##' @param ddf Reference distribution for the Wald paths. \code{"auto"}
+##'   (default): \code{"none"} for \code{vcov_type = "default"} and
+##'   \code{"cluster"} for \code{vcov_type = "sandwich"}. \code{"none"}:
+##'   \eqn{\chi^2}. \code{"satterthwaite"}: \eqn{F} with robust
+##'   Satterthwaite denominator degrees of freedom (default covariance and a
+##'   single grouping factor only; otherwise the default reference, with a
+##'   warning). \code{"cluster"}: the CR2 sandwich with approximate Hotelling
+##'   degrees of freedom (sandwich only; see Details).
+##' @param cluster For \code{vcov_type = "sandwich"}, the clusters, passed
+##'   to \code{\link{vcov_sandwich}}; needed for models with several
+##'   grouping factors, e.g. \code{cluster = "school"} for
+##'   \code{(1 | school/class)}.
+##' @param nsim Bootstrap replicates; default 1000 for \code{test = "boot"}
+##'   and 199 for \code{test = "score"}.
+##' @param seed Optional RNG seed for the bootstrap.
 ##' @param verbose Bootstrap progress messages.
 ##' @return An \code{"anova"} data.frame; the bootstrap path attaches
 ##'   \code{attr(., "boot") = list(D_boot, n_fail, nsim, D_obs)}. The
 ##'   score path attaches \code{attr(., "boot") = list(S_boot, n_fail,
 ##'   nsim, S_obs, s_j)} with \code{s_j} the named per-cluster
 ##'   contributions to the observed statistic.
+##' @references Self SG, Liang KY (1987). Asymptotic properties of maximum
+##'   likelihood estimators and likelihood ratio tests under nonstandard
+##'   conditions. \emph{Journal of the American Statistical Association}
+##'   82(398), 605--610.
+##' @references Guedon T, Baey C, Kuhn E (2024). \emph{Bootstrap test
+##'   procedure for variance components in nonlinear mixed effects models
+##'   in the presence of nuisance parameters and a singular Fisher
+##'   information matrix}. arXiv:2306.10779.
+##' @references Bell RM, McCaffrey DF (2002). Bias reduction in standard
+##'   errors for linear regression with multi-stage samples. \emph{Survey
+##'   Methodology} 28(2), 169--181.
+##' @references Pustejovsky JE, Tipton E (2018). Small-sample methods for
+##'   cluster-robust variance estimation and hypothesis testing in fixed
+##'   effects models. \emph{Journal of Business & Economic Statistics}
+##'   36(4), 672--683.
 ##' @references Heritier S, Ronchetti E (1994). \emph{Robust
 ##'   bounded-influence tests in general parametric models}. JASA
 ##'   89(427): 897--904.
@@ -917,28 +1292,58 @@
 ##'   \code{\link[=confint.rlmerMod]{confint}}
 ##' @importFrom stats anova pchisq pf
 ##' @method anova rlmerMod
+##' @section Lifecycle:
+##'   The Wald tests are stable. Experimental, and subject to change:
+##'   \code{test = "score"}, and for \code{test = "boot"} the options
+##'   \code{null = "robust"} and \code{nuisance = "threshold"} (its
+##'   default).
 ##' @export
 anova.rlmerMod <- function(object, ..., test = c("Wald", "boot", "score"),
                            null = c("parametric", "robust"),
+                           nuisance = c("threshold", "raw"),
                            vcov_type = c("default", "sandwich"),
-                           ddf = c("none", "satterthwaite"),
+                           ddf = c("auto", "none", "satterthwaite",
+                                   "cluster"),
                            nsim = 1000L, seed = NULL,
-                           verbose = FALSE) {
+                           verbose = FALSE, cluster = NULL) {
     stopifnot(is(object, "rlmerMod"))
+    bootArgGiven <- !missing(null) || !missing(nuisance)
     vcov_type <- match.arg(vcov_type)
     test_arg  <- match.arg(test)
     null      <- match.arg(null)
+    nuisance  <- match.arg(nuisance)
     ddf       <- match.arg(ddf)
+    if (!is.null(cluster) && vcov_type != "sandwich")
+        stop("'cluster' is used only with vcov_type = \"sandwich\"",
+             call. = FALSE)
+    ## (with the default test, a variance-component comparison switches
+    ## to the bootstrap below, so these arguments may apply)
+    if (bootArgGiven && (test_arg == "score" ||
+                         (test_arg == "Wald" && !missing(test))))
+        stop("'null' and 'nuisance' are used only with test = \"boot\"",
+             call. = FALSE)
+    .check_number(nsim, "nsim", lower = 1, integer = TRUE)
     ## Score refits only the null model per replicate (~4x cheaper),
     ## so its validated default is nsim = 199, not the boot's 1000.
     if (test_arg == "score" && missing(nsim))
         nsim <- 199L
+    ## Each vcov has a default reference (ddf = "auto"): the chi-square
+    ## table for the model-based vcov, the small-J cluster F-test for the
+    ## sandwich (theory-methods F3). A reference unavailable for the chosen
+    ## vcov falls back to that default.
     if (ddf == "satterthwaite" && vcov_type != "default") {
         warning("ddf = \"satterthwaite\" is only available with ",
-                "vcov_type = \"default\"; reverting to the chi-square ",
-                "Wald table.", call. = FALSE)
+                "vcov_type = \"default\"; using the sandwich's default ",
+                "reference (ddf = \"auto\").", call. = FALSE)
+        ddf <- "auto"
+    }
+    if (ddf == "cluster" && vcov_type != "sandwich") {
+        warning("ddf = \"cluster\" applies to vcov_type = \"sandwich\"; ",
+                "using the chi-square Wald table.", call. = FALSE)
         ddf <- "none"
     }
+    if (ddf == "auto")
+        ddf <- if (vcov_type == "sandwich") .ddf_auto_sandwich else "none"
     ## Compute the (cached) influence function once for the fit that
     ## carries the tested coefficients; fall back to the chi-square
     ## table if it is unavailable (unsupported design, etc.).
@@ -959,7 +1364,7 @@ anova.rlmerMod <- function(object, ..., test = c("Wald", "boot", "score"),
             if (is.null(IF)) ddf <- "none"
         }
         return(.anova_single_wald(object, vcov_type = vcov_type,
-                                  ddf = ddf, IF = IF))
+                                  ddf = ddf, IF = IF, cluster = cluster))
     }
 
     if (length(dots) > 1L)
@@ -988,8 +1393,8 @@ anova.rlmerMod <- function(object, ..., test = c("Wald", "boot", "score"),
 
     if (test_arg == "score") {
         if (!is_vc)
-            stop("test = \"score\" tests a single added variance ",
-                 "component; the models do not differ in their ",
+            stop("test = \"score\" tests added variance ",
+                 "components; the models do not differ in their ",
                  "random-effects structure. Use test = \"Wald\" for ",
                  "fixed-effects comparisons.", call. = FALSE)
         ## No .bootstrap_group_guard call here, deliberately: the score
@@ -1002,8 +1407,9 @@ anova.rlmerMod <- function(object, ..., test = c("Wald", "boot", "score"),
         ## would be misleading noise for this path.
         sc <- .anova_pair_score(fit0, fit1, nsim = nsim, seed = seed,
                                 verbose = verbose)
+        q_sc <- if (is.null(sc$q)) 1L else sc$q
         out <- data.frame(npar  = c(n_par(fit0), n_par(fit1)),
-                          Df    = c(NA_integer_, 1L),
+                          Df    = c(NA_integer_, q_sc),
                           Score = c(NA_real_, sc$S_obs),
                           `Pr(>=Score)` = c(NA_real_, sc$p.value),
                           check.names = FALSE)
@@ -1013,10 +1419,17 @@ anova.rlmerMod <- function(object, ..., test = c("Wald", "boot", "score"),
                                   nsim   = sc$nsim,
                                   S_obs  = sc$S_obs,
                                   s_j    = sc$s_j)
-        heading <- c(
+        heading <- if (q_sc == 1L) c(
             "Robust score test for one added variance component (rlmer)",
-            "  EXPERIMENTAL: simulation-validated, not proven; see ?anova.rlmerMod",
-            sprintf("  tested component: %s, one-sided", sc$label),
+            "  EXPERIMENTAL; see ?anova.rlmerMod",
+            sprintf("  tested component: %s, one-sided", sc$label)) else c(
+            sprintf(paste0("Robust score test for %d added variance ",
+                           "components (rlmer)"), q_sc),
+            paste0("  EXPERIMENTAL: cone (chi-bar) statistic of the ",
+                   "whitened robust score; see ?anova.rlmerMod"),
+            sprintf("  tested components: %s, all one-sided",
+                    paste(sc$label, collapse = ", ")))
+        heading <- c(heading,
             sprintf(paste0("  parametric score bootstrap (null refits ",
                            "only): nsim = %d (effective = %d, fit ",
                            "failures = %d)"),
@@ -1034,7 +1447,7 @@ anova.rlmerMod <- function(object, ..., test = c("Wald", "boot", "score"),
             if (is.null(IF)) ddf <- "none"
         }
         return(.anova_pair_wald(fit0, fit1, vcov_type = vcov_type,
-                                ddf = ddf, IF = IF))
+                                ddf = ddf, IF = IF, cluster = cluster))
     }
 
     ## C4 auto-guard: warn if the robust null fit downweights a group
@@ -1043,7 +1456,8 @@ anova.rlmerMod <- function(object, ..., test = c("Wald", "boot", "score"),
     .bootstrap_group_guard(fit0)
     robust_null <- identical(null, "robust")
     boot  <- .anova_pair_boot(fit0, fit1, nsim = nsim, seed = seed,
-                              verbose = verbose, robust.null = robust_null)
+                              verbose = verbose, robust.null = robust_null,
+                              nuisance = nuisance)
     p0 <- fit0@pp$p; p1 <- fit1@pp$p
     L0 <- length(getME(fit0, "theta")); L1 <- length(getME(fit1, "theta"))
     df_diff <- (p1 - p0) + (L1 - L0)
@@ -1058,11 +1472,32 @@ anova.rlmerMod <- function(object, ..., test = c("Wald", "boot", "score"),
     rownames(out) <- c("fit0", "fit1")
     attr(out, "boot") <- list(D_boot = boot$D_boot, n_fail = boot$n_fail,
                               nsim = nsim, D_obs = boot$D_obs,
-                              robust.null = boot$robust.null)
+                              robust.null = boot$robust.null,
+                              threshold = boot$threshold)
     heading <- c(
         "Parametric bootstrap quasi-deviance test (rlmer)",
         sprintf("  nsim = %d (effective = %d, fit failures = %d)",
                 nsim, length(boot$D_boot), boot$n_fail))
+    if (abs(boot$D_obs) <= 0.01) {
+        in_score_scope <- !inherits(tryCatch(.anova_score_scope(fit0, fit1),
+                                             error = function(e) e), "error")
+        heading <- c(heading, paste0(
+            "  note: the alternative fit puts the tested variance at 0, ",
+            "so the deviance difference is at its atom (p = 1); the ",
+            "deviance bootstrap has little information near the null",
+            if (in_score_scope) "; consider test = \"score\"" else ""))
+    } else if (boot$D_obs < 0) {
+        heading <- c(heading, paste0(
+            "  note: the alternative fit has the larger quasi-deviance ",
+            "(Diff < 0: the robust fits reached different local ",
+            "solutions), so there is no evidence against the null (p = 1)"))
+    }
+    if (!is.null(boot$threshold) && length(boot$threshold$zeroed))
+        heading <- c(heading,
+            sprintf(paste0("  generator: nuisance variance component(s) ",
+                           "%s estimated near zero set to 0 ",
+                           "(threshold; nuisance = \"raw\" to disable)"),
+                    paste(boot$threshold$zeroed, collapse = ", ")))
     if (robust_null) {
         rn <- boot$robust.null
         cleaned <- !is.null(rn) && isTRUE(rn$cleaned)

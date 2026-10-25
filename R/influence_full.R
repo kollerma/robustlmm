@@ -301,6 +301,14 @@ implicitIF_full <- function(fit, eps = 1e-6, use.cache = TRUE) {
         isTRUE(all.equal(ppc$cache.IFfull.theta, theta_now,
                          tolerance = 1e-10)))
         return(ppc$cache.IFfull)
+    .slowMessage(.satterthwaite_df_workload(fit),
+                 "robustlmm.message.if.max", 50000,
+                 "Computing the influence function of the fit",
+                 paste0("It is needed for Satterthwaite degrees of freedom, ",
+                        "the cluster sandwich and Cook's distances, and is ",
+                        "cached on the fit; summary(df = \"none\"), ",
+                        "anova(ddf = \"none\") and confint() with the ",
+                        "default covariance do not need it."))
     block_sizes <- vapply(fit@idx, nrow, integer(1))
     if (fit@method == "DAStau" && any(block_sizes > 2L))
         warning("DAStau uses the DASvar T_b for blocks of dimension > 2 ",

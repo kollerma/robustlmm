@@ -43,6 +43,9 @@ default behaviour of \code{summary} (see
 
 \section{Monte-Carlo DAS-tau calibration (EXPERIMENTAL)}{
 
+  For a single fit these settings can also be given in
+  \code{\link{rlmerControl}}, which takes precedence over the options.
+
   These options enable and tune an \emph{experimental} Monte-Carlo
   calibration of the DAS-tau fixed point in \code{\link{rlmer}}.
   Without it, \code{method = "DAStau"} computes the consistency
@@ -88,6 +91,31 @@ default behaviour of \code{summary} (see
     Monte-Carlo calibration error across fits. The global RNG
     state is saved and restored around the draw.}
 }
+}
+
+\section{Messages before long computations}{
+
+  Some computations can take minutes on large fits. Before starting one,
+  \pkg{robustlmm} compares a dimension-only measure of its cost with a
+  threshold and, above it, prints a message that names the cost and
+  how to avoid it. Nothing is skipped and no question is asked. The
+  cost is measured in the workload units \eqn{W} of
+  \code{robustlmm.summary.df.max} above.
+\describe{
+  \item{\code{robustlmm.message.if.max}}{Numeric, default
+    \code{50000}. Threshold on \eqn{W} for computing the influence
+    function of a fit (\code{\link{implicitIF_full}}), which the
+    Satterthwaite degrees of freedom, the cluster sandwich and
+    \code{cooks.distance} need. It is computed once and cached.}
+  \item{\code{robustlmm.message.boot.max}}{Numeric, default
+    \code{1e7}. Threshold on \code{nsim} times the number of robust
+    refits per replicate times \eqn{W}, for \code{anova(test = "boot")}
+    (two refits), \code{anova(test = "score")} (one) and
+    \code{confint(method = "boot")} (counted as 0.02, because
+    \pkg{confintROB} refits with \code{lmer}).}
+}
+  Set an option to \code{Inf} to silence its message, or wrap the call
+  in \code{\link{suppressMessages}}.
 }
 
 \section{Developer options}{

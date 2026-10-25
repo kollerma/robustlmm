@@ -8,7 +8,7 @@
   object,
   type = c("default", "sandwich"),
   cluster = NULL,
-  correction = c("G1", "none"),
+  correction = c("G1", "none", "CR2", "CR3"),
   ...
 )
 }
@@ -25,7 +25,9 @@ grouping factor), a character string naming a grouping factor of the
 model, or a length-\code{n} vector of cluster memberships.}
 
 \item{correction}{When \code{type = "sandwich"}, \code{"G1"} (default,
-applies the \eqn{J/(J-1)} small-sample scaling) or \code{"none"}.}
+applies the \eqn{J/(J-1)} small-sample scaling), \code{"none"},
+\code{"CR2"} (bias-reduced) or \code{"CR3"} (approximate
+leave-one-cluster-out jackknife); see \code{\link{vcov_sandwich}}.}
 
 \item{...}{Additional arguments passed to the default \code{vcov}
 method (only used when \code{type = "default"}).}
@@ -39,18 +41,20 @@ linearised model-based covariance). With \code{type = "sandwich"},
 returns the robust cluster-sandwich \code{\link{vcov_sandwich}}.
 }
 \details{
-The cluster sandwich is exact for a single (nested) grouping factor;
-for crossed factors it is approximate (a warning is issued, see
-\code{\link{vcov_sandwich}}).
-
-\strong{Small-J caveat for the sandwich.} The G1 correction is
-necessary but not sufficient at very small \eqn{J}: in a
-simulation study sandwich CI coverage drops to ~0.89 at \eqn{J =
-  8} (vs. nominal 0.95). \code{vcov_sandwich} emits a warning for
-\eqn{J < 20}; for inference at small \eqn{J} prefer \code{type =
-  "default"} or pair the sandwich CI with a bootstrap calibration
-(e.g. \code{confintROB}).
+The cluster sandwich is exact when every grouping factor is nested
+within the clusters and approximate for crossed factors (with a
+warning). With few clusters the default G1 sandwich is biased down for
+between-cluster coefficients; \code{correction = "CR2"} is the
+bias-reduced version, which \code{\link[=anova.rlmerMod]{anova}} and
+\code{\link[=confint.rlmerMod]{confint}} use for \code{vcov_type =
+"sandwich"} (see \code{\link{vcov_sandwich}}). \code{vcov_sandwich}
+warns for \eqn{J < 20} with \code{"G1"} or \code{"none"}.
 }
+\section{Lifecycle}{
+
+  Stable.
+}
+
 \seealso{
 \code{\link{vcov_sandwich}}
 }

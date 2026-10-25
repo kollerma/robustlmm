@@ -28,11 +28,19 @@ stopifnot(all(a1$Df == 1L))
 stopifnot(all(is.finite(a1$Chisq)) && all(a1$Chisq > 0))
 stopifnot(all(a1[["Pr(>Chisq)"]] >= 0 & a1[["Pr(>Chisq)"]] <= 1))
 
-## vcov_type = "sandwich" yields a different table but same structure.
-a1s <- anova(fit_full, vcov_type = "sandwich")
+## vcov_type = "sandwich" with ddf = "none" yields a different chi-square
+## table of the same structure.
+a1s <- suppressWarnings(anova(fit_full, vcov_type = "sandwich", ddf = "none"))
 stopifnot(identical(dim(a1), dim(a1s)))
 stopifnot(any(abs(a1$Chisq - a1s$Chisq) > 0.5))    # genuinely different
 stopifnot(grepl("sandwich", attr(a1s, "heading")[2]))
+## Its default (ddf = "auto") is the small-J cluster F-test: CR2 sandwich,
+## approximate-Hotelling (here Bell-McCaffrey) denominator df.
+a1f <- anova(fit_full, vcov_type = "sandwich")
+stopifnot(identical(colnames(a1f), c("NumDF", "DenDF", "F value", "Pr(>F)")),
+          grepl("CR2", attr(a1f, "heading")[2]),
+          all(is.finite(a1f$DenDF) & a1f$DenDF > 0),
+          all(a1f[["Pr(>F)"]] >= 0 & a1f[["Pr(>F)"]] <= 1))
 
 ## ----------------------------------------------------------------
 ## 2. Pairwise Wald for fixed-effects-only nested models.

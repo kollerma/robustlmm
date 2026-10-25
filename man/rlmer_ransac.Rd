@@ -13,6 +13,7 @@ rlmer_ransac(
   phony_threshold = 0.99,
   seed = NULL,
   max_tries = 5L,
+  scale_fn = NULL,
   ...
 )
 }
@@ -37,6 +38,11 @@ fit is returned with a warning. With a fixed \code{seed}, attempt
 \eqn{t} uses \code{seed + t - 1}, so the first attempt is reproducible
 and the retries are deterministic.}
 
+\item{scale_fn}{passed to \code{\link{ransac_lme4}} to rank the
+candidates, and used to score the fits of the multi-start consensus
+(default: the centred bisquare M-scale; \code{robustbase::Qn} gives
+the ranking before version 3.5.1).}
+
 \item{...}{other arguments to \code{\link{rlmer}} (e.g.
 \code{rho.e}, \code{rho.b}, \code{method}).}
 }
@@ -53,8 +59,9 @@ a starting value and then passes it to \code{\link{rlmer}}'s
 
 With \code{n_starts > 1} it runs a multi-start consensus:
 \code{rlmer} is fitted from each of the \code{n_starts} best distinct
-RANSAC candidate starts, and the returned fit is the
-lowest-residual-scale one whose random-effects covariance is interior
+RANSAC candidate starts, and the returned fit is the one with the
+lowest residual scale (by default the centred bisquare M-scale about
+zero, see \code{scale_fn}) whose random-effects covariance is interior
 (\eqn{|\hat\rho| \le} \code{phony_threshold}). This samples several
 basins of a redescending \eqn{\psi} and so recovers the interior
 solution when the single best start happens to fall into the phony
@@ -70,7 +77,27 @@ fit converges its e-side robustness weights are inspected and a warning
 is issued if the design restricted to the positively-weighted
 observations is rank-deficient, suggesting a positive-weight
 \eqn{\psi} (e.g. \code{rho.e = smoothPsi}) or a different start.
+
+\strong{What the start can change.} A start decides which solution
+\code{rlmer} reaches only where a redescending fit has several, as with
+the phony \eqn{|\hat\rho| \to 1} attractor above. It does not raise the
+breakdown point of the final fit: once the scale equations of
+\code{rlmer} break down (at a fraction of 0.295 outliers for the default
+settings and 0.156 for \code{setting = "RSEa"}), a redescending
+\code{rho.e} accepts the outliers from any start. See the section
+\dQuote{Ranking RANSAC candidates} of \code{vignette("simulationStudies")}.
+The RANSAC start is also not high-breakdown itself under contamination
+(every half-sample contains outliers); \code{rlmer(setting = "RSEhb")}
+combines high-breakdown scale equations, redescending
+\eqn{\psi}-functions and the start \code{init = "robust"}, see
+\code{\link{rlmer}}.
 }
+\section{Lifecycle}{
+
+  \strong{Experimental.} The interface and the results may change in a
+  later version.
+}
+
 \examples{
   \donttest{
   fit <- rlmer_ransac(Reaction ~ Days + (Days | Subject),

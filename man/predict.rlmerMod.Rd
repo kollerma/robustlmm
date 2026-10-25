@@ -56,6 +56,11 @@ small numbers of clusters the normal approximation may under-cover,
 and a bootstrap CI (via \code{confint(..., method = "boot")}) is
 preferable.
 }
+\section{Lifecycle}{
+
+  Stable.
+}
+
 \seealso{
 \code{\link[=vcov.rlmerMod]{vcov}}
 }

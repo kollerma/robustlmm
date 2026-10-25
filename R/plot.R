@@ -2,11 +2,16 @@
 
 globalVariables(c("theoretical", ".data"), add=TRUE)
 
+## residuals on the scale of constant variance (multiplied by the square
+## root of the prior weights)
+plotResid <- function(obj)
+    if (is(obj, "rlmerMod")) obj@resp$wtres else resid(obj)
+
 ## internal functions, called via plot.rlmerMod
 ## TA-plots inclusive coloring for weights
 ta <- function(obj, title="", add.line="none", ...) {
     data <- data.frame(fitted = fitted(obj),
-                       resid = resid(obj),
+                       resid = plotResid(obj),
                        weights = if (is(obj, "rlmerMod")) getME(obj, "w_e") else 1)
     plt <- ggplot2::ggplot(data, ggplot2::aes(fitted, resid))
     if (add.line == "below")
@@ -25,7 +30,7 @@ qq <- function(obj, type = c("resid", "ranef"), title="",
                multiply.weights=FALSE, add.line="none", ...) {
     type <- match.arg(type)
     val0 <- switch(type,
-                  resid = list(resid = data.frame(resid=resid(obj))),
+                  resid = list(resid = data.frame(resid=plotResid(obj))),
                   ranef = ranef(obj))
     ## robustness weights arranged EXACTLY like val0 (same list of
     ## per-factor data frames), so each point's weight is looked up by

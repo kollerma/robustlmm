@@ -21,7 +21,8 @@ rlmer(
   doFit = TRUE,
   init,
   size_obr = FALSE,
-  design.weights = NULL
+  design.weights = NULL,
+  control = rlmerControl()
 )
 
 lmerNoFit(formula, data = NULL, ..., initTheta)
@@ -45,7 +46,10 @@ Details.}
 
 \item{setting}{a string specifying suggested choices for the arguments
 \code{rho.e}, \code{rho.sigma.e}, \code{rho.b} and \code{rho.sigma.b}.
-Use \code{"RSEn"} (the default) or \code{"RSEa"}. Both use
+Use \code{"RSEn"} (the default), \code{"RSEa"}, or \code{"RSEhb"} for
+the high-breakdown configuration (see the section on breakdown in
+Details; it also sets \code{init = "robust"} unless \code{init} is
+given). \code{"RSEn"} and \code{"RSEa"} use
 \code{\link{smoothPsi}} for all the \dQuote{rho} arguments. For
 \code{rho.sigma.e}, squared robustness weights are used (see
 \code{\link{psi2propII}}). \code{"RSEn"} uses the same tuning parameter as
@@ -94,8 +98,21 @@ default, the model is fit immediately.}
 
 \item{init}{optional lmerMod- or rlmerMod-object to use for starting values,
   a list with elements \sQuote{fixef}, \sQuote{u}, \sQuote{sigma},
-  \sQuote{theta}, the string \code{"ransac"}, or a function producing an
-  lmerMod object.
+  \sQuote{theta}, the string \code{"robust"} or \code{"ransac"}, or a
+  function producing an lmerMod object.
+
+  \code{init = "robust"} is a high-breakdown start for any
+  random-effects structure: an S-estimate
+  (\code{robustbase::\link[robustbase]{lmrob}(method = "S")}) of the
+  fixed-effects part of the model screens the observations (absolute
+  residual at most \code{qnorm(0.995)} times its scale), and \code{lmer}
+  on the retained observations supplies \sQuote{fixef}, \sQuote{sigma}
+  and \sQuote{theta}. It is computed for the model as specified
+  (contrasts, subset, prior weights and offset) and is reproducible:
+  the S-estimate's resampling uses a fixed seed and leaves the random
+  number stream untouched. The start matters only with a redescending
+  \code{rho.e} or \code{rho.b}, whose estimating equations have several
+  solutions; see the section on breakdown in Details.
 
   \strong{An lmerMod or rlmerMod passed here supplies the model, not only
   the starting values}: the working object is built from it, so
@@ -157,6 +174,11 @@ design weights are supported for a \emph{single grouping factor}
 only; \code{rlmer} stops with an error if the model has more than
 one. Leverage robustness costs a little efficiency at the clean model
 (about 1\% at the default tuning; see \code{vignette("rlmer")}).}
+
+\item{control}{an \code{\link{rlmerControl}} object: \code{rel.tol},
+\code{max.iter}, the settings of the Monte-Carlo DAS-tau calibration,
+and whether to fit again if the fit does not converge. A setting may
+be given either as an argument or in \code{control}, not in both.}
 
 \item{initTheta}{parameter to initialize theta with (optional)}
 }
@@ -254,6 +276,40 @@ are given in Table 2 and 3 of the vignette (\code{vignette("rlmer")}).
 
 } }
 
+\item{Breakdown point:}{
+
+The residual scale \eqn{\sigma} is estimated from
+\eqn{\sum_i \eta_i \tau_i^2 w(t_i)(t_i^2 - \kappa) = 0},
+\eqn{t_i = r_i/(\tau_i\sigma)}, with the weights \eqn{w} of
+\code{rho.sigma.e}. For the \code{\link{psi2propII}} weights of the
+default settings \eqn{w(t)(t^2 - \kappa)} is bounded by its limit
+\eqn{\chi(\infty)}, and the equation breaks down (\eqn{\hat\sigma \to
+\infty}) at the fraction \eqn{\kappa/(\kappa + \chi(\infty))} of
+outliers: 0.295 for \code{"RSEn"} and 0.156 for \code{"RSEa"}. The scale
+is inflated well before that, and a redescending \code{rho.e} then no
+longer rejects the outliers, whatever the start. The simple variance
+components behave in the same way at the level of the random effects.
+
+\code{setting = "RSEhb"} is a high-breakdown configuration: the S-type
+scale \code{\link{sScalePsi}} (breakdown point 1/2) for
+\code{rho.sigma.e} and for simple variance components, a bisquare
+\code{rho.b} for simple random effects, the start \code{init =
+"robust"}, and a bisquare \code{rho.e} with \code{c = 3.444} (85\%
+efficiency). Its fixed effects break down under considerably more
+contamination than those of the default settings, at a cost in
+efficiency and in the precision of the variance components. For
+inference use the cluster sandwich (\code{vcov_type = "sandwich"} in
+\code{\link[=confint.rlmerMod]{confint}} and
+\code{\link[=anova.rlmerMod]{anova}}) and the default \code{method =
+"DAStau"}: \code{"DASvar"} under-estimates the residual scale in this
+setting (and \code{"DAStau"} falls back to it, with a warning, for
+random-effect blocks of dimension above 2). Blocks of correlated random
+effects keep their multivariate \code{rho.b} and \code{rho.sigma.b} and
+get no protection against outlying clusters. See the section
+\dQuote{Studies for the high-breakdown configuration} of
+\code{vignette("simulationStudies")} for the breakdown, efficiency and
+coverage results and their limits. }
+
 \item{Recommended tuning parameters:}{
 
 For a more robust estimate, use \code{setting = "RSEn"} (the default). For
@@ -308,6 +364,24 @@ This is mainly used to verify the algorithms to reproduce the fit by
   unaffected in every version. See the 3.5.0 entry of
   \code{news(package = "robustlmm")} for the magnitudes and the
   measured exposure of each method.
+}
+
+\section{Convergence}{
+
+  \code{rlmer} warns if the fit did not converge, and \code{print} and
+  \code{summary} then show a \dQuote{Convergence code} block. The code
+  is in \code{object@optinfo$conv$opt}: 0 converged; 1 the iterations
+  stopped at \code{max.iter}; 2 converged, but the estimating equations
+  are not satisfied; 3 an inner iteration of the last step did not
+  converge. The messages are in \code{object@optinfo$warnings}.
+}
+
+\section{Lifecycle}{
+
+  Stable. Experimental, and subject to change: \code{setting = "RSEhb"},
+  \code{init = "robust"} and \code{init = "ransac"}; structured covariances
+  (\code{cs()}, \code{ar1()}) in the formula; \code{size_obr}; and the
+  Monte-Carlo DAS-tau calibration (\code{\link{rlmerControl}}).
 }
 
 \examples{

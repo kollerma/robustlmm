@@ -135,7 +135,8 @@ DEFAULTS <- list(
 
 .eval_ci_wald <- function(fit, beta_true, vcov_type) {
     ci <- suppressWarnings(
-        confint(fit, method = "Wald", vcov_type = vcov_type))
+        confint(fit, method = "Wald", vcov_type = vcov_type,
+                df = "none"))   # the z-intervals this study recorded
     data.frame(method = paste0("Wald.", vcov_type),
                coef   = rownames(ci),
                lower  = ci[, 1L], upper = ci[, 2L],
@@ -236,7 +237,9 @@ DEFAULTS <- list(
     out <- list()
     if (!is.null(fit)) {
         a_d <- anova(fit, vcov_type = "default")
-        a_s <- anova(fit, vcov_type = "sandwich")
+        ## ddf = "none": the chi-square table this study recorded (the
+        ## sandwich default became the CR2 F-test later, theory-methods F3)
+        a_s <- anova(fit, vcov_type = "sandwich", ddf = "none")
         out[[length(out) + 1L]] <- data.frame(
             method = "anova.Wald.default",
             term = rownames(a_d), Df = a_d$Df, Chisq = a_d$Chisq,
@@ -587,7 +590,7 @@ DEFAULTS <- list(
         a_d <- suppressWarnings(
             anova(fit_null, fit_full, vcov_type = "default"))
         a_s <- suppressWarnings(
-            anova(fit_null, fit_full, vcov_type = "sandwich"))
+            anova(fit_null, fit_full, vcov_type = "sandwich", ddf = "none"))
         out[[length(out) + 1L]] <- data.frame(
             method = c("pair.Wald.default", "pair.Wald.sandwich"),
             Df     = c(a_d$Df[2L],     a_s$Df[2L]),

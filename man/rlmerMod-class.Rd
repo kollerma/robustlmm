@@ -42,6 +42,11 @@ Class "rlmerMod" of Robustly Fitted Mixed-Effect Models
 \details{
 A robust mixed-effects model as returned by \code{\link{rlmer}}.
 }
+\section{Lifecycle}{
+
+  Stable, including the \pkg{emmeans} support.
+}
+
 \section{Objects from the Class}{
  Objects are created by calls to
   \code{\link{rlmer}}.

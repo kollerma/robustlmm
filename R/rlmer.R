@@ -87,6 +87,40 @@
 ##'
 ##' } }
 ##'
+##' \item{Breakdown point:}{
+##'
+##' The residual scale \eqn{\sigma} is estimated from
+##' \eqn{\sum_i \eta_i \tau_i^2 w(t_i)(t_i^2 - \kappa) = 0},
+##' \eqn{t_i = r_i/(\tau_i\sigma)}, with the weights \eqn{w} of
+##' \code{rho.sigma.e}. For the \code{\link{psi2propII}} weights of the
+##' default settings \eqn{w(t)(t^2 - \kappa)} is bounded by its limit
+##' \eqn{\chi(\infty)}, and the equation breaks down (\eqn{\hat\sigma \to
+##' \infty}) at the fraction \eqn{\kappa/(\kappa + \chi(\infty))} of
+##' outliers: 0.295 for \code{"RSEn"} and 0.156 for \code{"RSEa"}. The scale
+##' is inflated well before that, and a redescending \code{rho.e} then no
+##' longer rejects the outliers, whatever the start. The simple variance
+##' components behave in the same way at the level of the random effects.
+##'
+##' \code{setting = "RSEhb"} is a high-breakdown configuration: the S-type
+##' scale \code{\link{sScalePsi}} (breakdown point 1/2) for
+##' \code{rho.sigma.e} and for simple variance components, a bisquare
+##' \code{rho.b} for simple random effects, the start \code{init =
+##' "robust"}, and a bisquare \code{rho.e} with \code{c = 3.444} (85\%
+##' efficiency). Its fixed effects break down under considerably more
+##' contamination than those of the default settings, at a cost in
+##' efficiency and in the precision of the variance components. For
+##' inference use the cluster sandwich (\code{vcov_type = "sandwich"} in
+##' \code{\link[=confint.rlmerMod]{confint}} and
+##' \code{\link[=anova.rlmerMod]{anova}}) and the default \code{method =
+##' "DAStau"}: \code{"DASvar"} under-estimates the residual scale in this
+##' setting (and \code{"DAStau"} falls back to it, with a warning, for
+##' random-effect blocks of dimension above 2). Blocks of correlated random
+##' effects keep their multivariate \code{rho.b} and \code{rho.sigma.b} and
+##' get no protection against outlying clusters. See the section
+##' \dQuote{Studies for the high-breakdown configuration} of
+##' \code{vignette("simulationStudies")} for the breakdown, efficiency and
+##' coverage results and their limits. }
+##'
 ##' \item{Recommended tuning parameters:}{
 ##'
 ##' For a more robust estimate, use \code{setting = "RSEn"} (the default). For
@@ -155,7 +189,10 @@
 ##'   Details.
 ##' @param setting a string specifying suggested choices for the arguments
 ##'   \code{rho.e}, \code{rho.sigma.e}, \code{rho.b} and \code{rho.sigma.b}.
-##'   Use \code{"RSEn"} (the default) or \code{"RSEa"}. Both use
+##'   Use \code{"RSEn"} (the default), \code{"RSEa"}, or \code{"RSEhb"} for
+##'   the high-breakdown configuration (see the section on breakdown in
+##'   Details; it also sets \code{init = "robust"} unless \code{init} is
+##'   given). \code{"RSEn"} and \code{"RSEa"} use
 ##'   \code{\link{smoothPsi}} for all the \dQuote{rho} arguments. For
 ##'   \code{rho.sigma.e}, squared robustness weights are used (see
 ##'   \code{\link{psi2propII}}). \code{"RSEn"} uses the same tuning parameter as
@@ -195,8 +232,21 @@
 ##'   default, the model is fit immediately.
 ##' @param init optional lmerMod- or rlmerMod-object to use for starting values,
 ##'   a list with elements \sQuote{fixef}, \sQuote{u}, \sQuote{sigma},
-##'   \sQuote{theta}, the string \code{"ransac"}, or a function producing an
-##'   lmerMod object.
+##'   \sQuote{theta}, the string \code{"robust"} or \code{"ransac"}, or a
+##'   function producing an lmerMod object.
+##'
+##'   \code{init = "robust"} is a high-breakdown start for any
+##'   random-effects structure: an S-estimate
+##'   (\code{robustbase::\link[robustbase]{lmrob}(method = "S")}) of the
+##'   fixed-effects part of the model screens the observations (absolute
+##'   residual at most \code{qnorm(0.995)} times its scale), and \code{lmer}
+##'   on the retained observations supplies \sQuote{fixef}, \sQuote{sigma}
+##'   and \sQuote{theta}. It is computed for the model as specified
+##'   (contrasts, subset, prior weights and offset) and is reproducible:
+##'   the S-estimate's resampling uses a fixed seed and leaves the random
+##'   number stream untouched. The start matters only with a redescending
+##'   \code{rho.e} or \code{rho.b}, whose estimating equations have several
+##'   solutions; see the section on breakdown in Details.
 ##'
 ##'   \strong{An lmerMod or rlmerMod passed here supplies the model, not only
 ##'   the starting values}: the working object is built from it, so
@@ -256,6 +306,17 @@
 ##'   only; \code{rlmer} stops with an error if the model has more than
 ##'   one. Leverage robustness costs a little efficiency at the clean model
 ##'   (about 1\% at the default tuning; see \code{vignette("rlmer")}).
+##' @param control an \code{\link{rlmerControl}} object: \code{rel.tol},
+##'   \code{max.iter}, the settings of the Monte-Carlo DAS-tau calibration,
+##'   and whether to fit again if the fit does not converge. A setting may
+##'   be given either as an argument or in \code{control}, not in both.
+##' @section Convergence:
+##'   \code{rlmer} warns if the fit did not converge, and \code{print} and
+##'   \code{summary} then show a \dQuote{Convergence code} block. The code
+##'   is in \code{object@optinfo$conv$opt}: 0 converged; 1 the iterations
+##'   stopped at \code{max.iter}; 2 converged, but the estimating equations
+##'   are not satisfied; 3 an inner iteration of the last step did not
+##'   converge. The messages are in \code{object@optinfo$warnings}.
 ##' @return object of class rlmerMod.
 ##' @seealso \code{\link[lme4]{lmer}}, \code{vignette("rlmer")}
 ##' @author Manuel Koller, with thanks to Vanda Lourenço for improvements.
@@ -292,29 +353,127 @@
 ##'
 ##' @importFrom lme4 lmer
 ##' @importFrom stats getCall
+##' @section Lifecycle:
+##'   Stable. Experimental, and subject to change: \code{setting = "RSEhb"},
+##'   \code{init = "robust"} and \code{init = "ransac"}; structured covariances
+##'   (\code{cs()}, \code{ar1()}) in the formula; \code{size_obr}; and the
+##'   Monte-Carlo DAS-tau calibration (\code{\link{rlmerControl}}).
 ##' @export
 rlmer <- function(formula, data, ..., method = c("DAStau", "DASvar"),
                   setting, rho.e, rho.b, rho.sigma.e, rho.sigma.b,
                   rel.tol = 1e-8, max.iter = 40 * (r + 1)^2, verbose = 0,
                   doFit = TRUE, init, size_obr = FALSE,
-                  design.weights = NULL)
+                  design.weights = NULL, control = rlmerControl())
 {
     lcall <- match.call()
     pf <- parent.frame()
     method <- match.arg(method)
-    lobj <- .rlmerInit(lcall, pf, formula, data, method, rho.e, rho.b, rho.sigma.e,
-                       rho.sigma.b, rel.tol, max.iter, verbose, init, setting, ...)$obj
+    control <- .resolveControl(control)
+    .checkControlClash(control, c(if (!missing(rel.tol)) "rel.tol",
+                                  if (!missing(max.iter)) "max.iter"))
+    if (missing(rel.tol)) rel.tol <- control$rel.tol
+    .check_number(rel.tol, "rel.tol", lower = 0, open = TRUE)
+    if (is.logical(verbose)) verbose <- as.numeric(verbose)
+    .check_number(verbose, "verbose")
+    .check_flag(doFit, "doFit")
+    ## Monte-Carlo DAS-tau settings of `control` hold for this fit only
+    op <- .controlOptions(control)
+    if (length(op)) {
+        oldOp <- options(op)
+        on.exit(options(oldOp), add = TRUE)
+    }
+    ri <- .rlmerInit(lcall, pf, formula, data, method, rho.e, rho.b, rho.sigma.e,
+                     rho.sigma.b, rel.tol, max.iter, verbose, init, setting,
+                     lmerCtrl = control$lmerControl, ...)
+    lobj <- ri$obj
     lobj@resp$eta <- .processDesignWeights(design.weights, lobj)
     lobj@pp <- as(lobj@pp, "rlmerPredD_DAS")
     lobj@pp$method <- lobj@method
     lobj@pp$initRho(lobj)
     lobj@pp$initMatrices(lobj)
+    if (!is.null(ri$start)) .applyInitList(lobj, ri$start)
 
     ## required for max.iter:
     r <- len(lobj, "theta")
+    if (missing(max.iter) && !is.null(control$max.iter))
+        max.iter <- control$max.iter
+    .check_number(max.iter, "max.iter", lower = 0, integer = TRUE)
 
-    return(.rlmer(lobj, rel.tol, max.iter, verbose, doFit,
-                  size_obr = isTRUE(size_obr)))
+    retry <- control$retry && doFit
+    fit <- .rlmer(lobj, rel.tol, max.iter, verbose, doFit,
+                  size_obr = isTRUE(size_obr), warn = !retry)
+    if (retry) {
+        if (!.converged(fit))
+            fit <- .retryFit(fit, lcall, pf, control, rel.tol, max.iter,
+                             verbose, isTRUE(size_obr))
+        for (m in unlist(fit@optinfo$warnings)) warning(m, call. = FALSE)
+    }
+    fit
+}
+
+.converged <- function(fit) isTRUE(fit@optinfo$conv$opt == 0)
+
+## Fallback chain for a fit that did not converge (rlmerControl(retry =
+## TRUE)): returns the first converged fit, or the original fit if no
+## attempt converges. The attempts run quietly; the caller raises the
+## warnings of the fit that is returned.
+.retryFit <- function(fit, lcall, pf, control, rel.tol, max.iter, verbose,
+                      size_obr) {
+    steps <- control$retry.steps
+    labels <- c(iterations = "more iterations",
+                DASvar = "start from a DASvar fit",
+                robust = "robust start")
+    ## every attempt gets the larger number of iterations
+    bigIter <- ceiling(max.iter * control$retry.max.iter.factor)
+    ctrl <- control
+    ctrl$retry <- FALSE
+    ctrl$max.iter <- NULL
+    attr(ctrl, "given") <- setdiff(attr(ctrl, "given"), "max.iter")
+    again <- function(...) {
+        cl <- lcall
+        cl$control <- ctrl
+        cl$max.iter <- bigIter
+        args <- list(...)
+        for (a in names(args)) cl[[a]] <- args[[a]]
+        eval(cl, pf)
+    }
+    tried <- character(0)
+    for (k in seq_along(steps)) {
+        if (steps[k] != "DASvar" || fit@method != "DASvar")
+            tried <- c(tried, steps[k])
+        cand <- tryCatch(suppressMessages(suppressWarnings(switch(steps[k],
+            iterations = {
+                ## continue from the unconverged estimate, on a copy
+                obj <- fit
+                obj@pp <- fit@pp$copy()
+                obj@resp <- fit@resp$copy()
+                .rlmer(obj, rel.tol, bigIter, verbose, TRUE,
+                       size_obr = size_obr, warn = FALSE)
+            },
+            DASvar = if (fit@method != "DASvar") {
+                fv <- again(method = "DASvar")
+                if (.converged(fv))
+                    again(init = list(fixef = .fixef(fv), sigma = .sigma(fv),
+                                      theta = theta(fv)))
+            },
+            robust = again(init = "robust")))),
+            error = function(e) NULL)
+        if (!is.null(cand) && .converged(cand)) {
+            cand@call <- lcall
+            cand@optinfo$retry <- list(
+                attempt = k, step = steps[k],
+                message = sprintf("converged on retry attempt %d of %d (%s)",
+                                  k, length(steps), labels[[steps[k]]]))
+            return(cand)
+        }
+    }
+    fit@optinfo$retry <- list(
+        attempt = NA_integer_, step = NA_character_,
+        message = sprintf("no retry attempt converged (tried: %s)",
+                          if (length(tried))
+                              paste(labels[tried], collapse = "; ")
+                          else "none applicable"))
+    fit
 }
 
 ## WS11 step 1: validate / compute the Mallows design weights eta.
@@ -454,6 +613,65 @@ rlmer <- function(formula, data, ..., method = c("DAStau", "DASvar"),
     invisible(NULL)
 }
 
+## High-breakdown starting values for init = "robust", computed from the
+## lmer start `linit` of the model actually fitted (its fixed-effects model
+## matrix, response, offset and prior weights, so contrasts, subset,
+## na.action, weights and offset are those of the call). A regression
+## S-estimate of the marginal model (robustbase::lmrob(method = "S"),
+## bisquare, breakdown point 1/2) screens the observations,
+## |r_i| <= qnorm(0.995) * scale, and lmer on the retained observations
+## (the same call restricted to them) supplies fixef, sigma and theta for
+## any random-effects structure. The S-estimate itself, not the default MM:
+## at 30% contamination the MM step's 95%-efficient bisquare accepts shifted
+## clusters once the S-scale inflates (breakdown study BD5: final fit
+## broken in 0.47 of the contaminated samples from the MM screen, 0.40 from
+## the S screen). The marginal residuals include the random effects, so the
+## screen is conservative: it removes gross outliers and bad leverage points
+## but keeps clusters whose random effect is merely large. The resampling of
+## the S-estimate uses a fixed seed and leaves the caller's RNG stream
+## untouched, so the start is reproducible.
+.robustInitList <- function(linit, lcall2, pf) {
+    X  <- lme4::getME(linit, "X")
+    y0 <- lme4::getME(linit, "y") - lme4::getME(linit, "offset")
+    w  <- stats::weights(linit)
+    had <- exists(".Random.seed", envir = globalenv(), inherits = FALSE)
+    if (had) old <- get(".Random.seed", envir = globalenv())
+    on.exit(if (had) assign(".Random.seed", old, envir = globalenv())
+            else rm(".Random.seed", envir = globalenv()))
+    set.seed(1L)
+    ## lmrob's "possible local breakdown" notes concern the S-estimate of
+    ## factor designs, which only screens here; they are not the user's
+    lr <- tryCatch(suppressWarnings(
+        robustbase::lmrob(y0 ~ 0 + X, weights = w, method = "S")),
+        error = function(e) e)
+    if (inherits(lr, "error"))
+        stop("init = \"robust\": the marginal S-estimate (lmrob) failed (",
+             conditionMessage(lr), ")", call. = FALSE)
+    keep <- abs(stats::residuals(lr)) <= stats::qnorm(0.995) * lr$scale
+    ## rows of the kept observations in the call's data (or, without data,
+    ## positions in the variables), from the model frame's row names
+    rn <- rownames(stats::model.frame(linit))
+    d0 <- if (is.null(lcall2$data)) NULL else eval(lcall2$data, pf)
+    rows <- if (is.data.frame(d0)) match(rn, rownames(d0))
+            else suppressWarnings(as.integer(rn))
+    if (anyNA(rows))
+        stop("init = \"robust\": cannot match the observations of the ",
+             "model frame to the rows of 'data'", call. = FALSE)
+    lcall3 <- lcall2
+    lcall3$subset <- rows[keep]
+    f <- tryCatch(suppressMessages(suppressWarnings(eval(lcall3, pf))),
+                  error = function(e) e)
+    if (inherits(f, "error"))
+        stop("init = \"robust\": lmer() on the screened observations ",
+             "failed (", conditionMessage(f), ")", call. = FALSE)
+    fe <- lme4::fixef(f)
+    ## a column lost to the screen (e.g. a factor level): fall back to the
+    ## S coefficients, which are on the full model matrix
+    if (length(fe) != ncol(X) || anyNA(fe)) fe <- stats::coef(lr)
+    list(fixef = unname(fe), sigma = sigma(f),
+         theta = unname(lme4::getME(f, "theta")))
+}
+
 ## Starting values taken from a fit on a DIFFERENT set of observations
 ## (a RANSAC subsample), in the form `.rlmerInit()`'s list branch wants.
 ##
@@ -470,7 +688,15 @@ rlmer <- function(formula, data, ..., method = c("DAStau", "DASvar"),
 
 .rlmerInit <- function(lcall, pf, formula, data, method, rho.e, rho.b, rho.sigma.e,
                        rho.sigma.b, rel.tol, max.iter, verbose, init,
-                       setting = c("RSEn", "RSEa"), ...) {
+                       setting = c("RSEn", "RSEa", "RSEhb"), lmerCtrl = NULL,
+                       ...) {
+    start <- NULL
+    own_init <- FALSE   # TRUE when init is the internal lmer start (linit)
+    ## setting = "RSEhb" starts from the high-breakdown start by default
+    hb <- !missing(setting) &&
+        identical(tryCatch(match.arg(setting, c("RSEn", "RSEa", "RSEhb")),
+                           error = function(e) ""), "RSEhb")
+    if (hb && missing(init)) init <- "robust"
     ## Resolve init = "ransac" to a PARAMETER LIST before the branches
     ## below.  It must not resolve to the merMod that ransac_lme4()
     ## returns: an merMod passed as `init` supplies the model as well as
@@ -487,14 +713,23 @@ rlmer <- function(formula, data, ..., method = c("DAStau", "DASvar"),
             stop("init = \"ransac\": no successful lmer fit across the RANSAC subsamples")
         init <- .ransacInitList(rr$fit)
     }
+    ## init = "robust": computed below from the lmer start of the model
+    ## actually fitted (see .robustInitList), then used like a list start
+    robust_start <- !missing(init) && !is.null(init) &&
+        identical(init, "robust")
+    if (robust_start) init <- NULL
     if (missing(init) || is.null(init) || is.list(init)) {
         lcall2 <- lcall
         lcall2[setdiff(names(formals(rlmer)), names(formals(lmer)))] <- NULL
         lcall2$doFit <- NULL
+        ## `control` of rlmer() is an rlmerControl; lmer() gets the
+        ## lmerControl it carries, if any
+        lcall2$control <- lmerCtrl
         lcall2$REML <- TRUE
         lcall2[[1]] <- substitute(lme4::lmer)
         linit <- eval(lcall2, pf)
         .checkStructuredCovariance(linit)
+        if (robust_start) init <- .robustInitList(linit, lcall2, pf)
         if (!missing(init) && is.list(init)) {
             ## Components may be omitted; whatever is absent keeps the
             ## value the full-data lmer initialisation produced.  When
@@ -531,28 +766,17 @@ rlmer <- function(formula, data, ..., method = c("DAStau", "DASvar"),
                 stopifnot(length(init[["sigma"]]) == length(sigma(linit)))
             if (!is.null(init[["theta"]]))
                 stopifnot(length(init[["theta"]]) == length(getME(linit, "theta")))
-            ## convert object to rlmerMod
-            linit <- as(linit, "rlmerMod")
-            ## set the supplied initial parameters, but do not fit yet
-            ## Order is load-bearing, not stylistic: the effects solve
-            ## triggered below reads beta and b from the object at call
-            ## time and its robustness weights depend on sigma, so beta
-            ## and sigma must already be set.  Reordering would start
-            ## the solve from stale values and fail silently.
-            if (!is.null(init[["fixef"]])) setFixef(linit, unname(init[["fixef"]]))
-            if (!is.null(init[["sigma"]])) setSigma(linit, init[["sigma"]])
-            if (!is.null(init[["theta"]])) {
-                ## fit.effects = TRUE re-solves (beta, u) at the sigma
-                ## and theta just set; update.sigma = FALSE keeps the
-                ## supplied sigma.  Only do this when `u` was not
-                ## supplied, so a fully specified init is used verbatim.
-                refitU <- is.null(init[["u"]])
-                setTheta(linit, init[["theta"]], fit.effects = refitU,
-                         update.sigma = FALSE)
-            }
-            if (!is.null(init[["u"]])) setU(linit, init[["u"]])
+            ## The values are applied by rlmer() once the fit is fully
+            ## configured (see .applyInitList): the (beta, u) re-solve
+            ## must use the fit's own psi-functions. Applied here, to the
+            ## object coerced from the lmer start, it ran with the
+            ## classical psi (rho.e = cPsi) and returned the GLS fit, so
+            ## the supplied fixed effects -- every RANSAC start's -- were
+            ## discarded.
+            start <- init
         }
         init <- linit
+        own_init <- TRUE
     } else if (is.function(init)) {
         init <- do.call(init,list(formula=formula, data=data, REML=TRUE, ...))
     } else if (!is(init, "merMod") && !is(init, "rlmerMod")) {
@@ -571,7 +795,7 @@ rlmer <- function(formula, data, ..., method = c("DAStau", "DASvar"),
     ## than stop, because dropping rows with NAs is a legitimate reason
     ## for the counts to differ; pass starting VALUES through the list
     ## form of `init` if the model should come from `formula`/`data`.
-    if ((is(init, "merMod") || is(init, "rlmerMod")) &&
+    if (!own_init && (is(init, "merMod") || is(init, "rlmerMod")) &&
         !missing(data) && is.data.frame(data)) {
         ninit <- tryCatch(nobs(init), error = function(e) NA_integer_)
         ## Compare against the rows the model would actually use, not
@@ -644,15 +868,31 @@ rlmer <- function(formula, data, ..., method = c("DAStau", "DASvar"),
     } else {
         setting <- "RSEn"
     }
+    hb <- setting == "RSEhb"
     if (missing(rho.e)) {
-        rho.e <- smoothPsi
+        rho.e <- if (hb) makeBisquarePsi(.rsehb_c) else smoothPsi
     }
+    ## An S-type scale function (makeSScalePsi) is a weight function for
+    ## the scale equations of the residuals and of one-dimensional blocks
+    ## only: the multivariate scale equation uses psi(d - s kappa) instead,
+    ## and as rho.e or rho.b it is no location psi-function at all.
+    is_ss <- function(p) !is.null(attr(p, "sscale"))
+    ss_msg <- paste0("an S-type scale function (sScalePsi, makeSScalePsi()) ",
+                     "can only be used for rho.sigma.e and for the ",
+                     "rho.sigma.b of one-dimensional random-effect blocks")
+    if (is_ss(rho.e)) stop(ss_msg, call. = FALSE)
     adjustForEfficiency <- setting == "RSEa"
     if (missing(rho.sigma.e)) {
-        rho.sigma.e <- psi2propII(rho.e, adjust = adjustForEfficiency)
+        rho.sigma.e <- if (hb) sScalePsi else
+            psi2propII(rho.e, adjust = adjustForEfficiency)
     }
     if (missing(rho.b)) {
-        rho.b <- lapply(lobj@dim, getDefaultRhoB, rho = rho.e)
+        ## RSEhb: redescending bisquare for simple variance components;
+        ## blocks of correlated random effects keep the multivariate default
+        rho.b <- if (hb)
+            lapply(lobj@dim, function(dm)
+                if (dm == 1) bisquarePsi else getDefaultRhoB(dm, smoothPsi))
+        else lapply(lobj@dim, getDefaultRhoB, rho = rho.e)
     } else if (!is.list(rho.b)) {
         rho.b <- rep.int(list(rho.b), length(lobj@dim))
         ## TODO warn if low asymptotic efficiency?
@@ -661,7 +901,8 @@ rlmer <- function(formula, data, ..., method = c("DAStau", "DASvar"),
         rho.sigma.b <- list()
         for (bt in seq_along(lobj@dim)) {
             if (lobj@dim[bt] == 1) {
-                rho.sigma.b[[bt]] <- psi2propII(rho.b[[bt]], adjust = adjustForEfficiency)
+                rho.sigma.b[[bt]] <- if (hb) sScalePsi else
+                    psi2propII(rho.b[[bt]], adjust = adjustForEfficiency)
             } else {
                 rho.sigma.b[[bt]] <- rho.b[[bt]]
             }
@@ -670,6 +911,15 @@ rlmer <- function(formula, data, ..., method = c("DAStau", "DASvar"),
         rho.sigma.b <- rep.int(list(rho.sigma.b), length(lobj@dim))
         ## TODO warn if low asymptotic efficiency?
     }
+    if (any(vapply(rho.b, is_ss, logical(1)))) stop(ss_msg, call. = FALSE)
+    bad <- which(lobj@dim > 1 & vapply(rho.sigma.b, is_ss, logical(1)))
+    if (length(bad))
+        stop("an S-type scale function (sScalePsi, makeSScalePsi()) is ",
+             "for one-dimensional random-effect blocks; block ",
+             paste(bad, collapse = ", "), " has dimension ",
+             paste(lobj@dim[bad], collapse = ", "), ". Pass rho.sigma.b ",
+             "as a list with a multivariate function for such blocks.",
+             call. = FALSE)
     ## set arguments only relevant to rlmerMod
     lobj@rho.b <- rho.b
     lobj@rho.sigma.b <- rho.sigma.b
@@ -688,8 +938,37 @@ rlmer <- function(formula, data, ..., method = c("DAStau", "DASvar"),
         }
     }
     lobj@method <- method
-    return(list(obj = lobj, init = init))
+    return(list(obj = lobj, init = init, start = start))
 }
+
+## Apply the starting values of init = list(...) to the fully configured
+## fit (psi-functions, design weights and IRLS matrices in place). Order is
+## load-bearing: the effects solve triggered by setTheta() reads beta and b
+## from the object and its robustness weights depend on sigma, so beta and
+## sigma are set first. fit.effects = TRUE re-solves (beta, u) jointly at
+## the supplied sigma and theta with the fit's psi-functions (the supplied
+## fixef is the warm start of that IRLS, so for a redescending rho.e it
+## selects the local solution); update.sigma = FALSE keeps the supplied
+## sigma. A supplied u is used verbatim instead of re-solving.
+.applyInitList <- function(lobj, init) {
+    if (!is.null(init[["fixef"]])) setFixef(lobj, unname(init[["fixef"]]))
+    if (!is.null(init[["sigma"]])) setSigma(lobj, init[["sigma"]])
+    if (!is.null(init[["theta"]])) {
+        refitU <- is.null(init[["u"]])
+        setTheta(lobj, init[["theta"]], fit.effects = refitU,
+                 update.sigma = FALSE)
+    }
+    if (!is.null(init[["u"]])) {
+        setU(lobj, init[["u"]])
+        ## setU() leaves mu (and the residuals) at the previous u
+        lobj@resp$updateMu(.mu(lobj))
+    }
+    invisible(lobj)
+}
+
+## Tuning constant of the bisquare rho.e of setting = "RSEhb" (breakdown
+## study BD3/BD6, research/breakdown).
+.rsehb_c <- 3.443689
 
 getDefaultRhoB <- function(dimension, rho) {
     if (dimension == 1) {
@@ -708,8 +987,58 @@ getDefaultRhoB <- function(dimension, rho) {
     return(chgDefaults(rho, k = k))
 }
 
+## Conditions used by the fit to make its warnings classifiable.
+## .innerWarning(): warning of an inner iteration (tau, sigma, theta, the
+## effects solve); convergence = TRUE marks a failed inner iteration as
+## opposed to a numerical safeguard. .signalIteration(): start of an outer
+## iteration. Outside of rlmer() these behave like ordinary warnings and
+## no-ops, respectively.
+.innerWarning <- function(..., convergence = FALSE) {
+    cls <- c(if (convergence) "rlmerConvergenceWarning", "rlmerInnerWarning",
+             "warning", "condition")
+    warning(structure(class = cls,
+                      list(message = .makeMessage(...), call = sys.call(-1))))
+}
+
+.signalIteration <- function()
+    signalCondition(structure(class = c("rlmerIteration", "condition"),
+                              list(message = "", call = NULL)))
+
+## Deduplicate warning messages; messages that differ only in an index
+## ("tau[12]") are reported once with a count.
+.collapseWarnings <- function(msgs) {
+    if (!length(msgs)) return(character(0))
+    key <- gsub("\\[[0-9]+\\]", "", msgs)
+    ukey <- unique(key)
+    n <- as.vector(table(factor(key, ukey)))
+    first <- msgs[match(ukey, key)]
+    indexed <- vapply(ukey, function(k) length(unique(msgs[key == k])) > 1L,
+                      logical(1))
+    ifelse(indexed, paste0(ukey, " (", n, " times)"), first)
+}
+
+## Labels of optinfo$conv$opt
+.convLabels <- c("0" = "converged",
+                 "1" = "iterations did not converge",
+                 "2" = "converged, but estimating equations are not satisfied",
+                 "3" = "an inner iteration did not converge")
+
+## Store the user-relevant warnings of the fit in optinfo, make
+## optinfo$conv$opt reflect them and raise each of them once.
+.reportFitWarnings <- function(lobj, fw, warn = TRUE) {
+    msgs <- .collapseWarnings(c(fw$outer, fw$inner))
+    optinfo <- lobj@optinfo
+    optinfo$warnings <- as.list(msgs)
+    optinfo$nMuffled <- fw$nMuffled
+    if (any(fw$innerConv) && identical(optinfo$conv$opt, 0))
+        optinfo$conv$opt <- 3
+    lobj@optinfo <- optinfo
+    if (warn) for (m in msgs) warning(m, call. = FALSE)
+    lobj
+}
+
 .rlmer <- function(lobj, rel.tol, max.iter, verbose, doFit,
-                   size_obr = FALSE) {
+                   size_obr = FALSE, warn = TRUE) {
     if (!doFit) {
         lobj@pp$updateMatrices()
         return(updateWeights(lobj))
@@ -735,14 +1064,35 @@ getDefaultRhoB <- function(dimension, rho) {
             cat("b.s: ", b.s(lobj), "\n")
     }
 
-    curWarnings <- list()
+    ## Warnings of the fit are collected instead of printed as they occur:
+    ## the inner iterations (tau, sigma, theta) may fail at an intermediate
+    ## outer iteration without consequence, so their warnings count only
+    ## when raised in the last outer iteration, which produced the returned
+    ## estimate. Everything else is reported. See .reportFitWarnings().
+    fw <- new.env(parent = emptyenv())
+    fw$outer <- fw$inner <- character(0)
+    fw$innerConv <- logical(0)
+    fw$nMuffled <- 0L
     lobj <- withCallingHandlers(
         .rlmer.fit(lobj, rel.tol, max.iter, verbose, size_obr = size_obr),
+        rlmerIteration = function(c) {
+            fw$nMuffled <- fw$nMuffled + length(fw$inner)
+            fw$inner <- character(0)
+            fw$innerConv <- logical(0)
+        },
         warning = function(w) {
-            curWarnings <<- append(curWarnings, list(conditionMessage(w)))
+            if (inherits(w, "rlmerInnerWarning")) {
+                fw$inner <- c(fw$inner, conditionMessage(w))
+                fw$innerConv <- c(fw$innerConv,
+                                  inherits(w, "rlmerConvergenceWarning"))
+            } else {
+                fw$outer <- c(fw$outer, conditionMessage(w))
+            }
             invokeRestart("muffleWarning")
         })
-    lobj@optinfo$warnings <- curWarnings
+    lobj <- .reportFitWarnings(lobj, fw, warn)
+    lobj@optinfo$rel.tol <- rel.tol
+    lobj@optinfo$max.iter <- max.iter
     lobj@optinfo$size_obr <- size_obr
 
     if (verbose > 0) {
@@ -1066,8 +1416,11 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
             sigma0 <- .sigma(lobj)
         }
     }
+    ## all random effects zero: nothing left to iterate on
+    allZero <- FALSE
     ## iterate
     while(!conv && (iter <- iter + 1) < max.iter) {
+        .signalIteration()
         if (verbose > 0) cat("---- Iteration", iter, " ----\n")
         thetatilde <- theta(lobj)
         sigma <- .sigma(lobj)
@@ -1086,7 +1439,10 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
         ## apply chol to non-zero part only
         idx <- !.zeroB(lobj)
         ## stop if all are zero
-        if (!any(idx)) break
+        if (!any(idx)) {
+            allZero <- TRUE
+            break
+        }
         Tidx <- T[idx, idx]
         if (any(diag(Tidx) == 0.0)) {
             ## partially dropped block: can't handle yet.
@@ -1287,7 +1643,7 @@ rlmer.fit.DAS.nondiag <- function(lobj, verbose, max.iter, rel.tol, method=lobj@
                     warnings = list(),
                     val = diff)
 
-    if (iter == max.iter) {
+    if (!conv && !allZero) {
         warning(wt <- "iterations did not converge, returning unconverged estimate.")
         optinfo$warnings <- list(wt)
         optinfo$conv$opt <- 1
@@ -1317,6 +1673,7 @@ rlmer.fit.DAS <- function(lobj, verbose, max.iter, rel.tol) {
     iter <- 0
     while (!converged && iter < max.iter) {
         iter <- iter + 1
+        .signalIteration()
         if (verbose > 0) cat("Iteration", iter, "\n")
         ## fit theta
         updateThetaTau(lobj, max.iter, rel.tol/10, verbose)
@@ -1356,7 +1713,7 @@ rlmer.fit.DAS <- function(lobj, verbose, max.iter, rel.tol) {
                     warnings = list(),
                     val = diff)
 
-    if (iter == max.iter) {
+    if (!converged) {
         warning(wt <- "iterations did not converge, returning unconverged estimate.")
         optinfo$warnings <- list(wt)
         optinfo$conv$opt <- 1

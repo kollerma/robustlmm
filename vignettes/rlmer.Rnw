@@ -242,6 +242,10 @@ We start by loading the \Rp package and the modified \code{Penicillin} dataset.
 
 <<init-hidden, echo=FALSE, results=hide>>=
 options(width = 60, str = strOptions(vec.len = 1.4), prompt = 'R> ', continue = '+  ')
+## Numbers quoted from the simulation studies come from this shipped RDS
+## (written by vignettes/precompute-3.5.0.R) via \Sexpr{}.
+nums <- readRDS("robustlmm-3.5.0-numbers.rds")
+fmt <- function(x, digits = 2) formatC(x, format = "f", digits = digits)
 <<init>>=
 require("robustlmm")
 filename <- system.file("doc/Penicillin.R", package = "robustlmm", mustWork = TRUE)
@@ -356,7 +360,7 @@ To shorten fitting times at the beginning of an analysis, use the argument \code
 
 \subsection{Finite-sample inference}\label{sec:finiteSample}
 
-For confidence intervals on the fixed-effect coefficients the package exposes \code{confint.rlmerMod}.  The default \code{method = "Wald"} returns the standard per-coefficient interval $\hat\beta_k \pm z_{1-\alpha/2}\sqrt{\hat V_{kk}}$ from \code{vcov(fit, type = vcov\_type)}---the same closed form \code{summary} reports, with the option to substitute the robust cluster sandwich (\code{vcov\_type = "sandwich"}).  This is what \code{summary} already exposes; \code{confint.rlmerMod} simply gives the matrix shape \code{stats::confint} users expect.
+For confidence intervals on the fixed-effect coefficients the package exposes \code{confint.rlmerMod}.  The default \code{method = "Wald"} returns the standard per-coefficient interval $\hat\beta_k \pm z_{1-\alpha/2}\sqrt{\hat V_{kk}}$ from \code{vcov(fit, type = vcov\_type)}---the same closed form \code{summary} reports, with the option to substitute the robust cluster sandwich (\code{vcov\_type = "sandwich"}), in which case the default critical value is a Bell--McCaffrey $t$ quantile with the bias-reduced CR2 sandwich (below).  This is what \code{summary} already exposes; \code{confint.rlmerMod} simply gives the matrix shape \code{stats::confint} users expect.
 
 When the asymptotic $\chi^2_p$ limit is suspect---typically for small numbers of groups $J$---bootstrap inference is preferable.  \code{confint.rlmerMod} delegates \code{method = "boot"} and \code{method = "BCa"} to the \pkg{confintROB} package \citep{mason2021confintrob, mason2024confintrob}, which implements both the parametric and the wild bootstrap (option \code{boot.type}), with optional bias-correction-and-acceleration on the bootstrap quantile (\code{method = "BCa"}).  \pkg{confintROB} is the published, peer-reviewed implementation for \code{rlmer} fits and should be the default route for any bootstrap CI.  Practical guidance from those papers: the $\chi^2_p$ Wald limit is adequate for $J \gtrsim 20$ groups, so the bootstrap mainly earns its (substantial) cost at smaller $J$; the wild bootstrap is robust to misspecification of the response covariance while the parametric bootstrap is exact under the fitted central LMM; and BCa is preferable when the bootstrap distribution is skewed.
 
@@ -364,7 +368,7 @@ When the asymptotic $\chi^2_p$ limit is suspect---typically for small numbers of
 
 The methodology behind these tools---the influence function, the cluster-robust sandwich covariance, the robust Satterthwaite degrees of freedom (also used by \code{summary}, \code{anova} and \code{emmeans}), the influence diagnostics (\code{cooks.distance}, \code{hatvalues}) and the robust \code{anova}---is collected in Appendix~\ref{sec:methods350}. A worked tour of each is given in \code{vignette("robustlmm-3.5.0")}.
 
-\emph{Small-$J$ caveat for the sandwich.}  A simulation study shows that at $J = 8$ the cluster sandwich undercovers (empirical $\approx 0.89$ vs nominal $0.95$) and that Wald-based \code{anova} tests using the sandwich are anti-conservative ($3$--$4\times$ nominal Type I); calibration returns to nominal only from $J \gtrsim 50$.  \code{vcov_sandwich} emits a warning when fewer than 20 clusters are detected.  At small $J$, prefer \code{vcov_type = "default"} for hypothesis tests or pair the sandwich CI with the \pkg{confintROB} bootstrap.  Example:
+\emph{Small-$J$ inference with the sandwich.}  With few clusters the G1 cluster sandwich is biased down for between-cluster coefficients and has fewer effective degrees of freedom than $J - 1$; normal or $\chi^2$ references on it are anti-conservative.  For \code{vcov\_type = "sandwich"}, \code{confint} and \code{anova} therefore default to the bias-reduced CR2 sandwich \citep{bell2002bias} adapted to the robust estimating equations (Appendix~\ref{sec:methSandwich}), with Bell--McCaffrey $t$ or approximate-Hotelling $F$ degrees of freedom \citep{pustejovsky2018small}, which are much closer to their nominal level (see the section on small-sample references for the cluster sandwich in \code{vignette("simulationStudies")}).  \code{vcov\_sandwich} still warns for fewer than 20 clusters with the G1 correction.  Example:
 
 <<finite-sample-confint, eval=FALSE>>=
 fit  <- rlmer(Yield ~ (1 | Batch), Dyestuff)
@@ -396,7 +400,8 @@ fit_mallows <- rlmer(Yield ~ x + (1 | Batch), data,
 @
 
 This trades a little efficiency for robustness in the design space. On
-clean data the cost is small---about a 1\% increase in the variance of
+clean data the cost is small---about a
+$\Sexpr{fmt(nums$mallows$costVsRsePct, 1)}\%$ increase in the variance of
 $\hat\beta$ at the default tuning ($\gamma = 1$, cutoff $0.975$),
 roughly stable as the number of non-constant columns of $\bld X$
 grows---and it vanishes entirely for intercept-only designs (where
@@ -933,8 +938,41 @@ the groups; on crossed designs the multiway estimator of
 projected to the nearest positive-semidefinite matrix, is used.
 Equation~\eqref{eq:sandwich} is returned by \code{vcov(., type =
 "sandwich")} and \code{vcov\_sandwich}; the default \code{vcov} is
-unchanged. The sandwich is a large-$J$ device and undercovers at small
-$J$ (see the inference study in \code{vignette("simulationStudies")}).
+unchanged. With the G1 correction the sandwich is a large-$J$ device:
+for between-cluster coefficients it is biased down by roughly their
+cluster-level leverage and has far fewer effective degrees of freedom than
+$J - 1$. The bias-reduced version (\code{correction = "CR2"}) splits the
+marginal Jacobian into cluster contributions, $\wh{\bld A} = \sum_j
+\wh{\bld A}_j$ (random effects profiled out; this needs every random
+effect nested within one cluster), and replaces each $\vec s_j$ by
+$(\bld I - \wh{\bld A}_j \wh{\bld A}\inv)^{-1/2} \vec s_j$, computed
+through a Cholesky factor of $\wh{\bld A}$ so that the result does not
+depend on how the covariates are centred or scaled. A direction in which
+$\wh{\bld A}_j \wh{\bld A}\inv$ has eigenvalue 1 is informed by
+cluster $j$ alone (for example a factor level present in one cluster);
+the sandwich cannot estimate the variance there, and contrasts loading on
+such a direction get no reference distribution. For a
+Gaussian fit this is the bias-reduced estimator of \citet{bell2002bias}
+applied to the design whitened by the clusters' marginal covariances
+$\bld V_j$, by the push-through identity $\bld X_j\tr(\bld I -
+\bld H_{jj})^{-1/2} = (\bld I - \bld X_j\tr \bld X_j \bld M)^{-1/2}
+\bld X_j\tr$ for the whitened design $\bld X$, $\bld M = (\bld X\tr
+\bld X)\inv$ and $\bld H = \bld X \bld M \bld X\tr$; it is exactly
+unbiased under the fitted model. The CR2 estimator of
+\citet{pustejovsky2018small} solves the same unbiasedness condition with
+the symmetric root taken in the coordinates of a Cholesky factor of
+$\bld V_j$; the two coincide when every $\bld V_j$ is a multiple of the
+identity and otherwise differ slightly. With the inverse in place of the
+inverse square root (\code{correction = "CR3"}) the estimator is
+$J/(J-1)$ times the one-step leave-one-cluster-out jackknife. For robust
+fits the CR2 sandwich is unbiased to first order under the working
+model $\mathrm{Cov}(\vec s_j) \propto \wh{\bld A}_j$. The same working
+model gives the approximate-Hotelling degrees of freedom of
+\citet{pustejovsky2018small} (Bell--McCaffrey for one contrast) in
+$O(J p^2)$ operations; \code{confint} and \code{anova} use this pair by
+default for \code{vcov\_type = "sandwich"}. For Mallows fits
+(\code{design.weights}) the contributions are $\vec s_i = \eta_i \vec
+x_i \psi_e(r_i)$, matching the estimating equations.
 
 \subsection{Cook's distances and robust leverage}\label{sec:methCooks}
 
@@ -989,19 +1027,25 @@ being held at zero.
 
 For a set of estimable contrasts collected in a matrix $\bld L$, the
 per-term Wald statistic is $\wh{\vec\beta}\tr \bld L\tr (\bld L \wh{\bld
-V} \bld L\tr)\inv \bld L \wh{\vec\beta}$, referred to a $\chi^2$ (or, with
-\code{ddf = "satterthwaite"}, an $F$) distribution; $\wh{\bld V}$ is the
-default or the sandwich covariance. For two nested fixed-effects models
+V} \bld L\tr)\inv \bld L \wh{\vec\beta}$. With the default covariance it
+is referred to a $\chi^2$ distribution (or, with \code{ddf =
+"satterthwaite"}, to an $F$ distribution with Satterthwaite denominator
+degrees of freedom); with \code{vcov\_type = "sandwich"} the default is
+the CR2 sandwich of Section~\ref{sec:methSandwich} with the approximate
+Hotelling test of \citet{pustejovsky2018small}, $F = (\eta - k + 1) W /
+(\eta k)$ on $(k, \eta - k + 1)$ degrees of freedom. For two nested
+fixed-effects models
 this reduces to a Wald restriction test. Variance-component comparisons
 lie on the boundary of the parameter cone, where the Wald statistic is
 not applicable; \code{test = "boot"} instead uses a parametric-bootstrap
 quasi-deviance test, evaluating both models' robust objective at a common
 scale (that of the smaller model) to avoid a sign-flip artefact when the
 fitted scales differ. This path is experimental, with two known
-limitations. First, the parametric bootstrap is inconsistent when the
-tested parameter is on the boundary \citep{andrews2000}; the principled
-remedy---shrinking the bootstrap-generating variance components toward the
-boundary \citep{guedon2024}---is not yet implemented. Second, it is
+limitations. First, the parametric bootstrap is inconsistent when a
+nuisance variance component is on the boundary \citep{andrews2000}; by
+default (\code{nuisance = "threshold"}) the generator therefore sets
+nuisance components estimated close to zero to exactly zero, following
+\citet{guedon2024}. Second, it is
 anti-conservative under group contamination, because the contamination
 biases the null fit that generates the bootstrap. Two responses to the
 latter are available. The experimental \code{null = "robust"} option
@@ -1012,8 +1056,8 @@ conservatism on clean data, and falls back to the plain parametric null
 when trimming would leave the design rank-deficient. More effectively,
 the robust score test of \S\ref{sec:methScore} (\code{test = "score"})
 bounds each cluster's influence and so needs no null cleaning at all, at
-the price of a narrower scope. The boundary inconsistency, and a
-finite-sample robustness theorem for the bootstrap, remain open.
+the price of a narrower scope. A finite-sample robustness theorem for
+the bootstrap remains open.
 Independently, the automatic robustness-weight warning flags the at-risk
 fits. The
 cluster-level \code{cooks.distance} is not a reliable screen for this

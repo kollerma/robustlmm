@@ -4,23 +4,57 @@
 \alias{residuals.rlmerMod}
 \title{Get residuals}
 \usage{
-\method{residuals}{rlmerMod}(object, type = c("response", "weighted"), scaled = FALSE, ...)
+\method{residuals}{rlmerMod}(
+  object,
+  type = c("response", "pearson", "weighted", "normalized"),
+  scaled = FALSE,
+  ...
+)
 }
 \arguments{
 \item{object}{rlmerMod object}
 
-\item{type}{type of residuals}
+\item{type}{type of residuals, see Details.}
 
-\item{scaled}{scale residuals by residual standard deviation (=scale
-parameter)?}
+\item{scaled}{divide the \code{"response"} or \code{"weighted"}
+residuals by the residual standard deviation? \code{"pearson"} and
+\code{"normalized"} residuals are always scaled.}
 
 \item{...}{ignored}
 }
 \description{
-The per-observation residuals are returned, i.e., the difference of the
-observation and the fitted value including random effects. With type one can
-specify whether the weights should be used or not.
+Residuals of a fitted \code{rlmer} model: the difference of the
+observations and the fitted values including the random effects, or a
+weighted or whitened version of it.
 }
+\details{
+\describe{
+  \item{\code{"response"}}{\eqn{y - \hat\mu}{y - mu}, as for
+    \code{\link[lme4]{lmer}}.}
+  \item{\code{"pearson"}}{the response residuals multiplied by the
+    square root of the prior weights and divided by
+    \eqn{\hat\sigma}{sigma}. These are the \dQuote{scaled residuals} of
+    \code{summary}.}
+  \item{\code{"weighted"}}{the response residuals multiplied by the
+    square root of the prior weights and by the robustness weights
+    \code{getME(object, "w_e")}.}
+  \item{\code{"normalized"}}{the marginal residuals \eqn{y - X
+    \hat\beta}{y - X beta} (minus the offset) multiplied by the inverse
+    of the lower Cholesky factor of the fitted marginal covariance
+    \eqn{\hat\sigma^2 (Z \Lambda \Lambda' Z' + W^{-1})}{sigma^2 (Z
+    Lambda Lambda' Z' + W^-1)}, with \eqn{W} the prior weights. At the
+    model they are uncorrelated with unit variance, so they can be used
+    to check the fitted within-cluster covariance structure. The
+    Cholesky factor is taken in the order of the observations in the
+    data, so each residual is adjusted for the earlier observations of
+    its cluster.}
+}
+}
+\section{Lifecycle}{
+
+  Stable.
+}
+
 \examples{
 \dontrun{
   fm <- rlmer(Yield ~ (1|Batch), Dyestuff)

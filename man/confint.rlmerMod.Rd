@@ -10,10 +10,11 @@
   level = 0.95,
   method = c("Wald", "boot", "BCa"),
   vcov_type = c("default", "sandwich"),
-  df = c("none", "satterthwaite"),
+  df = c("auto", "none", "satterthwaite", "cluster"),
   boot.type = c("wild", "parametric"),
   nsim = 1000L,
   seed = NULL,
+  cluster = NULL,
   ...
 )
 }
@@ -30,20 +31,19 @@ coefficient names.}
 \code{"boot"} (bootstrap percentile via \pkg{confintROB}), or
 \code{"BCa"} (bias-corrected bootstrap via \pkg{confintROB}).}
 
-\item{vcov_type}{Covariance to use for \eqn{V} when \code{method =
-"Wald"}: \code{"default"} (the linearised lme4 vcov; pre-existing
-behaviour) or \code{"sandwich"} (the robust cluster-sandwich
-\code{\link{vcov_sandwich}}; exact for a single nested grouping
-factor, approximate for crossed designs). Ignored when
-\code{method = "boot"} or \code{"BCa"}.}
+\item{vcov_type}{Covariance for \code{method = "Wald"}:
+\code{"default"} (the model-based covariance) or \code{"sandwich"}
+(the cluster sandwich, \code{\link{vcov_sandwich}}).}
 
-\item{df}{Critical-value degrees of freedom for \code{method =
-"Wald"}. \code{"none"} (default) uses the normal quantile
-\eqn{z_{1-\alpha/2}} as before; \code{"satterthwaite"} uses a
-per-coefficient Satterthwaite t-quantile (the robust IF-based
-df), matching \code{summary(object, df = "satterthwaite")}. It
-requires \code{vcov_type = "default"} and a single grouping factor;
-otherwise it warns and falls back to the normal quantile.}
+\item{df}{Quantile for \code{method = "Wald"}. \code{"auto"} (default):
+\code{"none"} for \code{vcov_type = "default"} and \code{"cluster"}
+for \code{vcov_type = "sandwich"}. \code{"none"}: the normal quantile
+(with the G1 sandwich for \code{vcov_type = "sandwich"}).
+\code{"cluster"}: the CR2 sandwich with Bell--McCaffrey \eqn{t}
+quantiles (sandwich only). \code{"satterthwaite"}: robust Satterthwaite
+\eqn{t} quantiles as in \code{summary(object, df = "satterthwaite")}
+(default covariance and a single grouping factor only; otherwise the
+default quantile, with a warning).}
 
 \item{boot.type}{Bootstrap kind passed to \code{confintROB} when
 \code{method = "boot"} or \code{"BCa"}: one of
@@ -54,6 +54,10 @@ otherwise it warns and falls back to the normal quantile.}
 
 \item{seed}{Optional RNG seed for reproducibility of the bootstrap.}
 
+\item{cluster}{For \code{vcov_type = "sandwich"}, the clusters, passed
+to \code{\link{vcov_sandwich}}; needed for models with several
+grouping factors.}
+
 \item{...}{Additional arguments forwarded to \code{confintROB}
 (e.g. \code{clusterID} for the wild bootstrap).}
 }
@@ -62,51 +66,64 @@ A 2-column matrix with one row per selected fixed-effect
   coefficient, columns \code{"<alpha/2> \%"} /
   \code{"<1-alpha/2> \%"}. Attributes \code{"method"},
   \code{"vcov_type"} (and, for the bootstrap paths,
-  \code{"boot.type"}) record the options used.
+  \code{"boot.type"}) record the options used; the small-J sandwich
+  reference adds \code{"df"} (per selected coefficient) and
+  \code{"correction"} (\code{"CR2"}, or \code{"G1"} when CR2 is not
+  defined).
 }
 \description{
 Two routes.
 \describe{
-  \item{\code{method = "Wald"}}{the default and the only path
-    implemented in this package. Per-coefficient closed-form CI
-    \eqn{\hat\beta_k \pm z_{1-\alpha/2} \cdot SE_k} with \eqn{V}
-    taken from \code{vcov(object, type = vcov_type)} -- so the
-    \code{"sandwich"} option carries through to the interval.}
-  \item{\code{method = "boot"} or \code{"BCa"}}{a thin dispatch to
-    \code{\link[confintROB]{confintROB}} (Mason, Cantoni &
-    Ghisletta 2021, 2024) with \code{boot.type} forwarded. The
-    wrapper subsets the returned matrix to the fixed-effect rows so
-    the shape matches the \code{"Wald"} path; variance-component
-    CIs from \code{confintROB} are dropped here. \code{vcov_type}
-    is not honoured on these paths (\code{confintROB} uses its own
-    internal covariance).}
+  \item{\code{method = "Wald"}}{the default: \eqn{\hat\beta_k \pm q\,
+    SE_k} with \eqn{SE_k} from \code{vcov(object, type = vcov_type)}
+    and \eqn{q} a normal or \eqn{t} quantile (see \code{df}).}
+  \item{\code{method = "boot"} or \code{"BCa"}}{delegated to
+    \code{\link[confintROB]{confintROB}} (Mason, Cantoni and Ghisletta
+    2021, 2024), returning its fixed-effect rows; \code{vcov_type =
+    "sandwich"}, \code{df} and \code{cluster} cannot be combined with
+    it.}
 }
 }
 \details{
-Guidance (Koller 2014; Mason et al. 2024). The chi-sq-p Wald limit
-is adequate for \eqn{J \gtrsim 20} groups; the bootstrap earns its
-(substantial) cost mainly at smaller \eqn{J}. \code{boot.type =
-  "wild"} (the default, following \pkg{confintROB}) is robust to
-misspecification of the response covariance, while
-\code{"parametric"} is exact under the fitted central LMM.
-\code{method = "BCa"} adds the bias-correction-and-acceleration
-adjustment to the bootstrap percentile (preferred when the
-bootstrap distribution is skewed).
+The Wald limit is adequate for about 20 or more groups; the bootstrap
+earns its cost mainly with fewer (Mason et al. 2024). \code{boot.type =
+"wild"} is robust to misspecification of the response covariance,
+\code{"parametric"} relies on the fitted central model, and
+\code{method = "BCa"} corrects the percentile interval for bias and
+skewness. The samples of both bootstraps are also available from
+\code{\link[=simulate.rlmerMod]{simulate}}.
 
-\strong{Small-J caveat for the sandwich.} \code{vcov_type =
-  "sandwich"} under-covers at \eqn{J < 20} (in a simulation study:
-coverage ~0.89 at \eqn{J = 8} vs. nominal 0.95); the sandwich path
-emits a warning. For Wald CIs at small \eqn{J} prefer \code{vcov_type
-  = "default"} or use \code{method = "boot"} / \code{"BCa"}.
+\strong{Sandwich covariance.} With few clusters, normal quantiles with
+the G1 sandwich under-cover, and for between-cluster coefficients the G1
+sandwich itself is biased down. For \code{vcov_type = "sandwich"} the
+default (\code{df = "auto"}, i.e. \code{"cluster"}) is therefore the
+bias-reduced CR2 sandwich of \code{\link{vcov_sandwich}} with a
+Bell--McCaffrey \eqn{t} quantile per coefficient (the degrees of freedom
+are in \code{attr(., "df")}); see the section \dQuote{Small-sample
+references for the cluster sandwich} of \code{vignette("simulationStudies")}.
+When the random effects are not nested within the clusters, the G1
+sandwich with \eqn{t_{J-1}} quantiles is used. A coefficient that a
+single cluster informs on its own (e.g. a factor level present in one
+cluster) gets an \code{NA} interval, with a warning.
 }
-\references{
-Mason F, Cantoni E, Ghisletta P (2021). \emph{Parametric
-  and bootstrap-based inference for linear mixed-effects models in
-  the presence of outliers}. Methodology 17(4): 271--293.
+\section{Lifecycle}{
 
-Mason F, Cantoni E, Ghisletta P (2024). \emph{Bootstrap
-  confidence intervals for fixed effects in mixed-effects models
-  with outliers}. Psychological Methods.
+  Stable.
+}
+
+\references{
+Bell RM, McCaffrey DF (2002). Bias reduction in standard
+  errors for linear regression with multi-stage samples. \emph{Survey
+  Methodology} 28(2), 169--181.
+
+Mason F, Cantoni E, Ghisletta P (2021). Parametric and
+  semi-parametric bootstrap-based confidence intervals for robust linear
+  mixed models. \emph{Methodology} 17(4), 271--295.
+
+Mason F, Cantoni E, Ghisletta P (2024). Linear mixed models
+  and latent growth curve models for group comparison studies
+  contaminated by outliers. \emph{Psychological Methods} 30(1),
+  155--173.
 }
 \seealso{
 \code{\link[=vcov.rlmerMod]{vcov}},

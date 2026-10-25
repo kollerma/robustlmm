@@ -126,15 +126,38 @@ nobs.rlmerMod <- .nobsLmerMod
     as.logical(x@devcomp$dims["REML"])
 }
 
-##' The per-observation residuals are returned, i.e., the difference of the
-##' observation and the fitted value including random effects. With type one can
-##' specify whether the weights should be used or not.
+##' Residuals of a fitted \code{rlmer} model: the difference of the
+##' observations and the fitted values including the random effects, or a
+##' weighted or whitened version of it.
+##'
+##' \describe{
+##'   \item{\code{"response"}}{\eqn{y - \hat\mu}{y - mu}, as for
+##'     \code{\link[lme4]{lmer}}.}
+##'   \item{\code{"pearson"}}{the response residuals multiplied by the
+##'     square root of the prior weights and divided by
+##'     \eqn{\hat\sigma}{sigma}. These are the \dQuote{scaled residuals} of
+##'     \code{summary}.}
+##'   \item{\code{"weighted"}}{the response residuals multiplied by the
+##'     square root of the prior weights and by the robustness weights
+##'     \code{getME(object, "w_e")}.}
+##'   \item{\code{"normalized"}}{the marginal residuals \eqn{y - X
+##'     \hat\beta}{y - X beta} (minus the offset) multiplied by the inverse
+##'     of the lower Cholesky factor of the fitted marginal covariance
+##'     \eqn{\hat\sigma^2 (Z \Lambda \Lambda' Z' + W^{-1})}{sigma^2 (Z
+##'     Lambda Lambda' Z' + W^-1)}, with \eqn{W} the prior weights. At the
+##'     model they are uncorrelated with unit variance, so they can be used
+##'     to check the fitted within-cluster covariance structure. The
+##'     Cholesky factor is taken in the order of the observations in the
+##'     data, so each residual is adjusted for the earlier observations of
+##'     its cluster.}
+##' }
 ##'
 ##' @title Get residuals
 ##' @param object rlmerMod object
-##' @param type type of residuals
-##' @param scaled scale residuals by residual standard deviation (=scale
-##'   parameter)?
+##' @param type type of residuals, see Details.
+##' @param scaled divide the \code{"response"} or \code{"weighted"}
+##'   residuals by the residual standard deviation? \code{"pearson"} and
+##'   \code{"normalized"} residuals are always scaled.
 ##' @param ... ignored
 ##' @examples
 ##' \dontrun{
@@ -143,21 +166,51 @@ nobs.rlmerMod <- .nobsLmerMod
 ##'                       resid(fm) * getME(fm, "w_e")))
 ##' }
 ##' @importFrom stats residuals resid
+##' @section Lifecycle:
+##'   Stable.
 ##' @export
-residuals.rlmerMod <- function(object, type = c("response", "weighted"),
+residuals.rlmerMod <- function(object,
+                               type = c("response", "pearson", "weighted",
+                                        "normalized"),
                                scaled=FALSE, ...) {
     type <- match.arg(type)
     r <- switch(type,
-                ## FIXME: really??
-                response = object@resp$wtres,
+                response = object@resp$y - object@resp$mu,
+                pearson = object@resp$wtres / .sigma(object),
                 weighted = wgt.e(object) * object@resp$wtres,
+                normalized = .normalizedResiduals(object),
                 stop("unknown type of residual"))
     if (is.null(nm <- rownames(model.frame(object)))) nm <- seq_along(r)
     names(r) <- nm
-    if (scaled) r <- r/sigma(object)
+    if (scaled && type %in% c("response", "weighted")) r <- r/sigma(object)
     if (!is.null(na.action <- attr(model.frame(object),"na.action")))
         r <- naresid(na.action,r)
     r
+}
+
+## Marginal residuals whitened by the lower Cholesky factor of the fitted
+## marginal covariance sigma^2 (Z Lambda Lambda' Z' + W^-1). Without
+## pivoting the factor of a covariance that is block diagonal up to a
+## permutation couples only observations of the same block, so it is
+## computed block by block when the random effects are nested within one
+## grouping factor and on the sparse matrix otherwise.
+.normalizedResiduals <- function(object) {
+    r <- object@resp$y - drop(.X(object) %*% .fixef(object)) -
+        object@resp$offset
+    ZL <- crossprod(.Zt(object), .U_b(object))
+    V <- tcrossprod(ZL) + Diagonal(x = 1 / object@resp$weights)
+    g <- .top_cluster(object)$g
+    res <- numeric(length(r))
+    if (!is.null(g)) {
+        for (idx in split(seq_along(r), g)) {
+            R <- chol(as.matrix(V[idx, idx, drop = FALSE]))
+            res[idx] <- backsolve(R, r[idx], transpose = TRUE)
+        }
+    } else {
+        ch <- Matrix::Cholesky(forceSymmetric(V), perm = FALSE, LDL = FALSE)
+        res <- drop(as.matrix(Matrix::solve(ch, r, system = "L")))
+    }
+    res / .sigma(object)
 }
 
 ### Get sigma (so that we are not coercing all the time)

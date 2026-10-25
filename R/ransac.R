@@ -155,6 +155,30 @@
     list(idx = sort(idx), n_singular = n_skipped, ok = ok)
 }
 
+## Centred residual scale for ranking RANSAC candidates: the bisquare
+## M-scale about zero (b = 1/2, c = 1.547645; 50% breakdown, Fisher
+## consistent at the normal). Unlike Qn it is not invariant under a
+## common shift of the residuals, so a candidate whose predictions are
+## off by a constant (for example a shifted intercept) scores worse than
+## the correct one. Condition (Q) of the RANSAC-RSE theory holds for it
+## and fails for Qn (IF-thread1 QnSelection); the population version is
+## uniquely minimised at the true coefficients for symmetric, strictly
+## unimodal errors (robustlmm theory notes, Topic3.YohaiConsistencyIdent).
+.ransac_mscale0 <- function(r, cc = 1.547645, b = 0.5, maxit = 200L,
+                            tol = 1e-10) {
+    r <- r[is.finite(r)]
+    if (!length(r)) return(NA_real_)
+    s <- stats::median(abs(r)) / 0.6744898
+    if (!is.finite(s) || s <= 0) return(0)
+    for (i in seq_len(maxit)) {
+        s_new <- s * sqrt(mean(robustbase::Mchi(r / s, cc, "bisquare")) / b)
+        conv <- abs(s_new - s) <= tol * s
+        s <- s_new
+        if (conv) break
+    }
+    s
+}
+
 ##' RANSAC-style random subsample initial estimator for linear
 ##' mixed-effects models.
 ##'
@@ -162,6 +186,19 @@
 ##' \code{\link[lme4]{lmer}} on each subsample, score by a robust
 ##' scale of residuals computed on the \emph{full} data, and return
 ##' the lmer fit minimising that score.
+##'
+##' The residuals are conditional: clusters in the subsample keep their
+##' predicted random effects, the others get none. A contaminated cluster
+##' inside the subsample is therefore absorbed by its own random effect, and
+##' under cluster-level contamination the start's between-cluster
+##' coefficients can be poor (see the section \dQuote{Ranking RANSAC
+##' candidates} of \code{vignette("simulationStudies")}).
+##'
+##' The breakdown point any start can give the fixed effects is limited
+##' by the design: with categorical predictors many observations lie on one
+##' hyperplane through the origin, and the ceiling drops (to about 1/4 for
+##' a balanced two-level factor with an intercept); see
+##' \code{\link{design_breakdown}}.
 ##'
 ##' The motivation is that for redescending psi-functions
 ##' (e.g. \code{\link{lqqPsi}}, the recommended redescender, or the
@@ -182,7 +219,14 @@
 ##'   count.
 ##' @param sub_frac fraction of the data per subsample (default 0.5).
 ##' @param scale_fn function from a numeric residual vector to a
-##'   scalar scale. Default \code{\link[robustbase]{Qn}}.
+##'   scalar scale, used to rank the candidate fits. The default
+##'   (\code{NULL}) is the bisquare M-scale of the residuals about zero
+##'   (breakdown point 1/2). It is centred: a candidate whose predictions
+##'   are off by a constant scores worse than the correct one, which
+##'   \code{\link[robustbase]{Qn}} (the default before version 3.5.1) cannot
+##'   detect; \code{scale_fn = robustbase::Qn} reproduces the earlier
+##'   ranking. See the section \dQuote{Ranking RANSAC candidates} of
+##'   \code{vignette("simulationStudies")}.
 ##' @param adaptive logical (default \code{TRUE}); stop drawing
 ##'   subsamples once the best score has not improved by more than
 ##'   \code{tol} (relative) for \code{patience} consecutive draws, after
@@ -259,10 +303,12 @@
 ##' Koller, M. and Stahel, W. A. (2017) Nonsingular subsampling for
 ##' regression S estimators with categorical predictors.
 ##' \emph{Computational Statistics} \bold{32}(2), 631--646.
-##' @importFrom robustbase Qn
+##' @section Lifecycle:
+##'   \strong{Experimental.} The interface and the results may change in a
+##'   later version.
 ##' @export
 ransac_lme4 <- function(formula, data, K = 200L, sub_frac = 0.5,
-                        scale_fn = robustbase::Qn,
+                        scale_fn = NULL,
                         adaptive = TRUE, patience = 50L, K_min = 50L,
                         tol = 1e-3, stratify = TRUE, n_keep = 1L,
                         seed = NULL, verbose = FALSE) {
@@ -275,6 +321,7 @@ ransac_lme4 <- function(formula, data, K = 200L, sub_frac = 0.5,
     if (!is.numeric(n_keep) || length(n_keep) != 1L || n_keep < 1L)
         stop("'n_keep' must be a positive integer scalar")
     n_keep <- as.integer(n_keep)
+    if (is.null(scale_fn)) scale_fn <- .ransac_mscale0
     n <- nrow(data)
     yname <- as.character(formula[[2]])
 
@@ -419,49 +466,130 @@ ransac_lme4 <- function(formula, data, K = 200L, sub_frac = 0.5,
     facs[[which.max(vapply(facs, nlevels, integer(1)))]]
 }
 
-##' Support-preservation (basin) radius for a fixed-effects start.
+##' Half-weight (basin) radius for a fixed-effects start.
 ##'
-##' Computes the radius \eqn{r^\star(c) = c\,\sigma / (2 \max_j
-##' \|x_j\|)} of the ball around the initial fixed-effects estimate
-##' within which every observation keeps its redescender-support
-##' membership, so the population Hessian stays positive definite (Koller
-##' and Stahel; the RANSAC-RSE basin theorem). Here \eqn{c} is the
-##' \emph{rejection point} of the redescending \eqn{\psi} --- the smallest
-##' \eqn{x > 0} with \eqn{\psi(x) = 0}. For the bisquare this is the tuning
-##' cutoff (default \code{4.685}); the geometry generalises to any
-##' finite-rejection-point redescender (e.g. \code{\link{lqqPsi}}) by
-##' finding its rejection point numerically. A redescending \eqn{\psi} is
-##' safe to engage from a start only if the eventual estimate stays within
-##' this radius of the (high-breakdown) start --- otherwise the iteration
-##' may leave the basin and converge to a phony solution.
+##' Computes the half-weight radius
+##' \deqn{r^\star(c) = s_{1/2}(c)\,\sigma / \max_j \|x_j\|}
+##' of the ball around the initial fixed-effects estimate on which the
+##' population Hessian of a redescending M-estimator stays positive
+##' definite (the RANSAC-RSE basin theorem, Step 1). Write
+##' \eqn{m(s) = E\,\psi'(Z + s)}, \eqn{Z \sim N(0, 1)}, for the expected
+##' redescender weight of an observation whose residual carries a
+##' deterministic mean-shift of \eqn{s} error-scale units; \eqn{m} is
+##' even in \eqn{s} and decreasing in \eqn{|s|} near the origin. The
+##' half-weight shift \eqn{s_{1/2}} is the first \eqn{s > 0} with
+##' \eqn{m(s) = m(0)/2}. By Cauchy-Schwarz every observation's shift
+##' within the ball is at most \eqn{\|x_j\| r^\star / \sigma \le
+##' s_{1/2}}, so its expected weight is at least \eqn{m(0)/2} and
+##' \eqn{-H(\beta) \succeq -H_0 / 2 \succ 0} throughout the ball. For the
+##' bisquare at the default cutoff \eqn{c = 4.685}, \eqn{s_{1/2} =
+##' 1.410}; for \code{sleepstudy} this gives \eqn{r^\star \approx 4.0}
+##' in the units of \eqn{\beta}.
 ##'
-##' @title Redescender basin (support-preservation) radius
+##' Up to version 3.5.0-2 this function returned the larger
+##' support-preservation radius \eqn{c\,\sigma / (2 \max_j \|x_j\|)}
+##' (6.6 for \code{sleepstudy}). That radius only kept every observation
+##' inside the redescender's support; it did not bound the Hessian away
+##' from singularity, which is what the basin guarantee needs, so it was
+##' replaced by the half-weight radius.
+##'
+##' When \code{rho} is supplied, \eqn{m(s)} is computed from its
+##' \code{Dpsi} slot by numerical integration, so the radius applies to
+##' any redescender (e.g. \code{\link{lqqPsi}}); \code{cc} is then only
+##' the upper end of the search interval for \eqn{s_{1/2}} (the rejection
+##' point of \code{rho}, found numerically, when \code{cc} is
+##' \code{NULL}; \code{10} if \code{rho} has none). Without \code{rho},
+##' the bisquare \eqn{\psi'} with cutoff \code{cc} (default \code{4.685})
+##' is used. If \eqn{m} is not monotone on the search interval, the first
+##' crossing of \eqn{m(0)/2} from the origin is taken.
+##'
+##' @title Redescender half-weight (basin) radius
 ##' @param object a fitted \code{lmerMod} or \code{rlmerMod} supplying
 ##'   the error scale \eqn{\sigma} and the fixed-effects design matrix.
-##' @param cc the rejection point \eqn{c} of the redescender. If
-##'   \code{NULL} and \code{rho} is supplied, \eqn{c} is the rejection
-##'   point of \code{rho} found numerically; if both are \code{NULL}, the
-##'   bisquare default \code{4.685}.
-##' @param rho an optional redescending \code{psi_func_rcpp} (e.g.
-##'   \code{\link{bisquarePsi}}, \code{\link{lqqPsi}}) whose rejection
-##'   point supplies \eqn{c} when \code{cc} is \code{NULL}.
-##' @return the basin radius \eqn{r^\star(c)} in the units of
-##'   \eqn{\beta} (a scalar), with attribute \code{"max_xnorm"}.
+##' @param cc without \code{rho}: the bisquare cutoff \eqn{c} (default
+##'   \code{4.685}). With \code{rho}: the upper end of the search
+##'   interval for \eqn{s_{1/2}} (default: the rejection point of
+##'   \code{rho}).
+##' @param rho an optional \code{psi_func_rcpp} (e.g.
+##'   \code{\link{bisquarePsi}}, \code{\link{lqqPsi}}) whose \code{Dpsi}
+##'   defines the expected-weight function \eqn{m}.
+##' @return the half-weight radius \eqn{r^\star} in the units of
+##'   \eqn{\beta} (a scalar), with attributes \code{"max_xnorm"},
+##'   \code{"s_half"} (the half-weight shift \eqn{s_{1/2}}) and
+##'   \code{"cc"}.
+##' @seealso \code{\link{rlmer_ransac}}
+##' @examples
+##' lm0 <- lme4::lmer(Reaction ~ Days + (Days | Subject), lme4::sleepstudy)
+##' ransac_basin_radius(lm0)                  # bisquare, c = 4.685
+##' ransac_basin_radius(lm0, rho = lqqPsi)    # from lqq's psi'
+##' @section Lifecycle:
+##'   \strong{Experimental.} The interface and the results may change in a
+##'   later version.
 ##' @export
 ransac_basin_radius <- function(object, cc = NULL, rho = NULL) {
-    if (is.null(cc)) {
-        rp <- .psi_rejection_point(rho)
-        cc <- if (!is.null(rp) && is.finite(rp)) rp else 4.685
-    }
+    hw <- .half_weight_shift(cc = cc, rho = rho)
     sigma_e <- tryCatch(as.numeric(sigma(object)), error = function(e) NA_real_)
     X <- tryCatch(as.matrix(getME(object, "X")), error = function(e) NULL)
     if (is.null(X) || !is.finite(sigma_e))
         stop("ransac_basin_radius: cannot extract sigma / design matrix ",
              "from 'object'.")
     max_xnorm <- max(sqrt(rowSums(X^2)))
-    r <- cc * sigma_e / (2 * max_xnorm)
+    r <- hw$s_half * sigma_e / max_xnorm
     attr(r, "max_xnorm") <- max_xnorm
+    attr(r, "s_half") <- hw$s_half
+    attr(r, "cc") <- hw$cc
     r
+}
+
+## Expected redescender weight under a deterministic residual mean-shift:
+## m(s) = E psi'(Z + s), Z ~ N(0, 1), by numerical integration (vectorised
+## in s). `dpsi` is a vectorised psi'. The Gaussian is truncated at +-lim
+## (dnorm(10) < 1e-21) and an absolute tolerance is set because m(s)
+## crosses zero for a redescender (near s = 2.15 for the bisquare), where
+## a purely relative tolerance makes integrate() report roundoff error.
+.expected_dpsi_shift <- function(dpsi, s, lim = 10, rel.tol = 1e-8,
+                                 abs.tol = 1e-12) {
+    vapply(s, function(si)
+        stats::integrate(function(z) stats::dnorm(z) * dpsi(z + si),
+                         -lim, lim, rel.tol = rel.tol, abs.tol = abs.tol,
+                         subdivisions = 500L)$value,
+        numeric(1))
+}
+
+## The half-weight shift s_{1/2}: the first s > 0 with m(s) = m(0)/2 for
+## m(s) = E psi'(Z + s). With `rho`, psi' is its Dpsi slot and the search
+## interval is (0, cc] with cc its rejection point (10 if none); without
+## `rho`, the bisquare psi' with cutoff cc (default 4.685), interval
+## (0, cc]. A coarse grid locates the first sign change of m(s) - m(0)/2
+## from the origin (so a non-monotone m gives the FIRST crossing, the
+## conservative choice), then uniroot refines it. Returns list(s_half, cc,
+## m0).
+.half_weight_shift <- function(cc = NULL, rho = NULL, tol = 1e-10) {
+    if (!is.null(rho) && methods::is(rho, "psi_func_rcpp")) {
+        dpsi <- function(z) rho@Dpsi(z)
+        if (is.null(cc)) {
+            rp <- .psi_rejection_point(rho)
+            cc <- if (!is.null(rp) && is.finite(rp)) rp else 10
+        }
+    } else {
+        if (is.null(cc)) cc <- 4.685
+        c0 <- cc
+        dpsi <- function(z)
+            ifelse(abs(z) <= c0, (1 - z^2 / c0^2) * (1 - 5 * z^2 / c0^2), 0)
+    }
+    if (!is.finite(cc) || cc <= 0)
+        stop(".half_weight_shift: need a finite positive search bound 'cc'.")
+    m0 <- .expected_dpsi_shift(dpsi, 0)
+    if (!is.finite(m0) || m0 <= 0)
+        stop(".half_weight_shift: E psi'(Z) is not positive.")
+    f <- function(s) .expected_dpsi_shift(dpsi, s) - m0 / 2
+    grid <- seq(0, cc, length.out = 201L)
+    v <- f(grid)
+    k <- which(v <= 0)[1L]
+    if (is.na(k) || k == 1L)
+        stop(".half_weight_shift: no half-weight crossing in (0, ", cc, "].")
+    s_half <- stats::uniroot(f, c(grid[k - 1L], grid[k]), tol = tol)$root
+    list(s_half = s_half, cc = cc, m0 = m0)
 }
 
 ## The rejection point of a redescending psi: the smallest x > 0 with
@@ -505,17 +633,18 @@ ransac_basin_radius <- function(object, cc = NULL, rho = NULL) {
 }
 
 ## WS12 basin gate: when a redescending rho.e is engaged from a RANSAC
-## start, warn if the converged FIXED EFFECTS left the bisquare support-
-## preservation radius r*(c) of the start. NB this is the beta-side
-## (Hessian support-preservation) condition only; it is a WEAK detector of
-## the random-effects phony correlation (P(warn | phony) ~ 0.17 in
-## inst/simulationStudy/ransacBasin.R) -- the rho -> +-1 attractor lives
-## in a different (RE-covariance) basin and is checked separately by
-## .ransac_check_phony.
+## start, warn if the converged FIXED EFFECTS left the half-weight radius
+## r* of the start (ransac_basin_radius: every observation keeps at least
+## half its expected redescender weight, so the population Hessian stays
+## positive definite on the ball). NB this is the beta-side (Hessian)
+## condition only; it is a WEAK detector of the random-effects phony
+## correlation (see inst/simulationStudy/ransacBasin.R) -- the rho -> +-1
+## attractor lives in a different (RE-covariance) basin and is checked
+## separately by .ransac_check_phony.
 .ransac_check_basin <- function(fit, start_fit, rho_e) {
     if (!.is_redescending(rho_e)) return(invisible(NULL))
-    ## Use the rejection point of rho_e (the general geometry); for the
-    ## bisquare this is its cutoff c, for lqq etc. it is found numerically.
+    ## Use the psi' of rho_e (the general geometry): the half-weight shift
+    ## is computed from its Dpsi slot, for the bisquare, lqq, etc. alike.
     r  <- tryCatch(ransac_basin_radius(start_fit, rho = rho_e),
                    error = function(e) NULL)
     if (is.null(r)) return(invisible(NULL))
@@ -528,11 +657,11 @@ ransac_basin_radius <- function(object, cc = NULL, rho = NULL) {
         warning(sprintf(
             paste0("RANSAC + redescending rho: the fitted fixed effects ",
                    "moved %.3g from the high-breakdown start, beyond the ",
-                   "support-preservation radius r* = %.3g (from the ",
-                   "rejection point of rho.e), so the redescender support ",
-                   "membership of every observation is no ",
-                   "longer guaranteed preserved (the population Hessian may ",
-                   "be indefinite on the path from the start). This is the ",
+                   "half-weight radius r* = %.3g (from the psi' of rho.e), ",
+                   "so at least one observation may have lost more than ",
+                   "half its expected redescender weight and the population ",
+                   "Hessian is no longer guaranteed positive definite on ",
+                   "the path from the start. This is the ",
                    "fixed-effect (beta) basin condition; it does NOT by ",
                    "itself certify the random-effects covariance (see the ",
                    "separate phony-correlation check). Consider a monotone ",
@@ -635,8 +764,9 @@ ransac_basin_radius <- function(object, cc = NULL, rho = NULL) {
 ##'
 ##' With \code{n_starts > 1} it runs a multi-start consensus:
 ##' \code{rlmer} is fitted from each of the \code{n_starts} best distinct
-##' RANSAC candidate starts, and the returned fit is the
-##' lowest-residual-scale one whose random-effects covariance is interior
+##' RANSAC candidate starts, and the returned fit is the one with the
+##' lowest residual scale (by default the centred bisquare M-scale about
+##' zero, see \code{scale_fn}) whose random-effects covariance is interior
 ##' (\eqn{|\hat\rho| \le} \code{phony_threshold}). This samples several
 ##' basins of a redescending \eqn{\psi} and so recovers the interior
 ##' solution when the single best start happens to fall into the phony
@@ -653,9 +783,27 @@ ransac_basin_radius <- function(object, cc = NULL, rho = NULL) {
 ##' observations is rank-deficient, suggesting a positive-weight
 ##' \eqn{\psi} (e.g. \code{rho.e = smoothPsi}) or a different start.
 ##'
+##' \strong{What the start can change.} A start decides which solution
+##' \code{rlmer} reaches only where a redescending fit has several, as with
+##' the phony \eqn{|\hat\rho| \to 1} attractor above. It does not raise the
+##' breakdown point of the final fit: once the scale equations of
+##' \code{rlmer} break down (at a fraction of 0.295 outliers for the default
+##' settings and 0.156 for \code{setting = "RSEa"}), a redescending
+##' \code{rho.e} accepts the outliers from any start. See the section
+##' \dQuote{Ranking RANSAC candidates} of \code{vignette("simulationStudies")}.
+##' The RANSAC start is also not high-breakdown itself under contamination
+##' (every half-sample contains outliers); \code{rlmer(setting = "RSEhb")}
+##' combines high-breakdown scale equations, redescending
+##' \eqn{\psi}-functions and the start \code{init = "robust"}, see
+##' \code{\link{rlmer}}.
+##'
 ##' @title rlmer with RANSAC initial estimator
 ##' @param formula,data passed to \code{\link{rlmer}}.
 ##' @param K,sub_frac,seed passed to \code{\link{ransac_lme4}}.
+##' @param scale_fn passed to \code{\link{ransac_lme4}} to rank the
+##'   candidates, and used to score the fits of the multi-start consensus
+##'   (default: the centred bisquare M-scale; \code{robustbase::Qn} gives
+##'   the ranking before version 3.5.1).
 ##' @param n_starts number of distinct RANSAC starts for the multi-start
 ##'   consensus (default 1 = single best start, the previous behaviour).
 ##' @param phony_threshold a fit is treated as phony (non-interior) when
@@ -677,16 +825,20 @@ ransac_basin_radius <- function(object, cc = NULL, rho = NULL) {
 ##'   fit <- rlmer_ransac(Reaction ~ Days + (Days | Subject),
 ##'                        data = sleepstudy, K = 30)
 ##'   }
+##' @section Lifecycle:
+##'   \strong{Experimental.} The interface and the results may change in a
+##'   later version.
 ##' @export
 rlmer_ransac <- function(formula, data, K = 200L, sub_frac = 0.5,
                          n_starts = 1L, phony_threshold = 0.99,
-                         seed = NULL, max_tries = 5L, ...) {
+                         seed = NULL, max_tries = 5L, scale_fn = NULL, ...) {
     if (!is.numeric(n_starts) || length(n_starts) != 1L || n_starts < 1L)
         stop("'n_starts' must be a positive integer scalar")
     if (!is.numeric(max_tries) || length(max_tries) != 1L || max_tries < 1L)
         stop("'max_tries' must be a positive integer scalar")
     max_tries <- as.integer(max_tries)
     rho_e <- list(...)[["rho.e"]]
+    score_fn <- if (is.null(scale_fn)) .ransac_mscale0 else scale_fn
 
     ## One RANSAC -> rlmer attempt from a fresh draw. Returns
     ## list(fit, start, all_phony, n_fits, min_rho) or NULL, and attaches
@@ -694,7 +846,8 @@ rlmer_ransac <- function(formula, data, K = 200L, sub_frac = 0.5,
     ## warnings so that re-seeded retries below do not spam them.
     one_try <- function(try_seed) {
         init <- ransac_lme4(formula, data, K = K, sub_frac = sub_frac,
-                            n_keep = as.integer(n_starts), seed = try_seed)
+                            n_keep = as.integer(n_starts), seed = try_seed,
+                            scale_fn = scale_fn)
         if (is.null(init$fit)) return(NULL)
         ## Hand rlmer() the RANSAC starting VALUES, not the RANSAC fit
         ## object.  An merMod passed as `init` supplies the model as well,
@@ -717,8 +870,10 @@ rlmer_ransac <- function(formula, data, K = 200L, sub_frac = 0.5,
         if (!any(ok)) return(NULL)
         fits <- fits[ok]; starts <- starts[ok]
         rho   <- vapply(fits, .re_max_abscor, numeric(1))
+        ## residual scale, by default centred (see .ransac_mscale0): two
+        ## fits whose predictions differ by a constant do not tie
         scale <- vapply(fits, function(f)
-            tryCatch(robustbase::Qn(residuals(f)), error = function(e) NA_real_),
+            tryCatch(score_fn(f@resp$wtres), error = function(e) NA_real_),
             numeric(1))
         interior <- is.finite(rho) & rho <= phony_threshold
         ## prefer an interior solution; among the eligible, the lowest robust

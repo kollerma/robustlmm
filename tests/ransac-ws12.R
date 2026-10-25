@@ -55,12 +55,29 @@ stopifnot(!isTRUE(rsf$stratified),
 ## --- 3. basin radius + redescender gate ------------------------------
 lm0 <- lmer(Reaction ~ Days + (Days | Subject), sleepstudy)
 r <- ransac_basin_radius(lm0)                        # default c = 4.685
+## half-weight radius r* = s_1/2 sigma / max||x_j|| with the half-weight
+## shift s_1/2(4.685) = 1.410 (m(s) = E psi'(Z + s) halved; paper 3,
+## thm:bisq-basin); max row norm = sqrt(82); sleepstudy r* ~ 4.0 (was 6.6
+## with the support-preservation radius up to 3.5.0-2)
+unit <- sigma(lm0) / sqrt(82)
 stopifnot(is.finite(as.numeric(r)), as.numeric(r) > 0,
-          ## scales linearly in c
-          abs(as.numeric(ransac_basin_radius(lm0, cc = 2)) -
-              as.numeric(r) * 2 / 4.685) < 1e-8,
-          ## r* = c sigma / (2 max||x_j||); max row norm = sqrt(82)
-          abs(attr(r, "max_xnorm") - sqrt(82)) < 1e-6)
+          abs(attr(r, "s_half") - 1.410) < 1e-3,
+          abs(attr(r, "max_xnorm") - sqrt(82)) < 1e-6,
+          abs(attr(r, "cc") - 4.685) < 1e-12,
+          abs(as.numeric(r) - 1.410 * unit) < 1e-3 * unit,
+          abs(as.numeric(r) - 4.0) < 0.05)
+## rho = bisquarePsi reproduces the default (its rejection point is c and
+## its Dpsi is the bisquare psi')
+stopifnot(abs(as.numeric(ransac_basin_radius(lm0, rho = bisquarePsi)) -
+              as.numeric(r)) < 1e-6)
+## s_1/2 is a Gaussian expectation, not linear in c, but increases with
+## the cutoff
+stopifnot(as.numeric(ransac_basin_radius(lm0, cc = 6)) > as.numeric(r),
+          as.numeric(ransac_basin_radius(lm0, cc = 3)) < as.numeric(r))
+## generic redescender: lqq gets its own finite positive radius from Dpsi
+rl <- ransac_basin_radius(lm0, rho = lqqPsi)
+stopifnot(is.finite(as.numeric(rl)), as.numeric(rl) > 0,
+          attr(rl, "s_half") > 0, attr(rl, "s_half") < attr(rl, "cc"))
 ## redescending detector
 stopifnot(robustlmm:::.is_redescending(bisquarePsi),
           !robustlmm:::.is_redescending(smoothPsi),

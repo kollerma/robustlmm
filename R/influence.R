@@ -160,7 +160,11 @@ caseweightIF <- function(fit, idx = NULL, use.expected = FALSE) {
     if (is.null(idx)) idx <- seq_len(n)
 
     sig <- parts$sigma
-    psi_e_vals <- rho_e@psi(parts$r_std)
+    eta <- pp$eta
+    if (length(eta) != n) eta <- rep.int(1, n)
+    ## Mallows design weights multiply each observation's score
+    ## contribution, as in the estimating equations.
+    psi_e_vals <- eta * rho_e@psi(parts$r_std)
 
     W     <- Diagonal(x = psi_e_vals[idx])
     Gb_cw <- as.matrix(crossprod(parts$A_X[idx, , drop = FALSE], W))
@@ -180,8 +184,9 @@ caseweightIF <- function(fit, idx = NULL, use.expected = FALSE) {
 
 ##' Resolve a cluster specification for a fitted \code{rlmerMod} object.
 ##'
-##' Used by \code{\link{vcov_sandwich}}. For a single grouping factor
-##' (nested design) the cluster-robust sandwich is exact; for crossed
+##' Used by \code{\link{vcov_sandwich}}. When every grouping factor is
+##' nested within the clusters (a single grouping factor, or the top level
+##' of a nested design) the cluster-robust sandwich is exact; for crossed
 ##' factors no single clustering nests every random-effect block, so a
 ##' warning is issued and the sandwich is approximate.
 ##'
@@ -206,16 +211,30 @@ resolveCluster <- function(fit, cluster, n) {
         if (!cluster %in% names(fl))
             stop("cluster '", cluster, "' is not a grouping factor; ",
                  "available: ", paste(names(fl), collapse = ", "))
-        if (length(fl) > 1L)
-            warning("Crossed/multiple grouping factors: the per-cluster ",
-                    "u-scores of random effects NOT nested within '",
-                    cluster, "' do not vanish, so the sandwich is ",
-                    "approximate.", call. = FALSE)
-        return(fl[[cluster]])
+        g <- fl[[cluster]]
+    } else {
+        if (length(cluster) != n)
+            stop("cluster vector must have length n = ", n)
+        g <- factor(cluster)
     }
-    if (length(cluster) != n)
-        stop("cluster vector must have length n = ", n)
-    factor(cluster)
+    ## a grouping factor nested within the clusters (the lower levels of a
+    ## nested design) keeps the sandwich exact; one that is not (crossed
+    ## factors) leaves per-cluster u-scores that do not vanish
+    crossed <- names(fl)[!vapply(fl, .nested_within, logical(1), g = g)]
+    if (length(crossed))
+        warning("Grouping factor(s) ", paste(crossed, collapse = ", "),
+                " not nested within the clusters: their per-cluster ",
+                "u-scores do not vanish, so the sandwich is approximate.",
+                call. = FALSE)
+    g
+}
+
+## Is every level of factor f contained in a single level of g?
+.nested_within <- function(f, g) {
+    f <- as.integer(factor(f)); g <- as.integer(factor(g))
+    ok <- !is.na(f) & !is.na(g)
+    first <- g[ok][match(f[ok], f[ok])]
+    all(first == g[ok])
 }
 
 ##' Robust cluster-sandwich covariance of the fixed effects of a fitted
@@ -225,78 +244,298 @@ resolveCluster <- function(fit, cluster, n) {
 ##' \hat{B} \hat{A}^{-T}}, where \eqn{\hat{A}} is the Schur-complement
 ##' (marginal) Jacobian of the profiled \eqn{\beta}-score and \eqn{\hat{B}
 ##' = \sum_j s_j s_j^T} sums the per-cluster \eqn{\beta}-score
-##' contributions \eqn{s_j = \sum_{i \in j} x_i \psi_e(\hat{r}_i)}. Equal
-##' to the user-facing \code{vcov(object, type = "sandwich")}.
+##' contributions \eqn{s_j = \sum_{i \in j} \eta_i x_i \psi_e(\hat{r}_i)}
+##' (\eqn{\eta_i} the Mallows design weights, 1 unless
+##' \code{design.weights} is used). Equal to the user-facing
+##' \code{vcov(object, type = "sandwich")}.
 ##'
-##' Exact for a single (nested) grouping factor; approximate for crossed
-##' factors (a warning is issued via \code{\link{resolveCluster}}). With
-##' few clusters, set \code{correction = "G1"} (default) for the
-##' \eqn{J/(J-1)} small-sample scaling.
+##' Exact when every grouping factor is nested within the clusters (a
+##' single grouping factor, or \code{cluster} naming the top level of a
+##' nested design); approximate for crossed factors, with a warning.
 ##'
-##' \strong{Small-J caveat.} The G1 correction is necessary but not
-##' sufficient at very small \eqn{J}: in a simulation study CI
-##' coverage drops to ~0.89 at \eqn{J = 8} (vs. nominal 0.95), and
-##' Wald-style hypothesis tests using the sandwich are anti-conservative
-##' (Type-I ~3-4x nominal). The function emits a warning for \eqn{J <
-##'   20}. For inference at small \eqn{J} prefer \code{vcov_type =
-##'   "default"} or pair the sandwich CI with a bootstrap calibration
-##' (e.g. \code{confintROB}); the sandwich is most useful at \eqn{J
-##'   \gtrsim 50}.
+##' \strong{Small-sample corrections.} \code{"G1"} (default) scales by
+##' \eqn{J/(J-1)}. This removes the small-sample bias for the intercept but
+##' not for between-cluster coefficients, for which the sandwich stays
+##' biased down when there are few clusters. \code{"CR2"} is the
+##' bias-reduced sandwich of Bell and McCaffrey (2002) adapted to the robust
+##' estimating equations: with \eqn{\hat{A} = \sum_j \hat{A}_j} split into
+##' cluster contributions, each \eqn{s_j} is replaced by
+##' \eqn{(I - \hat{A}_j\hat{A}^{-1})^{-1/2} s_j}. For a Gaussian fit it is
+##' unbiased under the fitted model. It takes the symmetric square root
+##' after whitening by the clusters' marginal covariances, whereas the CR2
+##' of Pustejovsky and Tipton (2018) uses their Cholesky factors; the two
+##' coincide when these covariances are multiples of the identity and
+##' otherwise differ slightly. \code{"CR3"} uses
+##' \eqn{(I - \hat{A}_j\hat{A}^{-1})^{-1}}: \eqn{J/(J-1)} times the one-step
+##' leave-one-cluster-out jackknife. CR2 and CR3 need every random effect
+##' nested within one
+##' cluster. \code{\link[=anova.rlmerMod]{anova}} and
+##' \code{\link[=confint.rlmerMod]{confint}} use CR2 with Bell--McCaffrey /
+##' approximate Hotelling degrees of freedom (Pustejovsky and Tipton 2018)
+##' for \code{vcov_type = "sandwich"}.
 ##'
-##' \eqn{\hat{\sigma}, \hat{\theta}} are held fixed (partial sandwich); the
-##' returned variance is the leading-order fixed-effects covariance.
+##' \eqn{\hat{\sigma}} and \eqn{\hat{\theta}} are held fixed (partial
+##' sandwich).
 ##'
 ##' @param fit \code{rlmerMod} object.
 ##' @param cluster Cluster specification; see \code{\link{resolveCluster}}.
-##' @param correction One of \code{"G1"} (default, applies \eqn{J/(J-1)})
-##'   or \code{"none"}.
+##' @param correction One of \code{"G1"} (default, applies \eqn{J/(J-1)}),
+##'   \code{"none"}, \code{"CR2"} or \code{"CR3"}; see Details.
 ##' @return A \eqn{p \times p} covariance matrix for \eqn{\hat{\beta}},
 ##'   with dimnames from the fixed-effect coefficient names and attribute
 ##'   \code{"n.clusters"}.
+##' @references Bell RM, McCaffrey DF (2002). Bias reduction in standard
+##'   errors for linear regression with multi-stage samples. \emph{Survey
+##'   Methodology} 28(2), 169--181.
+##' @references Pustejovsky JE, Tipton E (2018). Small-sample methods for
+##'   cluster-robust variance estimation and hypothesis testing in fixed
+##'   effects models. \emph{Journal of Business & Economic Statistics}
+##'   36(4), 672--683.
 ##' @seealso \code{\link[=vcov.rlmerMod]{vcov}}, \code{\link{caseweightIF}}
+##' @section Lifecycle:
+##'   Stable.
 ##' @export
-vcov_sandwich <- function(fit, cluster = NULL, correction = c("G1", "none")) {
+vcov_sandwich <- function(fit, cluster = NULL,
+                          correction = c("G1", "none", "CR2", "CR3")) {
     stopifnot(is(fit, "rlmerMod"))
     correction <- match.arg(correction)
+    V <- .vcov_sandwich(fit, cluster = cluster, correction = correction)
+    J <- attr(V, "n.clusters")
+    if (J < 20L && correction %in% c("G1", "none"))
+        warning("Cluster sandwich with J = ", J, " < 20 clusters: with ",
+                "correction = \"", correction, "\" it is biased down for ",
+                "between-cluster coefficients, and chi-square / normal ",
+                "references are anti-conservative. anova() and confint() ",
+                "use correction = \"CR2\" with Bell-McCaffrey degrees of ",
+                "freedom for vcov_type = \"sandwich\".", call. = FALSE)
+    V
+}
+
+## Workhorse of vcov_sandwich() without the small-J warning (anova() and
+## confint() call it with the correction they then calibrate).
+.vcov_sandwich <- function(fit, cluster = NULL, correction = "G1") {
     parts <- implicitIF(fit)
     rho_e <- fit@rho.e
     n     <- fit@pp$n
     p     <- fit@pp$p
     sig   <- parts$sigma
+    eta   <- fit@pp$eta
+    if (length(eta) != n) eta <- rep.int(1, n)
 
+    ## The e-side estimating equation is sum_i eta_i x_i psi_e(r_i): the
+    ## Mallows design weights multiply each score contribution.
     psi_e <- rho_e@psi(parts$r_std)
-    Gb    <- t(parts$A_X * psi_e)
+    Gb    <- t(parts$A_X * (eta * psi_e))
 
     g       <- resolveCluster(fit, cluster, n)
     groups  <- split(seq_len(n), g)
     J       <- length(groups)
-
-    if (J < 20L)
-        warning("Cluster sandwich with J = ", J, " < 20 clusters is ",
-                "anti-conservative for hypothesis tests (in simulations ",
-                "the anova Type-I error inflated to roughly 3-4x nominal ",
-                "at J = 8); use vcov_type = \"default\" for inference at ",
-                "small J, or pair the sandwich CI with a bootstrap ",
-                "calibration (e.g. confintROB).",
-                call. = FALSE)
 
     Smat <- vapply(groups,
                    function(ix) rowSums(Gb[, ix, drop = FALSE]),
                    numeric(p))
     if (is.null(dim(Smat))) Smat <- matrix(Smat, nrow = p)
 
-    Jbb_inv_S <- .solveSafe(parts$Jbb, Smat)
-    xu        <- .solveSafe(parts$S, -parts$Jub %*% Jbb_inv_S)
-    xb        <- Jbb_inv_S - parts$Jbb_inv_Jbu %*% xu
-    IF        <- sig * as.matrix(xb)
-
-    V <- tcrossprod(IF)
-    if (correction == "G1" && J > 1L) V <- V * (J / (J - 1))
+    cr <- NULL
+    if (correction %in% c("CR2", "CR3")) {
+        Aj <- .cluster_jacobians(fit, parts, g, eta)
+        ## Whitening root B with B B' = A^{-1}: the Cholesky factor, not a
+        ## truncated eigen-root. CR2 does not depend on the root chosen,
+        ## A^{-1} (I - A_j A^{-1})^{-1/2} = B (I - M_j)^{-1/2} B' with
+        ## M_j = B' A_j B, but a relative eigenvalue cut-off on A silently
+        ## dropped directions of badly scaled designs (a raw calendar year:
+        ## cond(A) ~ 1e10).
+        B  <- .whitening_root(Reduce(`+`, Aj))
+        Mj <- lapply(Aj, function(a) {
+            M <- crossprod(B, a %*% B)
+            (M + t(M)) / 2
+        })
+        ## A direction of M_j with eigenvalue 1 is informed by cluster j
+        ## alone (e.g. a factor level present in one cluster): (I - M_j)^{-1/2}
+        ## is infinite there and the sandwich cannot estimate its variance.
+        ## Such directions are recorded (and contrasts loading on them get
+        ## no reference distribution, see .cr2_df) instead of silently
+        ## dropped by the pseudo-inverse.
+        degen <- .cr_degenerate_directions(Mj)
+        if (ncol(degen))
+            warning("The cluster sandwich cannot estimate the variance in ",
+                    ncol(degen), " direction(s) of the fixed effects that a ",
+                    "single cluster informs on its own (for example a factor ",
+                    "level present in only one cluster); contrasts involving ",
+                    "them get no small-sample reference (NA). Use vcov_type = ",
+                    "\"default\" for such terms.", call. = FALSE)
+        Rj <- lapply(Mj, function(M)
+            .msym_pow(diag(p) - M, if (correction == "CR2") -1/2 else -1))
+        IF <- vapply(seq_len(J), function(j)
+            sig * as.numeric(B %*% (Rj[[j]] %*% crossprod(B, Smat[, j]))),
+            numeric(p))
+        if (is.null(dim(IF))) IF <- matrix(IF, nrow = p)
+        V <- tcrossprod(IF)
+        if (correction == "CR2") {
+            ## kept in an environment so that printing V stays short
+            cr <- new.env(parent = emptyenv())
+            cr$B <- B; cr$Mj <- Mj; cr$Rj <- Rj; cr$degen <- degen
+        }
+    } else {
+        Jbb_inv_S <- .solveSafe(parts$Jbb, Smat)
+        xu        <- .solveSafe(parts$S, -parts$Jub %*% Jbb_inv_S)
+        xb        <- Jbb_inv_S - parts$Jbb_inv_Jbu %*% xu
+        IF        <- sig * as.matrix(xb)
+        V <- tcrossprod(IF)
+        if (correction == "G1" && J > 1L) V <- V * (J / (J - 1))
+    }
     V <- (V + t(V)) / 2
     nm <- colnames(fit@pp$X)
     dimnames(V) <- list(nm, nm)
     attr(V, "n.clusters") <- J
+    attr(V, "correction") <- correction
+    if (!is.null(cr)) attr(V, "cr2") <- cr
     V
+}
+
+## Symmetric matrix power via the eigendecomposition; eigenvalues below
+## tol (relative) are treated as zero (Moore-Penrose convention, as for
+## the CR2 adjustment matrices of Pustejovsky and Tipton 2018). Used only
+## for I - M_j, whose eigenvalues lie in [0, 1].
+.msym_pow <- function(M, pw, tol = 1e-10) {
+    e <- eigen((M + t(M)) / 2, symmetric = TRUE)
+    lam <- e$values
+    keep <- lam > tol * max(1, abs(lam[1L]))
+    v <- numeric(length(lam))
+    v[keep] <- lam[keep]^pw
+    e$vectors %*% (v * t(e$vectors))
+}
+
+## B with B B' = M^{-1} for a symmetric positive definite M: B = R^{-1} for
+## the Cholesky factor M = R'R. Scale-equivariant, so no direction of a
+## badly scaled design is lost. A singular M (fixed effects without
+## information) falls back to a pseudo-inverse root with a warning.
+.whitening_root <- function(M) {
+    M <- (M + t(M)) / 2
+    R <- tryCatch(chol(M), error = function(e) NULL)
+    if (!is.null(R)) return(backsolve(R, diag(nrow(M))))
+    warning("CR2: the fixed-effects Jacobian is singular; using a ",
+            "pseudo-inverse.", call. = FALSE)
+    .msym_pow(M, -1/2)
+}
+
+## Directions (columns, in the whitened coordinates of M_j) in which some
+## M_j has eigenvalue 1 up to tol: informed by that cluster alone.
+.cr_degenerate_directions <- function(Mj, tol = 1e-8) {
+    p <- nrow(Mj[[1L]])
+    vs <- lapply(Mj, function(M) {
+        e <- eigen(M, symmetric = TRUE)
+        e$vectors[, e$values >= 1 - tol, drop = FALSE]
+    })
+    V <- do.call(cbind, c(list(matrix(0, p, 0)), vs))
+    if (!ncol(V)) return(V)
+    q <- qr(V)
+    qr.Q(q)[, seq_len(q$rank), drop = FALSE]
+}
+
+## Cluster contributions A_j of the marginal (u-profiled) beta-Jacobian,
+## sum_j A_j = A = Jbb - Jbu Juu^{-1} Jub. Requires every random effect to
+## load on a single cluster, so that Juu is block-diagonal by cluster.
+.cluster_jacobians <- function(fit, parts, g, eta) {
+    gi <- as.integer(g)
+    J  <- nlevels(g)
+    De <- eta * parts$D_e
+    AX <- parts$A_X
+    AZ <- parts$A_ZUb
+    q  <- ncol(AZ)
+    Pen <- as.matrix(parts$Lambda_ratio %*% parts$D_b_act)
+    Pen <- (Pen + t(Pen)) / 2
+    ## random effect -> cluster
+    Zt_t <- as(fit@pp$Zt, "TsparseMatrix")
+    uc <- unique(cbind(Zt_t@i + 1L, gi[Zt_t@j + 1L]))
+    if (anyDuplicated(uc[, 1L]))
+        stop(structure(class = c("rlmer_cr_not_nested", "error", "condition"),
+            list(message = paste0(
+                "correction = \"CR2\" / \"CR3\" needs every random effect ",
+                "nested within one cluster; here some load on several ",
+                "clusters (crossed factors, or a cluster variable finer than ",
+                "a grouping factor). Use correction = \"G1\"."),
+                call = NULL)))
+    u_cl <- integer(q)
+    u_cl[uc[, 1L]] <- uc[, 2L]
+    ## random effects without data (all-zero covariate in their level)
+    ## join the cluster of the block they are coupled to
+    for (it in seq_len(3L)) {
+        zero <- which(u_cl == 0L)
+        if (!length(zero)) break
+        for (k in zero) {
+            nb <- which(Pen[k, ] != 0 & u_cl > 0L)
+            if (length(nb)) u_cl[k] <- u_cl[nb[1L]]
+        }
+    }
+    lapply(seq_len(J), function(j) {
+        ix <- which(gi == j)
+        uj <- which(u_cl == j)
+        Xj <- AX[ix, , drop = FALSE]
+        dj <- De[ix]
+        Aj <- crossprod(Xj, dj * Xj)
+        if (length(uj)) {
+            Zj  <- AZ[ix, uj, drop = FALSE]
+            Bxu <- crossprod(Xj, dj * Zj)
+            Buu <- crossprod(Zj, dj * Zj) + Pen[uj, uj, drop = FALSE]
+            Aj  <- Aj - Bxu %*% .solveSafe(Buu, t(Bxu))
+        }
+        as.matrix((Aj + t(Aj)) / 2)
+    })
+}
+
+## Degrees of freedom for the CR2 Wald test of L beta = 0 (L: k x p): the
+## approximate Hotelling T^2 of Pustejovsky and Tipton (2018), eta =
+## k (k + 1) / sum_{s,t} Var(Z_st), Z the CR2 estimate of L V L' whitened
+## by its working-model value, under the working model Cov(s_j) ~ A_j with
+## independent clusters. For k = 1 this is the Bell and McCaffrey (2002)
+## Satterthwaite df. The test is F = (eta - k + 1) / (eta k) * W on
+## (k, eta - k + 1) df, W the Wald statistic.
+.cr2_df <- function(V, L) {
+    cr <- attr(V, "cr2")
+    if (is.null(cr)) return(NA_real_)
+    L  <- rbind(L)
+    k  <- nrow(L)
+    B  <- cr$B
+    p  <- ncol(B)
+    J  <- length(cr$Mj)
+    ## whitened contrasts: rows of Lt satisfy Lt A^{-1} Lt' = I
+    Lw <- L %*% B                                       # k x p
+    Lt <- .whitening_root(tcrossprod(Lw))
+    ct <- t(crossprod(Lt, Lw))                          # p x k, B' Lt'
+    ## a contrast loading on a direction informed by one cluster alone has
+    ## no estimable sandwich variance (see .cr_degenerate_directions)
+    if (ncol(cr$degen) &&
+        max(abs(crossprod(cr$degen, ct))) > 1e-6)
+        return(NA_real_)
+    ## Per cluster j and whitened contrast s: a_js = R_j c_s, u_js = M_j a_js,
+    ## d_j^{st} = a_js' u_jt. With U_s = [u_1s .. u_Js] (p x J) the working-
+    ## model covariances of the cluster terms are G^{st} = diag(d^{st}) -
+    ## U_s' U_t, and Var(Z_st) = <G^{ss}, G^{tt}> + tr(G^{st} G^{st}); both
+    ## are expanded below so that only p x p products are formed (O(J p^2)).
+    U <- array(0, c(p, J, k))
+    d <- array(0, c(J, k, k))
+    for (j in seq_len(J)) {
+        a  <- cr$Rj[[j]] %*% ct
+        uu <- cr$Mj[[j]] %*% a
+        U[, j, ] <- uu
+        d[j, , ] <- crossprod(a, uu)
+    }
+    Us  <- lapply(seq_len(k), function(s) matrix(U[, , s], p))
+    nrm <- vapply(Us, function(u) colSums(u^2), numeric(J))
+    nrm <- matrix(nrm, J)
+    tot <- 0
+    for (s in seq_len(k)) for (t in seq_len(k)) {
+        dss <- d[, s, s]; dtt <- d[, t, t]; dst <- d[, s, t]
+        UsUt <- tcrossprod(Us[[s]], Us[[t]])            # p x p
+        UtUs <- t(UsUt)
+        inner_st <- colSums(Us[[s]] * Us[[t]])          # u_js . u_jt
+        g1 <- sum(dss * dtt) - sum(dss * nrm[, t]) - sum(dtt * nrm[, s]) +
+            sum(UsUt^2)
+        g2 <- sum(dst^2) - 2 * sum(dst * inner_st) + sum(UtUs * t(UtUs))
+        tot <- tot + g1 + g2
+    }
+    k * (k + 1) / tot
 }
 
 ## Model-based delta-method covariance of beta-hat (internal comparator).

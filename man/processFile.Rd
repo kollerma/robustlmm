@@ -41,7 +41,7 @@ to save.}
 \value{
 The list of all processed results merged together.
 
-  To help reproduciblility, the output of \code{toLatex(sessionInfo(),
+  To help reproducibility, the output of \code{toLatex(sessionInfo(),
   locale = FALSE)} is stored in the \code{sessionInfo} attribute.
 }
 \description{

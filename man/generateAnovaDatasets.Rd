@@ -100,7 +100,7 @@ then all the values need to be larger than one.
 levels for each variance component. Each group needs to have more than one
 level. The vector is sorted descending before the names are assigned. This
 ensures that, when running \code{lmer}, the order of the random effects does
-not change. \code{lmer} also sorts the random effects by decending number of
+not change. \code{lmer} also sorts the random effects by descending number of
 levels.
 
 In order to save memory, only the generated random effects and the errors

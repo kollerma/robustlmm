@@ -9,36 +9,36 @@
 ##'
 ##' Two routes.
 ##' \describe{
-##'   \item{\code{method = "Wald"}}{the default and the only path
-##'     implemented in this package. Per-coefficient closed-form CI
-##'     \eqn{\hat\beta_k \pm z_{1-\alpha/2} \cdot SE_k} with \eqn{V}
-##'     taken from \code{vcov(object, type = vcov_type)} -- so the
-##'     \code{"sandwich"} option carries through to the interval.}
-##'   \item{\code{method = "boot"} or \code{"BCa"}}{a thin dispatch to
-##'     \code{\link[confintROB]{confintROB}} (Mason, Cantoni &
-##'     Ghisletta 2021, 2024) with \code{boot.type} forwarded. The
-##'     wrapper subsets the returned matrix to the fixed-effect rows so
-##'     the shape matches the \code{"Wald"} path; variance-component
-##'     CIs from \code{confintROB} are dropped here. \code{vcov_type}
-##'     is not honoured on these paths (\code{confintROB} uses its own
-##'     internal covariance).}
+##'   \item{\code{method = "Wald"}}{the default: \eqn{\hat\beta_k \pm q\,
+##'     SE_k} with \eqn{SE_k} from \code{vcov(object, type = vcov_type)}
+##'     and \eqn{q} a normal or \eqn{t} quantile (see \code{df}).}
+##'   \item{\code{method = "boot"} or \code{"BCa"}}{delegated to
+##'     \code{\link[confintROB]{confintROB}} (Mason, Cantoni and Ghisletta
+##'     2021, 2024), returning its fixed-effect rows; \code{vcov_type =
+##'     "sandwich"}, \code{df} and \code{cluster} cannot be combined with
+##'     it.}
 ##' }
 ##'
-##' Guidance (Koller 2014; Mason et al. 2024). The chi-sq-p Wald limit
-##' is adequate for \eqn{J \gtrsim 20} groups; the bootstrap earns its
-##' (substantial) cost mainly at smaller \eqn{J}. \code{boot.type =
-##'   "wild"} (the default, following \pkg{confintROB}) is robust to
-##' misspecification of the response covariance, while
-##' \code{"parametric"} is exact under the fitted central LMM.
-##' \code{method = "BCa"} adds the bias-correction-and-acceleration
-##' adjustment to the bootstrap percentile (preferred when the
-##' bootstrap distribution is skewed).
+##' The Wald limit is adequate for about 20 or more groups; the bootstrap
+##' earns its cost mainly with fewer (Mason et al. 2024). \code{boot.type =
+##' "wild"} is robust to misspecification of the response covariance,
+##' \code{"parametric"} relies on the fitted central model, and
+##' \code{method = "BCa"} corrects the percentile interval for bias and
+##' skewness. The samples of both bootstraps are also available from
+##' \code{\link[=simulate.rlmerMod]{simulate}}.
 ##'
-##' \strong{Small-J caveat for the sandwich.} \code{vcov_type =
-##'   "sandwich"} under-covers at \eqn{J < 20} (in a simulation study:
-##' coverage ~0.89 at \eqn{J = 8} vs. nominal 0.95); the sandwich path
-##' emits a warning. For Wald CIs at small \eqn{J} prefer \code{vcov_type
-##'   = "default"} or use \code{method = "boot"} / \code{"BCa"}.
+##' \strong{Sandwich covariance.} With few clusters, normal quantiles with
+##' the G1 sandwich under-cover, and for between-cluster coefficients the G1
+##' sandwich itself is biased down. For \code{vcov_type = "sandwich"} the
+##' default (\code{df = "auto"}, i.e. \code{"cluster"}) is therefore the
+##' bias-reduced CR2 sandwich of \code{\link{vcov_sandwich}} with a
+##' Bell--McCaffrey \eqn{t} quantile per coefficient (the degrees of freedom
+##' are in \code{attr(., "df")}); see the section \dQuote{Small-sample
+##' references for the cluster sandwich} of \code{vignette("simulationStudies")}.
+##' When the random effects are not nested within the clusters, the G1
+##' sandwich with \eqn{t_{J-1}} quantiles is used. A coefficient that a
+##' single cluster informs on its own (e.g. a factor level present in one
+##' cluster) gets an \code{NA} interval, with a warning.
 ##'
 ##' @param object An \code{rlmerMod} object.
 ##' @param parm Either \code{NULL} (all fixed-effect coefficients), an
@@ -48,24 +48,26 @@
 ##' @param method One of \code{"Wald"} (default; closed form),
 ##'   \code{"boot"} (bootstrap percentile via \pkg{confintROB}), or
 ##'   \code{"BCa"} (bias-corrected bootstrap via \pkg{confintROB}).
-##' @param vcov_type Covariance to use for \eqn{V} when \code{method =
-##'   "Wald"}: \code{"default"} (the linearised lme4 vcov; pre-existing
-##'   behaviour) or \code{"sandwich"} (the robust cluster-sandwich
-##'   \code{\link{vcov_sandwich}}; exact for a single nested grouping
-##'   factor, approximate for crossed designs). Ignored when
-##'   \code{method = "boot"} or \code{"BCa"}.
-##' @param df Critical-value degrees of freedom for \code{method =
-##'   "Wald"}. \code{"none"} (default) uses the normal quantile
-##'   \eqn{z_{1-\alpha/2}} as before; \code{"satterthwaite"} uses a
-##'   per-coefficient Satterthwaite t-quantile (the robust IF-based
-##'   df), matching \code{summary(object, df = "satterthwaite")}. It
-##'   requires \code{vcov_type = "default"} and a single grouping factor;
-##'   otherwise it warns and falls back to the normal quantile.
+##' @param vcov_type Covariance for \code{method = "Wald"}:
+##'   \code{"default"} (the model-based covariance) or \code{"sandwich"}
+##'   (the cluster sandwich, \code{\link{vcov_sandwich}}).
+##' @param df Quantile for \code{method = "Wald"}. \code{"auto"} (default):
+##'   \code{"none"} for \code{vcov_type = "default"} and \code{"cluster"}
+##'   for \code{vcov_type = "sandwich"}. \code{"none"}: the normal quantile
+##'   (with the G1 sandwich for \code{vcov_type = "sandwich"}).
+##'   \code{"cluster"}: the CR2 sandwich with Bell--McCaffrey \eqn{t}
+##'   quantiles (sandwich only). \code{"satterthwaite"}: robust Satterthwaite
+##'   \eqn{t} quantiles as in \code{summary(object, df = "satterthwaite")}
+##'   (default covariance and a single grouping factor only; otherwise the
+##'   default quantile, with a warning).
 ##' @param boot.type Bootstrap kind passed to \code{confintROB} when
 ##'   \code{method = "boot"} or \code{"BCa"}: one of
 ##'   \code{"wild"} (default, the \code{confintROB} recommendation) or
 ##'   \code{"parametric"}.
 ##' @param nsim Bootstrap replicates; default 1000.
+##' @param cluster For \code{vcov_type = "sandwich"}, the clusters, passed
+##'   to \code{\link{vcov_sandwich}}; needed for models with several
+##'   grouping factors.
 ##' @param seed Optional RNG seed for reproducibility of the bootstrap.
 ##' @param ... Additional arguments forwarded to \code{confintROB}
 ##'   (e.g. \code{clusterID} for the wild bootstrap).
@@ -73,29 +75,59 @@
 ##'   coefficient, columns \code{"<alpha/2> \%"} /
 ##'   \code{"<1-alpha/2> \%"}. Attributes \code{"method"},
 ##'   \code{"vcov_type"} (and, for the bootstrap paths,
-##'   \code{"boot.type"}) record the options used.
+##'   \code{"boot.type"}) record the options used; the small-J sandwich
+##'   reference adds \code{"df"} (per selected coefficient) and
+##'   \code{"correction"} (\code{"CR2"}, or \code{"G1"} when CR2 is not
+##'   defined).
 ##' @seealso \code{\link[=vcov.rlmerMod]{vcov}},
 ##'   \code{\link[confintROB]{confintROB}}
-##' @references Mason F, Cantoni E, Ghisletta P (2021). \emph{Parametric
-##'   and bootstrap-based inference for linear mixed-effects models in
-##'   the presence of outliers}. Methodology 17(4): 271--293.
-##' @references Mason F, Cantoni E, Ghisletta P (2024). \emph{Bootstrap
-##'   confidence intervals for fixed effects in mixed-effects models
-##'   with outliers}. Psychological Methods.
+##' @references Bell RM, McCaffrey DF (2002). Bias reduction in standard
+##'   errors for linear regression with multi-stage samples. \emph{Survey
+##'   Methodology} 28(2), 169--181.
+##' @references Mason F, Cantoni E, Ghisletta P (2021). Parametric and
+##'   semi-parametric bootstrap-based confidence intervals for robust linear
+##'   mixed models. \emph{Methodology} 17(4), 271--295.
+##' @references Mason F, Cantoni E, Ghisletta P (2024). Linear mixed models
+##'   and latent growth curve models for group comparison studies
+##'   contaminated by outliers. \emph{Psychological Methods} 30(1),
+##'   155--173.
 ##' @importFrom stats confint qnorm qt
 ##' @method confint rlmerMod
+##' @section Lifecycle:
+##'   Stable.
 ##' @export
 confint.rlmerMod <- function(object, parm = NULL, level = 0.95,
                              method = c("Wald", "boot", "BCa"),
                              vcov_type = c("default", "sandwich"),
-                             df = c("none", "satterthwaite"),
+                             df = c("auto", "none", "satterthwaite",
+                                    "cluster"),
                              boot.type = c("wild", "parametric"),
-                             nsim = 1000L, seed = NULL, ...) {
+                             nsim = 1000L, seed = NULL, cluster = NULL, ...) {
     stopifnot(is(object, "rlmerMod"))
+    dfGiven   <- !missing(df)
     method    <- match.arg(method)
     vcov_type <- match.arg(vcov_type)
     df        <- match.arg(df)
     boot.type <- match.arg(boot.type)
+    .check_level(level)
+    if (method == "Wald") {
+        if (!is.null(cluster) && vcov_type != "sandwich")
+            stop("'cluster' is used only with vcov_type = \"sandwich\"",
+                 call. = FALSE)
+    } else {
+        ## arguments of the Wald interval have no effect on the bootstrap
+        if (vcov_type != "default")
+            stop("vcov_type = \"", vcov_type, "\" cannot be combined with ",
+                 "method = \"", method, "\": the bootstrap of confintROB ",
+                 "does not use a covariance of the fixed effects",
+                 call. = FALSE)
+        if (dfGiven)
+            stop("'df' is used only with method = \"Wald\"", call. = FALSE)
+        if (!is.null(cluster))
+            stop("'cluster' is used only with method = \"Wald\"; the wild ",
+                 "bootstrap of confintROB takes 'clusterID'", call. = FALSE)
+        .check_number(nsim, "nsim", lower = 1, integer = TRUE)
+    }
 
     beta <- .fixef(object)
     nms  <- colnames(object@pp$X)
@@ -104,7 +136,29 @@ confint.rlmerMod <- function(object, parm = NULL, level = 0.95,
     if (method == "Wald") {
         parm_idx <- .resolve_parm(parm, beta, nms)
         a   <- (1 - level) / 2
-        V   <- as.matrix(vcov(object, type = vcov_type))
+        ## A df choice unavailable for the chosen vcov falls back to that
+        ## vcov's default (df = "auto").
+        if (df == "satterthwaite" && vcov_type != "default") {
+            warning("df = \"satterthwaite\" requires vcov_type = ",
+                    "\"default\"; using the sandwich's default (df = ",
+                    "\"auto\").", call. = FALSE)
+            df <- "auto"
+        }
+        if (df == "cluster" && vcov_type != "sandwich") {
+            warning("df = \"cluster\" applies to vcov_type = \"sandwich\"; ",
+                    "using z-quantiles.", call. = FALSE)
+            df <- "none"
+        }
+        if (df == "auto" && vcov_type == "sandwich")
+            df <- if (.ddf_auto_sandwich == "cluster") "cluster" else "none"
+        ## Sandwich with df = "cluster": the small-J reference of
+        ## theory-methods F3 -- the CR2 (bias-reduced) sandwich with a
+        ## Bell-McCaffrey t df per coefficient (G1 with t(J - 1) when CR2 is
+        ## not defined, i.e. random effects not nested within clusters).
+        Vraw <- if (vcov_type == "sandwich" && df == "cluster")
+                    .cluster_vcov(object, cluster)
+                else vcov(object, type = vcov_type, cluster = cluster)
+        V   <- as.matrix(Vraw)
         se  <- sqrt(diag(V))
         ## WS16 step 5: critical value is the normal quantile by default,
         ## or a per-coefficient Satterthwaite t-quantile when df =
@@ -113,27 +167,39 @@ confint.rlmerMod <- function(object, parm = NULL, level = 0.95,
         ## Mallows eta), or a variance-component boundary -- warns and
         ## falls back to the z-quantile, i.e. the previous behaviour.
         crit <- rep(qnorm(1 - a), length(beta))
+        dfv  <- NULL
+        if (vcov_type == "sandwich" && df == "cluster") {
+            dfv <- if (identical(attr(Vraw, "correction"), "CR2"))
+                       vapply(seq_along(beta), function(i) {
+                           L <- matrix(0, 1L, length(beta)); L[1L, i] <- 1
+                           .cr2_df(Vraw, L)
+                       }, numeric(1))
+                   else rep(attr(Vraw, "n.clusters") - 1, length(beta))
+            low <- which(is.finite(dfv) & dfv < 1)
+            if (length(low))
+                warning("Fewer than one cluster degree of freedom for ",
+                        paste(nms[low], collapse = ", "),
+                        ": the clusters carry almost no information on ",
+                        if (length(low) > 1L) "these coefficients" else
+                        "this coefficient", ".", call. = FALSE)
+            crit <- qt(1 - a, df = dfv)
+        }
         if (df == "satterthwaite") {
-            if (vcov_type != "default") {
-                warning("df = \"satterthwaite\" requires vcov_type = ",
-                        "\"default\"; using z-quantiles.", call. = FALSE)
+            sw <- tryCatch(suppressWarnings(.satterthwaite_df(object)),
+                           error = function(e) e)
+            if (inherits(sw, "error")) {
+                warning("Satterthwaite df unavailable (",
+                        conditionMessage(sw),
+                        "); using z-quantiles.", call. = FALSE)
+            } else if (isTRUE(attr(sw, "boundary")) &&
+                       !isTRUE(attr(sw, "reducible"))) {
+                warning("Variance-component boundary (singular fit): ",
+                        "Satterthwaite df not identifiable; using ",
+                        "z-quantiles.", call. = FALSE)
             } else {
-                sw <- tryCatch(suppressWarnings(.satterthwaite_df(object)),
-                               error = function(e) e)
-                if (inherits(sw, "error")) {
-                    warning("Satterthwaite df unavailable (",
-                            conditionMessage(sw),
-                            "); using z-quantiles.", call. = FALSE)
-                } else if (isTRUE(attr(sw, "boundary")) &&
-                           !isTRUE(attr(sw, "reducible"))) {
-                    warning("Variance-component boundary (singular fit): ",
-                            "Satterthwaite df not identifiable; using ",
-                            "z-quantiles.", call. = FALSE)
-                } else {
-                    ## WS14: a reducible boundary yields a valid df
-                    ## conditional on the zeroed component(s); use it.
-                    crit <- qt(1 - a, df = pmax(as.numeric(sw), 1))
-                }
+                ## WS14: a reducible boundary yields a valid df
+                ## conditional on the zeroed component(s); use it.
+                crit <- qt(1 - a, df = pmax(as.numeric(sw), 1))
             }
         }
         margin <- crit * se
@@ -142,6 +208,10 @@ confint.rlmerMod <- function(object, parm = NULL, level = 0.95,
         rownames(out) <- nms[parm_idx]
         attr(out, "method")    <- "Wald"
         attr(out, "vcov_type") <- vcov_type
+        if (!is.null(dfv)) {
+            attr(out, "df") <- dfv[parm_idx]
+            attr(out, "correction") <- attr(Vraw, "correction")
+        }
         return(out)
     }
 
@@ -150,10 +220,10 @@ confint.rlmerMod <- function(object, parm = NULL, level = 0.95,
         stop("method = \"", method, "\" requires the 'confintROB' package; ",
              "install confintROB or use method = \"Wald\".",
              call. = FALSE)
-    if (vcov_type != "default")
-        warning("vcov_type = \"", vcov_type, "\" is ignored when ",
-                "method = \"", method, "\"; confintROB uses its own ",
-                "internal covariance.", call. = FALSE)
+    ## confintROB refits with lmer(), roughly 1/50 of a robust refit
+    .bootMessage(object, nsim, 0.02,
+                 sprintf("confint(method = \"%s\")", method),
+                 "Reduce 'nsim', or use method = \"Wald\".")
     if (!is.null(seed)) set.seed(seed)
 
     ## NOTE: do NOT forward parm to confintROB. confintROB treats an

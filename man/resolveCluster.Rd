@@ -20,8 +20,9 @@ memberships.}
 A length-\code{n} factor of cluster memberships.
 }
 \description{
-Used by \code{\link{vcov_sandwich}}. For a single grouping factor
-(nested design) the cluster-robust sandwich is exact; for crossed
+Used by \code{\link{vcov_sandwich}}. When every grouping factor is
+nested within the clusters (a single grouping factor, or the top level
+of a nested design) the cluster-robust sandwich is exact; for crossed
 factors no single clustering nests every random-effect block, so a
 warning is issued and the sandwich is approximate.
 }

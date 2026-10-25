@@ -192,6 +192,50 @@ lchol <- function(x) {
 
 .summary.cor.max <- 20
 
+## Compact fragility block for print.summary.rlmerMod (see fragility.R):
+## the first-order contamination fraction eps* that drives each bounded
+## variance parameter to its bound, from the observed clusters.
+.prt.fragility <- function(fr, digits = 3) {
+    if (is.null(fr) || !nrow(fr)) return(invisible(NULL))
+    fr <- fr[is.finite(fr$eps), , drop = FALSE]
+    if (!nrow(fr)) return(invisible(NULL))
+    cat("Fragility (first-order contamination fraction reaching the bound;",
+        "observed clusters, see ?fragility):\n")
+    lab <- format(fr$parameter)
+    for (i in seq_len(nrow(fr))) {
+        if (fr$eps[i] > 0.5)
+            cat(sprintf(paste0("  %s eps* > 0.5 (%s not reached by a ",
+                               "minority of clusters like %s %s)\n"),
+                        lab[i], fr$bound[i], attr(fr, "grouping"),
+                        fr$driver[i]))
+        else
+            cat(sprintf("  %s eps* = %s (%s after about %s more clusters like %s %s)\n",
+                        lab[i], format(signif(fr$eps[i], 2)), fr$bound[i],
+                        format(signif(fr$clusters[i], 2)),
+                        attr(fr, "grouping"), fr$driver[i]))
+    }
+    invisible(NULL)
+}
+
+## Convergence block of print.rlmerMod / print.summary.rlmerMod: printed
+## only when the fit reported a problem or needed a retry.
+.prt.conv <- function(optinfo) {
+    code <- optinfo$conv$opt
+    msgs <- unlist(optinfo$warnings)
+    retry <- optinfo$retry
+    if (is.null(code)) code <- 0
+    ## fits of versions before 3.5.1 stored the warnings of every
+    ## intermediate iteration; they say nothing about the result
+    if (is.null(optinfo$nMuffled)) msgs <- NULL
+    if (code == 0 && !length(msgs) && is.null(retry)) return(invisible(NULL))
+    lab <- .convLabels[as.character(code)]
+    cat("\nConvergence code: ", code, " (", lab, ")\n", sep = "")
+    if (!is.null(retry))
+        cat("  ", retry$message, "\n", sep = "")
+    for (m in msgs) cat("  ", m, "\n", sep = "")
+    invisible(NULL)
+}
+
 ## Print method
 ## along the lines of printMerenv of lme4
 ##' @export
@@ -216,6 +260,7 @@ print.summary.rlmerMod <- function(x, digits = max(3, getOption("digits") - 3),
     .prt.VC(x$varcor, digits=digits, useScale= x$useScale,
 	    comp = ranef.comp, ...)
     .prt.grps(x$ngrps, nobs= x$devcomp$dims[["n"]])
+    .prt.fragility(x$fragility, digits = digits)
 
     ## fixed effecs
     ## this part is 1:1 from printMerenv
@@ -272,6 +317,7 @@ print.summary.rlmerMod <- function(x, digits = max(3, getOption("digits") - 3),
 	    }  ## if (p > 1)
         } ## if (correlation)
     } ## if (p>0)
+    .prt.conv(x$optinfo)
     ## robustness weights
     summarizeRobWeights(x$wgt.e, digits=3,
                         header="\nRobustness weights for the residuals:")
@@ -327,6 +373,7 @@ print.rlmerMod <- function(x, digits = max(3, getOption("digits") - 3),
 	print.default(format(cf, digits = digits),
 		      print.gap = 2L, quote = FALSE, ...)
     } else cat("No fixed effect coefficients\n")
+    .prt.conv(x@optinfo)
     invisible(x)
 }
 
@@ -435,12 +482,22 @@ summary.rlmerMod <- function(object, df = c("auto", "none", "satterthwaite"),
     }
     varcor <- VarCorr(object)
 
+    ## Fragility of the variance parameters (fragility.R): computed only
+    ## when the Satterthwaite df has just built and cached the full IF, so
+    ## it adds nothing but the per-cluster scores to summary()'s cost.
+    frag <- NULL
+    if (computeDf && nrow(coefs) > 0 && exists("sw", inherits = FALSE) &&
+        !inherits(sw, "error"))
+        frag <- tryCatch(.fragility_table(object), error = function(e) NULL)
+
     structure(list(methTitle=.methTitle(object), devcomp=devC,
                    ngrps=sapply(object@flist, function(x) length(levels(x))),
                    coefficients=coefs, sigma=sig, dfMethod=df, dfNote=dfNote,
                    vcov=vcov(object, correlation=TRUE, sigm=sig),
                    varcor=varcor, # and use formatVC(.) for printing.
+                   fragility=frag,
                    call=object@call,
+                   optinfo=object@optinfo,
                    wgt.e=wgt.e(object),
                    wgt.b=wgt.b(object),
                    design.weights=object@resp$eta,   # WS11 (Mallows eta)
@@ -448,7 +505,7 @@ summary.rlmerMod <- function(object, df = c("auto", "none", "satterthwaite"),
                    rho.sigma.e=rho.e(object, "sigma"),
                    rho.b=rho.b(object),
                    rho.sigma.b=rho.b(object, "sigma"),
-                   residuals=residuals(object, scaled=TRUE)
+                   residuals=residuals(object, type="pearson")
                    ), class = "summary.rlmerMod")
 }
 

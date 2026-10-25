@@ -135,7 +135,7 @@ psiFuncRcpp <- function(rcppClass, ...) {
 ##' The \bold{smoothed Huber \eqn{\psi}{psi}-function} is very similar to the
 ##' regular Huber \eqn{\psi}{psi}-function. Instead of a sharp bend like the
 ##' Huber function, the smoothed Huber function bends smoothly. The first tuning
-##' contant, k, can be compared to the tuning constant of the original Huber
+##' constant, k, can be compared to the tuning constant of the original Huber
 ##' function. The second tuning constant, s, determines the smoothness of the
 ##' bend.
 ##'
@@ -166,6 +166,9 @@ setLoadAction(function(ns) assign("smoothPsi", psiFuncRcpp("SmoothPsi"), envir =
 .chgDefaults <- function(object, ...) {
   if (identical(object, cPsi))
     return(cPsi)
+  if (!is.null(attr(object, "sscale")))
+    stop("chgDefaults() does not apply to an S-type scale function; ",
+         "use makeSScalePsi(c = ...)", call. = FALSE)
   clone <- do.call(psiFuncRcpp,
                    c(list(object@getRcppClass()),
                      fixTDefs(..., defaultTDefs = object@tDefs)))

@@ -5,15 +5,15 @@
 \title{Robust cluster-sandwich covariance of the fixed effects of a fitted
 \code{rlmerMod} object.}
 \usage{
-vcov_sandwich(fit, cluster = NULL, correction = c("G1", "none"))
+vcov_sandwich(fit, cluster = NULL, correction = c("G1", "none", "CR2", "CR3"))
 }
 \arguments{
 \item{fit}{\code{rlmerMod} object.}
 
 \item{cluster}{Cluster specification; see \code{\link{resolveCluster}}.}
 
-\item{correction}{One of \code{"G1"} (default, applies \eqn{J/(J-1)})
-or \code{"none"}.}
+\item{correction}{One of \code{"G1"} (default, applies \eqn{J/(J-1)}),
+\code{"none"}, \code{"CR2"} or \code{"CR3"}; see Details.}
 }
 \value{
 A \eqn{p \times p} covariance matrix for \eqn{\hat{\beta}},
@@ -25,27 +25,54 @@ Computes the robust score sandwich \eqn{\hat{V}_{IF} = \hat{A}^{-1}
 \hat{B} \hat{A}^{-T}}, where \eqn{\hat{A}} is the Schur-complement
 (marginal) Jacobian of the profiled \eqn{\beta}-score and \eqn{\hat{B}
 = \sum_j s_j s_j^T} sums the per-cluster \eqn{\beta}-score
-contributions \eqn{s_j = \sum_{i \in j} x_i \psi_e(\hat{r}_i)}. Equal
-to the user-facing \code{vcov(object, type = "sandwich")}.
+contributions \eqn{s_j = \sum_{i \in j} \eta_i x_i \psi_e(\hat{r}_i)}
+(\eqn{\eta_i} the Mallows design weights, 1 unless
+\code{design.weights} is used). Equal to the user-facing
+\code{vcov(object, type = "sandwich")}.
 }
 \details{
-Exact for a single (nested) grouping factor; approximate for crossed
-factors (a warning is issued via \code{\link{resolveCluster}}). With
-few clusters, set \code{correction = "G1"} (default) for the
-\eqn{J/(J-1)} small-sample scaling.
+Exact when every grouping factor is nested within the clusters (a
+single grouping factor, or \code{cluster} naming the top level of a
+nested design); approximate for crossed factors, with a warning.
 
-\strong{Small-J caveat.} The G1 correction is necessary but not
-sufficient at very small \eqn{J}: in a simulation study CI
-coverage drops to ~0.89 at \eqn{J = 8} (vs. nominal 0.95), and
-Wald-style hypothesis tests using the sandwich are anti-conservative
-(Type-I ~3-4x nominal). The function emits a warning for \eqn{J <
-  20}. For inference at small \eqn{J} prefer \code{vcov_type =
-  "default"} or pair the sandwich CI with a bootstrap calibration
-(e.g. \code{confintROB}); the sandwich is most useful at \eqn{J
-  \gtrsim 50}.
+\strong{Small-sample corrections.} \code{"G1"} (default) scales by
+\eqn{J/(J-1)}. This removes the small-sample bias for the intercept but
+not for between-cluster coefficients, for which the sandwich stays
+biased down when there are few clusters. \code{"CR2"} is the
+bias-reduced sandwich of Bell and McCaffrey (2002) adapted to the robust
+estimating equations: with \eqn{\hat{A} = \sum_j \hat{A}_j} split into
+cluster contributions, each \eqn{s_j} is replaced by
+\eqn{(I - \hat{A}_j\hat{A}^{-1})^{-1/2} s_j}. For a Gaussian fit it is
+unbiased under the fitted model. It takes the symmetric square root
+after whitening by the clusters' marginal covariances, whereas the CR2
+of Pustejovsky and Tipton (2018) uses their Cholesky factors; the two
+coincide when these covariances are multiples of the identity and
+otherwise differ slightly. \code{"CR3"} uses
+\eqn{(I - \hat{A}_j\hat{A}^{-1})^{-1}}: \eqn{J/(J-1)} times the one-step
+leave-one-cluster-out jackknife. CR2 and CR3 need every random effect
+nested within one
+cluster. \code{\link[=anova.rlmerMod]{anova}} and
+\code{\link[=confint.rlmerMod]{confint}} use CR2 with Bell--McCaffrey /
+approximate Hotelling degrees of freedom (Pustejovsky and Tipton 2018)
+for \code{vcov_type = "sandwich"}.
 
-\eqn{\hat{\sigma}, \hat{\theta}} are held fixed (partial sandwich); the
-returned variance is the leading-order fixed-effects covariance.
+\eqn{\hat{\sigma}} and \eqn{\hat{\theta}} are held fixed (partial
+sandwich).
+}
+\section{Lifecycle}{
+
+  Stable.
+}
+
+\references{
+Bell RM, McCaffrey DF (2002). Bias reduction in standard
+  errors for linear regression with multi-stage samples. \emph{Survey
+  Methodology} 28(2), 169--181.
+
+Pustejovsky JE, Tipton E (2018). Small-sample methods for
+  cluster-robust variance estimation and hypothesis testing in fixed
+  effects models. \emph{Journal of Business & Economic Statistics}
+  36(4), 672--683.
 }
 \seealso{
 \code{\link[=vcov.rlmerMod]{vcov}}, \code{\link{caseweightIF}}

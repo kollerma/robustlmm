@@ -1,6 +1,7 @@
 % !Rnw weave = Sweave
 \documentclass[nojss]{jss}
 \usepackage{rlmer}
+\usepackage{booktabs}
 
 %\VignetteIndexEntry{New features in robustlmm 3.5.0: robust inference, diagnostics and structured covariances}
 %\VignetteDepends{robustlmm, lme4, emmeans}
@@ -65,6 +66,8 @@ set.seed(20260623)
 ## RDS by vignettes/precompute-3.5.0.R and pulled in with \Sexpr{} below,
 ## so they always match the studies and are never hand-typed.
 nums <- readRDS("robustlmm-3.5.0-numbers.rds")
+## numbers of the MMRM section, written by vignettes/precompute-mmrm.R
+mm <- readRDS("mmrm-sensitivity-numbers.rds")
 fmt <- function(x, digits = 2) formatC(x, format = "f", digits = digits)
 ## Sweave does not echo R warnings into the vignette the way an
 ## interactive session does; this helper prints them next to the call
@@ -155,21 +158,25 @@ echoWarnings(vcov(fm, type = "sandwich"))
 The default is preserved byte-for-byte, so existing code is
 unaffected. The small-sample correction \code{correction = "G1"}
 (default) applies the $J / (J - 1)$ scaling. On a design with a single
-grouping factor the cluster variable is detected automatically; on
-crossed designs pass \code{cluster = "factor-name"} and note that the
-sandwich is then only approximate.
+grouping factor the cluster variable is detected automatically; with
+several grouping factors pass \code{cluster = "factor-name"} (also to
+\code{confint} and \code{anova}): with the top level of a nested design
+the sandwich is exact, on crossed designs only approximate.
 
 \emph{A small-$J$ caveat.} The sandwich is a large-$J$ approximation.
 \code{sleepstudy} has only $J = \Sexpr{nlevels(sleepstudy$Subject)}$
 subjects --- fewer than the $20$ clusters below which \code{vcov_sandwich}
-warns --- which is why the call above prints the warning: at small $J$ the
-sandwich undercovers and sandwich-based \code{anova} tests
-(Section~\ref{sec:anova}) become anti-conservative. The size of that
-effect, and the cluster count from which calibration returns to nominal,
-are quantified by a simulation study; the conclusions are recorded
-in \code{?vcov\_sandwich} and \code{?anova.rlmerMod}. At small $J$, prefer
-\code{type = "default"} for tests, or pair the sandwich interval with a
-bootstrap calibration (Section~\ref{sec:confint}).
+warns --- which is why the call above prints the warning. With few
+clusters the G1 sandwich is biased down for between-cluster coefficients
+and has fewer effective degrees of freedom than $J - 1$, so normal or
+$\chi^2$ references on it are anti-conservative. \code{correction =
+"CR2"} gives the bias-reduced sandwich \citep{bell2002bias} adapted to the
+robust estimating equations, and \code{confint} and \code{anova} use it
+by default for \code{vcov\_type = "sandwich"}, with Bell--McCaffrey /
+approximate-Hotelling degrees of freedom \citep{pustejovsky2018small}
+(Sections~\ref{sec:confint} and~\ref{sec:anova}); the simulation
+evidence is in the section ``Small-sample references for the cluster
+sandwich'' of \code{vignette("simulationStudies")}.
 
 \subsection{Confidence intervals}\label{sec:confint}
 
@@ -181,11 +188,13 @@ $\hat\beta_k \pm q\sqrt{\hat V_{kk}}$ from \code{vcov(., type =
 
 <<confint-wald>>=
 confint(fm, method = "Wald")
-suppressWarnings(  # silence the small-J sandwich note shown above
-    confint(fm, method = "Wald", vcov_type = "sandwich"))
+confint(fm, method = "Wald", vcov_type = "sandwich")
 @
 
-By default the quantile $q$ is the normal $z_{1 - \alpha/2}$. Passing
+For the default covariance the quantile $q$ is the normal
+$z_{1 - \alpha/2}$; for the sandwich it is a Bell--McCaffrey $t$
+quantile per coefficient with the CR2 covariance (its degrees of freedom
+are in \code{attr(., "df")}). Passing
 \code{df = "satterthwaite"} substitutes the robust Satterthwaite
 $t$-quantile (Section~\ref{sec:df}), which widens the interval at small
 $J$:
@@ -227,7 +236,10 @@ anova(fm)
 @
 
 Pass \code{vcov\_type = "sandwich"} to base the table on the
-cluster-sandwich covariance instead. Called on two nested
+cluster-sandwich covariance instead; the table is then the small-$J$
+$F$-test of the CR2 sandwich with approximate-Hotelling denominator
+degrees of freedom (\code{ddf = "none"} restores the $\chi^2$ table).
+Called on two nested
 fixed-effects models it performs a Wald restriction test:
 
 <<anova-two>>=
@@ -271,8 +283,7 @@ smallest random-effect robustness weight falls below a tuned threshold
 are trimmed for the generation step only, while the observed statistic
 still uses all the data. In simulation this reduces --- but does not
 fully remove --- the contamination-induced Type-I inflation at larger
-$J$ while preserving power. It is validated by simulation, not by a
-finite-sample theorem; see \code{?anova.rlmerMod}.
+$J$ while preserving power. It is validated by simulation.
 
 For the common special case where the alternative adds exactly one
 independent scalar variance component --- as in the example above,
@@ -285,25 +296,39 @@ statistic from psi-bounded per-cluster contributions of the robust
 bootstrap that refits just the null model per replicate, about four
 times cheaper than \code{test = "boot"} (default \code{nsim = 199}).
 In simulation the bounded statistic held its size where the deviance
-bootstrap did not: with 10\% of clusters shifted at $J = 50$, Type-I
-was 0.035 vs the deviance bootstrap's 0.115, at clean-null Type-I
-0.045 and power 0.920 vs 0.900
+bootstrap did not: with $\Sexpr{nums$scoreTest$contamPct}\%$ of the
+clusters shifted at $J = \Sexpr{nums$scoreTest$J}$, its Type-I error was
+$\Sexpr{fmt(nums$scoreTest$contamScore, 3)}$ against the deviance
+bootstrap's $\Sexpr{fmt(nums$scoreTest$contamBoot, 3)}$, with clean-null
+Type-I error $\Sexpr{fmt(nums$scoreTest$cleanScore, 3)}$
+($\Sexpr{fmt(nums$scoreTest$cleanBoot, 3)}$) and power
+$\Sexpr{fmt(nums$scoreTest$powerScore, 3)}$
+($\Sexpr{fmt(nums$scoreTest$powerBoot, 3)}$), over
+$\Sexpr{nums$scoreTest$nreps}$ samples per setting
 (\code{inst/simulationStudy/scoreTest.R}, which reproduces these
-cells end-to-end through the package interface). Contamination aligned with the tested
-direction is indistinguishable from the alternative for any test with
-power; the returned per-cluster contributions (\code{attr(., "boot")\$s\_j})
+settings end-to-end through the package interface). With 18 groups,
+an uncentred covariate or $5\%$ outlying observations its Type-I error
+stayed between $\Sexpr{fmt(nums$scoreTest$sweepSize[1], 3)}$ and
+$\Sexpr{fmt(nums$scoreTest$sweepSize[2], 3)}$. Contamination aligned
+with the tested direction is indistinguishable from the alternative for
+any test with power (with shifted slopes in the contaminated clusters the
+test rejected in
+$\Sexpr{fmt(100 * nums$scoreTest$sweepSlopeDirection, 0)}\%$ of the
+samples); the returned per-cluster contributions (\code{attr(., "boot")\$s\_j})
 identify the driving clusters, to be inspected together with the
 cluster diagnostics of Section~\ref{sec:influence} when a rejection is
-suspect. Outside its scope (multi-component or correlated-slope
+suspect. Several added independent components are tested jointly (see
+the section ``Several added variance components'' of
+\code{vignette("simulationStudies")}). Outside its scope (correlated-slope
 alternatives, crossed or nested grouping factors) it stops with an
 error; \code{test = "boot"} remains the default variance-component
-path. It is validated by simulation, not by a theorem; see
-\code{?anova.rlmerMod} for the full record.
+path. It is validated by simulation.
 
 Under error-distribution contamination the robust Wald test can be
 substantially more powerful than the classical likelihood-ratio test
 while matching its Type-I error on clean data; a simulation study
-quantifies the power gain (see \code{?anova.rlmerMod}).
+quantifies the power gain (see the inference study in
+\code{vignette("simulationStudies")}).
 
 \subsection{Satterthwaite degrees of freedom}\label{sec:df}
 
@@ -504,10 +529,13 @@ rs$K_used
 
 \code{rlmer\_ransac} wraps the start and the robust fit and runs three
 diagnostics: a fixed-effect \emph{basin} check (warns when a
-redescending \code{rho.e} left the support-preservation radius
-$r^\ast(c) = c\,\sigma / (2 \max_j \lVert x_j \rVert)$, with $c$ the
-rejection point of \code{rho.e} --- the bisquare cutoff, or found
-numerically for lqq and the other redescenders --- returned by
+redescending \code{rho.e} left the half-weight radius
+$r^\ast = s_{1/2}\,\sigma / \max_j \lVert x_j \rVert$ of the start,
+where $s_{1/2}$ is the residual mean-shift at which the expected
+redescender weight $m(s) = \mathrm{E}\,\psi'(Z + s)$, $Z \sim N(0,1)$, has
+halved --- $s_{1/2} = 1.410$ for the bisquare, computed from the
+\code{Dpsi} slot for lqq and the other redescenders --- so that the
+population Hessian stays positive definite on the ball; returned by
 \code{ransac\_basin\_radius}), a random-effects phony-correlation
 check (warns when the fitted RE covariance is near-singular,
 $|\hat\rho| \to 1$), and a refinement-singularity check
@@ -542,12 +570,16 @@ low-breakdown start can be drawn to a bad local solution.
 
 The defaults are settled and simulation-backed. Across the
 contamination scenarios of
-\code{inst/simulationStudy/ransacConsensus.R}, measured with
-\textsf{robustlmm}~3.5.0-2, the optional multi-start consensus
-(\code{n\_starts > 1}) lowers the pooled phony-correlation rate from
-$0.178$ to $0.165$ at no cost in slope accuracy; over $1200$ paired
-fits the consensus is the interior one in all $15$ replicates where the
-two disagree. RANSAC handles a
+\code{inst/simulationStudy/ransacConsensus.R}, the optional multi-start
+consensus (\code{n\_starts > 1}) lowers the pooled phony-correlation rate
+from $\Sexpr{fmt(nums$ransacConsensus$phonySingle, 3)}$ to
+$\Sexpr{fmt(nums$ransacConsensus$phonyConsensus, 3)}$ at no cost in slope
+accuracy (slope RMSE $\Sexpr{fmt(nums$ransacConsensus$slopeRmseSingle)}$
+and $\Sexpr{fmt(nums$ransacConsensus$slopeRmseConsensus)}$); over
+$\Sexpr{nums$ransacConsensus$nPairs}$ paired fits the consensus is the
+interior one in
+\Sexpr{with(nums$ransacConsensus, if (singleBetter == 0) paste("all", consensusBetter) else paste(consensusBetter, "of the", consensusBetter + singleBetter))}
+replicates where the two disagree. RANSAC handles a
 single, crossed or nested grouping structure---subsampling is stratified
 by the finest grouping factor so each subsample \code{lmer} stays
 fittable on designs with many small clusters---and the start is fully
@@ -688,14 +720,196 @@ calibration of the same DAS-tau fixed point for such blocks; the sample
 is drawn once per fit from a deterministic seed, so fits remain
 reproducible. In a companion simulation on clean Gaussian data this
 removes the small calibration residual that the \code{DASvar}
-approximation leaves in the fitted correlation ($\approx 0.004$ in
-absolute value for four-level \code{ar1} blocks with $200$ subjects;
-\code{inst/simulationStudy/dasmcValidation.R}).
+approximation leaves in the fitted correlation: for \code{ar1} blocks of
+dimension $\Sexpr{nums$dasmc$blockDim}$ with $\Sexpr{nums$dasmc$J}$
+subjects the mean difference to \code{lmer} was at most
+$\Sexpr{fmt(nums$dasmc$dasvarResidual, 3)}$ in absolute value with
+\code{DASvar} and $\Sexpr{fmt(nums$dasmc$dasmcResidual, 3)}$ with the
+Monte-Carlo calibration
+(\code{inst/simulationStudy/dasmcValidation.R}).
 It is validated by simulation only---not by a finite-sample
 theorem---and for blocks of dimension $\leq 2$ the quadrature path
 remains in place, as the Monte-Carlo path offers no improvement there.
 See \code{?"robustlmm-options"} for the option's companions and
 caveats.
+
+\section{A robust sensitivity analysis for an MMRM}\label{sec:mmrm}
+
+In clinical trials with repeated measurements the primary analysis is
+often a mixed model for repeated measures (MMRM): treatment, visit and
+their interaction as fixed effects, and an unstructured covariance of
+the visits within a subject. A robust fit can serve as a sensitivity
+analysis next to it: if a few unusual observations or subjects drive the
+result, the robust estimate moves away from the classical one, and the
+robustness weights show where. This section goes through such an analysis
+with the example data \code{fev\_data} of the \pkg{mmrm} package
+\citep{mmrm}: \Sexpr{mm$weights$rlmer$nobs} lung-function measurements
+(\code{FEV1}) of \Sexpr{mm$weights$rlmer$nsubj} subjects at four visits,
+in a treatment and a placebo arm. It uses \code{augment()} and
+\code{contrast\_test()}, which are new in version 3.5.1. The code is
+shown but not run here, so
+that the vignette does not need \pkg{mmrm}; the results were computed
+with \pkg{mmrm} \Sexpr{mm$versions[["mmrm"]]} by
+\code{vignettes/precompute-mmrm.R}.
+
+\subsection{The models differ}
+
+The MMRM specifies the marginal covariance of the four visits directly
+and leaves it unstructured:
+<<mmrm-fit, eval=FALSE>>=
+library("mmrm")
+fitMmrm <- mmrm(FEV1 ~ RACE + SEX + ARMCD * AVISIT + us(AVISIT | USUBJID),
+                data = fev_data)
+@
+\code{rlmer} cannot fit this model. Its covariance comes from random
+effects plus an independent residual error, and with one observation per
+subject and visit a visit-level random effect cannot be separated from
+the residual error. An unstructured block over the visits is therefore
+not identifiable, and the structured alternative \code{cs(0 + AVISIT |
+USUBJID)} is refused for the same reason (\code{rlmer} asks for more than
+four observations per subject). What can be fitted are random-effects
+models for the subject: a random intercept, which implies the same
+variance at every visit and the same correlation between any two, and a
+random intercept and slope in the visit number, which lets the variance
+change smoothly over the visits.
+<<mmrm-rlmer, eval=FALSE>>=
+fitRob <- rlmer(FEV1 ~ RACE + SEX + ARMCD * AVISIT + (1 | USUBJID),
+                data = fev_data)
+fev_data$visit <- as.numeric(fev_data$AVISIT) - 2.5
+fitRobSlope <- rlmer(FEV1 ~ RACE + SEX + ARMCD * AVISIT +
+                         (visit | USUBJID),
+                     data = fev_data, method = "DASvar")
+@
+The robust analysis is thus a check under a different, more restrictive
+covariance model, not a robust version of the MMRM.
+
+\subsection{Treatment difference at the last visit}
+
+For the MMRM and the random-intercept fit the treatment difference at the
+last visit comes from \pkg{emmeans}, with Satterthwaite degrees of
+freedom in both cases:
+<<mmrm-emmeans, eval=FALSE>>=
+library("emmeans")
+contrast(emmeans(fitMmrm, ~ ARMCD | AVISIT), "revpairwise")
+contrast(emmeans(fitRob, ~ ARMCD | AVISIT), "revpairwise")
+@
+The same contrast can be written in terms of the coefficients and tested
+with \code{contrast\_test()}, which also offers the cluster sandwich:
+<<mmrm-contrast, eval=FALSE>>=
+L <- c("ARMCDTRT" = 1, "ARMCDTRT:AVISITVIS4" = 1)
+contrast_test(fitRob, L)
+contrast_test(fitRob, L, vcov_type = "sandwich")
+@
+
+<<mmrm-table, echo=FALSE, results=tex>>=
+ctab <- mm$contrasts
+lab <- c(mmrm = "MMRM, unstructured covariance",
+         lmer = "\\code{lmer}, random intercept",
+         rlmer = "\\code{rlmer}, random intercept",
+         rlmerSandwich = "\\quad with the cluster sandwich",
+         slope = "\\code{rlmer}, random intercept and slope",
+         slopeSandwich = "\\quad with the cluster sandwich")
+cat("\\begin{table}[htb]\n\\centering\n",
+    "\\begin{tabular}{lrrrr}\n\\toprule \n",
+    "Fit & Estimate & SE & df & $p$ \\\\\n\\midrule \n", sep = "")
+for (r in rownames(ctab))
+    cat(lab[[r]], " & ", fmt(ctab[r, "estimate"]), " & ",
+        fmt(ctab[r, "se"]), " & ",
+        if (is.finite(ctab[r, "df"])) fmt(ctab[r, "df"], 0) else "--",
+        " & ", if (ctab[r, "p"] < 0.001) "$<$0.001" else fmt(ctab[r, "p"], 3),
+        " \\\\\n", sep = "")
+cat("\\bottomrule \n\\end{tabular}\n",
+    "\\caption[Treatment difference at the last visit]{Treatment ",
+    "difference in FEV1 at the last visit. The standard errors without ",
+    "the sandwich are model-based; ``--'' is the normal reference.}\n",
+    "\\label{tab:mmrm}\n\\end{table}\n", sep = "")
+@
+
+Table~\ref{tab:mmrm} shows the results. The robust estimates,
+$\Sexpr{fmt(mm$contrasts["rlmer", "estimate"])}$ and
+$\Sexpr{fmt(mm$contrasts["slope", "estimate"])}$, are somewhat smaller
+than the MMRM's $\Sexpr{fmt(mm$contrasts["mmrm", "estimate"])}$, by less
+than one of its standard errors. The standard errors differ more than
+the estimates. The model-based standard errors of the random-effects fits,
+classical and robust, are about
+$\Sexpr{fmt(mm$contrasts["lmer", "se"], 1)}$, against
+$\Sexpr{fmt(mm$contrasts["mmrm", "se"], 1)}$ for the MMRM: they rely on
+a common variance for all visits, while the MMRM estimates a standard
+deviation of $\Sexpr{fmt(mm$variance$mmrmSd[["VIS4"]], 1)}$ at the last
+visit and $\Sexpr{fmt(mm$variance$mmrmSd[["VIS3"]], 1)}$ at the third.
+The cluster sandwich does not rely on the covariance model, and with it
+the robust fits give standard errors of
+$\Sexpr{fmt(mm$contrasts["rlmerSandwich", "se"], 1)}$ and
+$\Sexpr{fmt(mm$contrasts["slopeSandwich", "se"], 1)}$, close to the
+MMRM's; the $p$-value of the random-intercept fit is then
+$\Sexpr{fmt(mm$contrasts["rlmerSandwich", "p"], 3)}$. When the covariance
+model of the robust fit is cruder than the primary model's, as here, the
+sandwich is the standard error to compare.
+
+\subsection{Where the fits disagree}
+
+The robustness weights come with the data from \code{augment()}:
+<<mmrm-augment, eval=FALSE>>=
+aug <- generics::augment(fitRob)
+aug[order(aug$.wt_e)[1:6], ]
+table(aug$AVISIT[aug$.wt_e < 0.8])
+@
+In the random-intercept fit, \Sexpr{mm$weights$rlmer$nLow} observations
+have a weight below $0.5$, and of the
+\Sexpr{sum(mm$weights$rlmer$belowByVisit)} observations with a weight
+below $0.8$, \Sexpr{mm$weights$rlmer$belowByVisit[["VIS4"]]} are from the
+last visit, which has a quarter of the observations. The downweighted
+observations are thus not scattered recording errors: they sit where the
+response is more variable than the model allows. The same shows in the
+variance components. The robust random-intercept fit estimates a subject
+standard deviation of $\Sexpr{fmt(mm$variance$rlmerSd[["subject"]], 1)}$
+(\code{lmer}: $\Sexpr{fmt(mm$variance$lmerSd[["subject"]], 1)}$), a
+boundary fit that says the common-correlation model does not describe
+these data. With the random slope the picture is calmer:
+\Sexpr{mm$weights$slope$nLow} observations below $0.5$, and
+\Sexpr{mm$weights$slope$belowByVisit[["VIS4"]]} of
+\Sexpr{sum(mm$weights$slope$belowByVisit)} below $0.8$ at the last
+visit. Here the weights point to a shortcoming of the model, the
+unequal variances of the visits, which the unstructured MMRM accommodates
+by construction.
+
+The subjects that drive a fit are found with the cluster-level Cook's
+distance of Section~\ref{sec:cooks-cluster}:
+<<mmrm-cooks, eval=FALSE>>=
+cd <- cooks.distance(fitRobSlope, groups = TRUE)
+head(sort(cd, decreasing = TRUE))
+@
+In the random-slope fit the largest value is
+$\Sexpr{fmt(mm$cooks$slope$max, 1)}$ (subject
+\Sexpr{names(mm$cooks$slope$top)[1]}) against a median of
+$\Sexpr{fmt(mm$cooks$slope$median, 1)}$, and the next ones follow
+closely: no single subject dominates. The subject with the smallest
+random-effect weight is \Sexpr{mm$weights$slope$minWtBSubject}
+($\Sexpr{fmt(mm$weights$slope$minWtB)}$); the number of subjects with a
+weight below one is \Sexpr{mm$weights$slope$nSubjBelow1}.
+This computation needs the influence function of the fit and takes
+several minutes for a model of this size; \code{rlmer} announces it with
+a message.
+
+\subsection{What this analysis does and does not show}
+
+For these data the sensitivity analysis gives no sign that outliers
+drive the primary result: the robust estimates are within one standard
+error of the MMRM's, no subject dominates, and the downweighted
+observations are explained by the larger variance at the last visit. Three limits should be stated with any such analysis.
+\begin{itemize}
+\item The models differ. The MMRM has an unstructured marginal covariance
+  of the visits; \code{rlmer} has random effects and an independent
+  error. A difference between the two fits can come from the covariance
+  model as well as from outliers.
+\item The MMRM with an unstructured covariance over the visits cannot be
+  fitted by \code{rlmer}, because that block is not identifiable next to
+  the residual error.
+\item Missing visits: the MMRM is valid when the dropout is missing at
+  random. Whether the robust estimating equations are, has not been
+  studied. With dropout that depends on the observed responses the robust
+  fit should be read as descriptive.
+\end{itemize}
 
 \section{Summary}\label{sec:summary}
 

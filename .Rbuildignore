@@ -43,3 +43,6 @@ inst/simulationStudy/datasets_consistencyAndEfficiencyBlockDiagonal-processed\.R
 ^research$
 inst/simulationStudy/datasets_robustnessBlockDiagonalExtended-processed\.Rdata
 inst/simulationStudy/robustnessBlockDiagonalExtendedRansacRefit\.R
+vignettes/precompute-methods-studies\.R
+vignettes/precompute-high-breakdown\.R
+vignettes/precompute-mmrm\.R

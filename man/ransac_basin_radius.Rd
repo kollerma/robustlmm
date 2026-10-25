@@ -2,7 +2,7 @@
 % Please edit documentation in R/ransac.R
 \name{ransac_basin_radius}
 \alias{ransac_basin_radius}
-\title{Redescender basin (support-preservation) radius}
+\title{Redescender half-weight (basin) radius}
 \usage{
 ransac_basin_radius(object, cc = NULL, rho = NULL)
 }
@@ -10,34 +10,71 @@ ransac_basin_radius(object, cc = NULL, rho = NULL)
 \item{object}{a fitted \code{lmerMod} or \code{rlmerMod} supplying
 the error scale \eqn{\sigma} and the fixed-effects design matrix.}
 
-\item{cc}{the rejection point \eqn{c} of the redescender. If
-\code{NULL} and \code{rho} is supplied, \eqn{c} is the rejection
-point of \code{rho} found numerically; if both are \code{NULL}, the
-bisquare default \code{4.685}.}
+\item{cc}{without \code{rho}: the bisquare cutoff \eqn{c} (default
+\code{4.685}). With \code{rho}: the upper end of the search
+interval for \eqn{s_{1/2}} (default: the rejection point of
+\code{rho}).}
 
-\item{rho}{an optional redescending \code{psi_func_rcpp} (e.g.
-\code{\link{bisquarePsi}}, \code{\link{lqqPsi}}) whose rejection
-point supplies \eqn{c} when \code{cc} is \code{NULL}.}
+\item{rho}{an optional \code{psi_func_rcpp} (e.g.
+\code{\link{bisquarePsi}}, \code{\link{lqqPsi}}) whose \code{Dpsi}
+defines the expected-weight function \eqn{m}.}
 }
 \value{
-the basin radius \eqn{r^\star(c)} in the units of
-  \eqn{\beta} (a scalar), with attribute \code{"max_xnorm"}.
+the half-weight radius \eqn{r^\star} in the units of
+  \eqn{\beta} (a scalar), with attributes \code{"max_xnorm"},
+  \code{"s_half"} (the half-weight shift \eqn{s_{1/2}}) and
+  \code{"cc"}.
 }
 \description{
-Support-preservation (basin) radius for a fixed-effects start.
+Half-weight (basin) radius for a fixed-effects start.
 }
 \details{
-Computes the radius \eqn{r^\star(c) = c\,\sigma / (2 \max_j
-\|x_j\|)} of the ball around the initial fixed-effects estimate
-within which every observation keeps its redescender-support
-membership, so the population Hessian stays positive definite (Koller
-and Stahel; the RANSAC-RSE basin theorem). Here \eqn{c} is the
-\emph{rejection point} of the redescending \eqn{\psi} --- the smallest
-\eqn{x > 0} with \eqn{\psi(x) = 0}. For the bisquare this is the tuning
-cutoff (default \code{4.685}); the geometry generalises to any
-finite-rejection-point redescender (e.g. \code{\link{lqqPsi}}) by
-finding its rejection point numerically. A redescending \eqn{\psi} is
-safe to engage from a start only if the eventual estimate stays within
-this radius of the (high-breakdown) start --- otherwise the iteration
-may leave the basin and converge to a phony solution.
+Computes the half-weight radius
+\deqn{r^\star(c) = s_{1/2}(c)\,\sigma / \max_j \|x_j\|}
+of the ball around the initial fixed-effects estimate on which the
+population Hessian of a redescending M-estimator stays positive
+definite (the RANSAC-RSE basin theorem, Step 1). Write
+\eqn{m(s) = E\,\psi'(Z + s)}, \eqn{Z \sim N(0, 1)}, for the expected
+redescender weight of an observation whose residual carries a
+deterministic mean-shift of \eqn{s} error-scale units; \eqn{m} is
+even in \eqn{s} and decreasing in \eqn{|s|} near the origin. The
+half-weight shift \eqn{s_{1/2}} is the first \eqn{s > 0} with
+\eqn{m(s) = m(0)/2}. By Cauchy-Schwarz every observation's shift
+within the ball is at most \eqn{\|x_j\| r^\star / \sigma \le
+s_{1/2}}, so its expected weight is at least \eqn{m(0)/2} and
+\eqn{-H(\beta) \succeq -H_0 / 2 \succ 0} throughout the ball. For the
+bisquare at the default cutoff \eqn{c = 4.685}, \eqn{s_{1/2} =
+1.410}; for \code{sleepstudy} this gives \eqn{r^\star \approx 4.0}
+in the units of \eqn{\beta}.
+
+Up to version 3.5.0-2 this function returned the larger
+support-preservation radius \eqn{c\,\sigma / (2 \max_j \|x_j\|)}
+(6.6 for \code{sleepstudy}). That radius only kept every observation
+inside the redescender's support; it did not bound the Hessian away
+from singularity, which is what the basin guarantee needs, so it was
+replaced by the half-weight radius.
+
+When \code{rho} is supplied, \eqn{m(s)} is computed from its
+\code{Dpsi} slot by numerical integration, so the radius applies to
+any redescender (e.g. \code{\link{lqqPsi}}); \code{cc} is then only
+the upper end of the search interval for \eqn{s_{1/2}} (the rejection
+point of \code{rho}, found numerically, when \code{cc} is
+\code{NULL}; \code{10} if \code{rho} has none). Without \code{rho},
+the bisquare \eqn{\psi'} with cutoff \code{cc} (default \code{4.685})
+is used. If \eqn{m} is not monotone on the search interval, the first
+crossing of \eqn{m(0)/2} from the origin is taken.
+}
+\section{Lifecycle}{
+
+  \strong{Experimental.} The interface and the results may change in a
+  later version.
+}
+
+\examples{
+lm0 <- lme4::lmer(Reaction ~ Days + (Days | Subject), lme4::sleepstudy)
+ransac_basin_radius(lm0)                  # bisquare, c = 4.685
+ransac_basin_radius(lm0, rho = lqqPsi)    # from lqq's psi'
+}
+\seealso{
+\code{\link{rlmer_ransac}}
 }

@@ -25,6 +25,9 @@ jobs:
           - {os: ubuntu-latest,   r: 'release'}
           - {os: ubuntu-latest,   r: 'oldrel-1'}
 
+    # Cap runaway jobs so a hang can't drain the minutes budget.
+    timeout-minutes: 90
+
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
@@ -40,11 +43,26 @@ jobs:
 
       - uses: r-lib/actions/setup-pandoc@v2
 
+      # On Windows `tlmgr update --self` hangs, so install the larger
+      # TinyTeX-2 bundle there, which already has the packages below.
       - uses: r-lib/actions/setup-tinytex@v2
+        env:
+          TINYTEX_INSTALLER: ${{ runner.os == 'Windows' && 'TinyTeX-2' || 'TinyTeX-1' }}
 
       - name: Install additional LaTeX packages
+        if: runner.os != 'Windows'
+        timeout-minutes: 15
         run: |
+          tlmgr update --self
           tlmgr install ae adjustbox collectbox
+
+      - name: Check LaTeX packages
+        shell: bash
+        timeout-minutes: 5
+        run: |
+          for f in ae.sty adjustbox.sty collectbox.sty; do
+            kpsewhich "$f" || { echo "missing $f"; exit 1; }
+          done
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
@@ -55,3 +73,31 @@ jobs:
         with:
           build_args: 'c("--no-manual", "--compact-vignettes=both")'
           args: 'c("--no-manual", "--as-cran", "--no-stop-on-test-error")'
+
+  # Spelling of the help pages, NEWS and vignettes against inst/WORDLIST.
+  spelling:
+    runs-on: ubuntu-latest
+    name: spelling
+    timeout-minutes: 15
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: any::spelling
+          dependencies: 'NA'
+
+      - name: Spell check
+        run: |
+          x <- spelling::spell_check_package(".", vignettes = TRUE)
+          print(x)
+          if (nrow(x) > 0L)
+            stop(nrow(x), " word(s) not in inst/WORDLIST; fix them or run ",
+                 "spelling::update_wordlist() after reviewing")
+        shell: Rscript {0}

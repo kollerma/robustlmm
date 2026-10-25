@@ -295,7 +295,7 @@ fitDatasets_rlmer <-
 ##' @title Create Rho-Functions With Custom Tuning Parameter
 ##' @param tuningParameter argument passed on to
 ##'   \code{\link{extractTuningParameter}}. See its documentation for details.
-##' @param which string specifiying which tuning parameter should be extracted.
+##' @param which string specifying which tuning parameter should be extracted.
 ##' @param rho.e \code{\link{PsiFunction}} to be used for \code{rho.e}.
 ##' @param rho.sigma.e \code{\link{PsiFunction}} to be used for
 ##'   \code{rho.sigma.e}.
@@ -358,7 +358,7 @@ createRhoFunction <-
 ##'   rho.sigma.b.blockDiagonal. 'rho.b.diagonal' denotes the tuning parameter
 ##'   to be used for 'rho.b' for models with diagonal random effects covariance
 ##'   matrix. Names are optional.
-##' @param which string specifiying which tuning parameter should be extracted.
+##' @param which string specifying which tuning parameter should be extracted.
 ##' @author Manuel Koller
 ##' @return scalar tuning parameter
 ##' @export

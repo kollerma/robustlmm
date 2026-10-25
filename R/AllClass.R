@@ -517,7 +517,7 @@ setRefClass("rlmerPredD_DAS",
                          if (any(tooSmall)) {
                             tau2[tooSmall] <- 0.01
                             obsString <- createObservationsString(tooSmall)
-                            warning("Detected very small values for tau^2 for ",
+                            .innerWarning("Detected very small values for tau^2 for ",
                                     obsString, ". Using 0.01 instead.")
                          }
                          .tau_e <<- sqrt(tau2)
@@ -596,6 +596,8 @@ setRefClass("rlmerResp",
 ##'   VarCorr.summary.rlmerMod vcov.summary.rlmerMod
 ##'   weights.rlmerMod
 ##' @docType class
+##' @section Lifecycle:
+##'   Stable, including the \pkg{emmeans} support.
 ##' @section Objects from the Class: Objects are created by calls to
 ##'   \code{\link{rlmer}}.
 ##' @section Methods: Almost all methods available from objects returned from
@@ -792,7 +794,7 @@ setClass("rlmerMod",
         cnms <- from@cnms
         y <- getME(from, "y")
         offset <- getME(from, "offset")
-        weights <- weights(from)
+        weights <- from@resp$weights
     } else stop("Unsupported object of class", class(from))
 
     resp <- new("rlmerResp",

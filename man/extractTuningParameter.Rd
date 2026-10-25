@@ -21,7 +21,7 @@ rho.sigma.b.blockDiagonal. 'rho.b.diagonal' denotes the tuning parameter
 to be used for 'rho.b' for models with diagonal random effects covariance
 matrix. Names are optional.}
 
-\item{which}{string specifiying which tuning parameter should be extracted.}
+\item{which}{string specifying which tuning parameter should be extracted.}
 
 \item{label}{label or vector of labels in results. Only predefined labels of
 the form 'fitDatasets_rlmer_...' are supported (for others NA is

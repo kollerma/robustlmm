@@ -5,15 +5,17 @@
 ## n_starts = 5 (consensus) and compare the phony rate (|rho-hat| > 0.9999)
 ## and slope RMSE.
 ##
-## ---- FINDING (200 reps/gen, n_starts = 5, K <= 80, 2026-06-22) --------
-## Multi-start consensus cuts the phony rate ~5.5x and in EVERY generator,
-## including the error-contaminated / heavy-tailed ones where single-start
-## bisquare was worse than the default monotone RSE (cf. ransacBasin.R):
-##   N/N 0.090->0.015, N/CN 0.260->0.055, CN/N 0.040->0.005,
-##   CN/CN 0.180->0.025, t3/t3 0.155->0.020, skt3/skt3 0.170->0.040;
-##   pooled 0.149 -> 0.027. Slope RMSE essentially unchanged (no
-## efficiency cost). Consensus is therefore the recommended way to use a
-## redescending psi with the RANSAC start.
+## ---- FINDING (200 reps/gen, n_starts = 5, K <= 80) ----------------------
+## Re-run 2026-09-29 with version 3.5.1 (RANSAC candidates
+## ranked by the centred M-scale; list starts' fixed effects honoured):
+## the consensus lowers the phony rate in every generator,
+##   N/N 0.145->0.135, N/CN 0.340->0.320, CN/N 0.065->0.060,
+##   CN/CN 0.170->0.165, t3/t3 0.210->0.185, skt3/skt3 0.170->0.155;
+##   pooled 0.183 -> 0.170, all 16 discordant pairs in its favour, slope
+## RMSE unchanged (1.91 vs 1.92). The effect is small; earlier runs gave
+## 0.178 -> 0.165 (3.5.0-2) and 0.149 -> 0.027 (June 2026, before the fix
+## of init = "ransac" fitting the RANSAC subsample). The vignettes quote
+## the shipped results via vignettes/precompute-3.5.0.R.
 ## ----------------------------------------------------------------------
 
 suppressMessages({ library(robustlmm); library(lme4); library(parallel) })

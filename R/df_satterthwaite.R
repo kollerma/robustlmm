@@ -409,8 +409,7 @@
     if (boundary && !reducible)
         warning("variance-component boundary (singular fit): the ",
                 "(sigma, theta) covariance is not identifiable at ",
-                "first order; returned values are unreliable. See the ",
-                "boundary discussion in the IF-thread1 papers.")
+                "first order; returned values are unreliable.")
     nm <- c("sigma", paste0("theta", seq_len(L)))
     dimnames(A) <- list(nm, nm)
     attr(A, "n.clusters")          <- J

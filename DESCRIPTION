@@ -1,8 +1,8 @@
 Package: robustlmm
 Type: Package
 Title: Robust Linear Mixed Effects Models
-Version: 3.5.0-2
-Date: 2026-07-30
+Version: 3.5.1
+Date: 2026-10-25
 Author: Manuel Koller [aut, cre]
 Authors@R: person(given = "Manuel", family = "Koller", role = c("aut", "cre"), email = "kollerma@proton.me")
 Maintainer: Manuel Koller <kollerma@proton.me>
@@ -16,7 +16,7 @@ LazyLoad: yes
 Depends:
     lme4 (>= 2.0-1),
     Matrix (>= 1.6-2),
-    R (>= 3.5.0)
+    R (>= 3.6.0)
 Suggests:
     ggplot2,
     reshape2,
@@ -32,7 +32,9 @@ Suggests:
     ggh4x,
     testthat,
     robustvarComp,
-    confintROB
+    confintROB,
+    generics,
+    tibble
 Imports:
     lattice,
     nlme,
@@ -50,7 +52,10 @@ Collate:
     'ghq.R'
     'psiFunc2.R'
     'redescendingPsi.R'
+    'sscale.R'
+    'checks.R'
     'AllClass.R'
+    'control.R'
     'rlmer.R'
     'accessors.R'
     'fromLme4.R'
@@ -71,8 +76,13 @@ Collate:
     'influence.R'
     'influence_full.R'
     'df_satterthwaite.R'
+    'fragility.R'
+    'design_breakdown.R'
     'bootstrapWald.R'
+    'simulate.R'
     'anova.R'
+    'contrast.R'
+    'tidiers.R'
     'fitDatasets.R'
     'processFit.R'
     'processFile.R'
@@ -82,6 +92,7 @@ Collate:
     'options.R'
 LinkingTo: Rcpp, robustbase, Matrix
 Encoding: UTF-8
+Language: en-US
 RcppModules: psi_function_module
 Config/build/clean-inst-doc: false
 Config/roxygen2/version: 8.0.0

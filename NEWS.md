@@ -1,5 +1,319 @@
 # robustlmm NEWS
 
+## robustlmm 3.5.1
+
+### Small-sample inference, variance-component tests and RANSAC
+
+- `vcov_sandwich()` / `vcov(type = "sandwich")` gain `correction = "CR2"`
+  and `"CR3"`: the bias-reduced cluster sandwich of Bell and McCaffrey
+  (2002) and its approximate-jackknife version, adapted to the robust
+  estimating equations. With few clusters the default G1 sandwich is biased
+  down for between-cluster coefficients.
+
+- `anova()` and `confint()` with `vcov_type = "sandwich"` now use the CR2
+  sandwich by default, with the approximate Hotelling F-test of Pustejovsky
+  and Tipton (2018) and Bell-McCaffrey t quantiles (new `ddf` / `df` values
+  `"auto"`, the default, and `"cluster"`). `ddf = "none"` / `df = "none"`
+  restore the chi-square table and normal intervals of earlier versions; with
+  the sandwich, `"satterthwaite"` now falls back to the new reference. Both
+  functions gain `cluster` for models with several grouping factors. A
+  coefficient that a single cluster informs on its own gets `NA`, with a
+  warning. The test is much closer to its level than the chi-square table
+  but can stay somewhat anti-conservative for between-cluster terms; see the
+  section "Small-sample references for the cluster sandwich" of
+  `vignette("simulationStudies")`.
+
+- `anova(test = "boot")` gains `nuisance`: by default (`"threshold"`) a
+  nuisance variance component of the null model estimated close to zero is
+  set to zero when generating the bootstrap samples, which keeps the
+  bootstrap consistent when that component is zero (Guedon, Baey and Kuhn
+  2024); `"raw"` restores the previous generator. The simulation study
+  could not show a finite-sample benefit; see the section "Near-zero
+  nuisance variance components in the bootstrap test" of
+  `vignette("simulationStudies")`.
+
+- `anova(test = "score")` tests several added independent variance
+  components jointly, with the cone (chi-bar) statistic of the whitened
+  robust score; see the section "Several added variance components" of
+  `vignette("simulationStudies")`.
+
+- `ransac_lme4()` and `rlmer_ransac()` rank the candidates by a centred
+  residual scale (the bisquare M-scale about zero) instead of
+  `robustbase::Qn`, which cannot tell a candidate with a shifted intercept
+  from the correct one. `scale_fn = robustbase::Qn` restores the previous
+  ranking; `rlmer_ransac()` gains `scale_fn`, which also scores its
+  multi-start consensus. See the section "Ranking RANSAC candidates" of
+  `vignette("simulationStudies")`.
+
+- New `fragility()`: the first-order fraction of contaminating clusters
+  that would drive each variance parameter to its bound. `summary()` prints
+  it when it computes the Satterthwaite degrees of freedom.
+
+- New `design_breakdown()`: the breakdown ceiling of the fixed-effects
+  design (Mili and Coakley 1996) and the breakdown point an MM-type
+  refinement is guaranteed to inherit from its start (following Yohai
+  1987).
+
+### High-breakdown estimation (opt-in)
+
+- New `makeSScalePsi()` and the pre-built `sScalePsi`: an S-type scale
+  function for `rho.sigma.e` and one-dimensional `rho.sigma.b`. The scale
+  equations of `rlmer()` break down at a fraction of 0.295 outliers for
+  the default settings and 0.156 for `setting = "RSEa"`, and a
+  redescending `rho.e` stops rejecting the outliers once the scale is
+  inflated. `sScalePsi` turns the same equations into the bounded-rho
+  M-scale equations of S-estimation (breakdown point 1/2), keeping the
+  consistency constant, the design-adaptive standardisation and everything
+  built on the scale estimates. `rlmer()` refuses it for random-effect
+  blocks of dimension above 1 and as `rho.e` or `rho.b`.
+
+- New `rlmer(init = "robust")`: a high-breakdown start for any
+  random-effects structure. An S-estimate of the fixed-effects part
+  (`lmrob(method = "S")`) screens the observations and `lmer()` on the
+  retained observations supplies the starting values. It is computed for
+  the model as specified (contrasts, subset, prior weights and offset) and
+  is reproducible (fixed seed, random number stream untouched). The start
+  matters only with a redescending `rho.e` or `rho.b`.
+
+- New `setting = "RSEhb"` for `rlmer()`: `sScalePsi` for the residual
+  scale and simple variance components, a bisquare `rho.b` for simple
+  random effects, `init = "robust"`, and a bisquare `rho.e` with
+  `c = 3.444` (85% efficiency). Its fixed effects break down under
+  considerably more contamination than with the default setting, at a cost
+  in efficiency and variance-component precision; use `vcov_type =
+  "sandwich"` for inference and the default `method = "DAStau"`. `?rlmer`
+  has a new section on the breakdown point; the simulation results are in
+  the section "Studies for the high-breakdown configuration" of
+  `vignette("simulationStudies")`.
+
+### Usability and interoperability
+
+- New `rlmerControl()` and `rlmer(..., control = )`: one object for
+  `rel.tol`, `max.iter`, the settings of the experimental Monte-Carlo
+  DAS-tau calibration (so far available only through `options()`), and an
+  optional retry. The arguments `rel.tol` and `max.iter` and the options
+  keep working; giving a setting both as an argument and in `control` is an
+  error. An `lmerControl()` object passed as `control` still goes to the
+  classical start.
+
+- `rlmerControl(retry = TRUE)`: a fit that does not converge is fitted
+  again along a chain of fallbacks (continue with more iterations; start
+  from a `"DASvar"` fit; start from `init = "robust"`), and the first
+  converged fit is returned. The attempt that succeeded is recorded in
+  `fit@optinfo$retry` and shown by `print()` and `summary()`. Off by
+  default.
+
+- `vignette("robustlmm-3.5.0")` has a new section "A robust sensitivity
+  analysis for an MMRM": a repeated-measures trial (the example data of
+  the `mmrm` package) analysed with `rlmer()` next to the primary MMRM,
+  with the treatment contrast through `emmeans` and `contrast_test()`, the
+  robustness weights from `augment()` and cluster-level Cook's distances,
+  and a statement of what such an analysis does not show (the models
+  differ; an unstructured covariance over the visits cannot be fitted by
+  `rlmer()`; validity under dropout has not been studied).
+
+- The help pages state the lifecycle of each function in a section
+  "Lifecycle": stable, or experimental (interface and results may change).
+  Experimental are `anova(test = "score")`, `null = "robust"` and
+  `nuisance = "threshold"`; `cs()` / `ar1()`; the Monte-Carlo DAS-tau
+  calibration; `sScalePsi` / `makeSScalePsi()`, `setting = "RSEhb"` and
+  `init = "robust"`; `fragility()` and `design_breakdown()`; the RANSAC
+  functions; and the retry of `rlmerControl()`.
+
+- A message now announces computations that can take long: the influence
+  function of a large fit (needed for Satterthwaite degrees of freedom, the
+  cluster sandwich and Cook's distances) and bootstraps with many robust
+  refits (`anova(test = "boot")` with the default `nsim = 1000` on most
+  data). The message names the cost and how to avoid it; nothing is
+  skipped. The thresholds are the new options `robustlmm.message.if.max`
+  and `robustlmm.message.boot.max` (`Inf` silences them); see
+  `?"robustlmm-options"`.
+
+- Earlier and clearer errors for invalid arguments in `rlmer()`, `vcov()`,
+  `confint()`, `anova()`, `predict()` and `contrast_test()`. Combinations in
+  which an argument had no effect are now errors instead of being ignored:
+  `confint(method = "boot")` with `vcov_type = "sandwich"` (was a warning),
+  with `df` or with `cluster`; `cluster` (and for `vcov()`, `correction`)
+  without the sandwich in `vcov()`, `confint()` and `anova()`; `null` or
+  `nuisance` with `anova(test = "score")` or an explicit `test = "Wald"`.
+  Remove the argument to get the previous result. A `max.iter` that is not
+  a whole number is an error as well.
+
+- New `simulate()` method for `rlmerMod` objects. `type = "parametric"`
+  draws from the central Gaussian model at the robust estimates (random
+  effects redrawn by default, `use.u = TRUE` keeps the fitted ones; prior
+  weights and offsets are honoured); `type = "wild"` gives the cluster wild
+  bootstrap samples of Modugno and Giannerini (2015), with Mammen or
+  Rademacher weights and a `cluster` argument for nested and crossed
+  designs. These are the samples of the bootstraps in `confintROB`; for a
+  single grouping factor without prior weights or offset the wild samples
+  are identical to its under the same seed. `confint(method = "boot")` is
+  unchanged.
+
+- New `refit()` method (the `lme4` generic): refits a model to a new
+  response with the psi-functions, method, prior weights and offset stored
+  in the fit (the original data is not needed), started from the original
+  fit. With `simulate()` it makes
+  `lme4::bootMer()` work for `rlmerMod` objects.
+
+- New `tidy()`, `glance()` and `augment()` methods for `rlmerMod` objects
+  (generics of the `generics` package, as re-exported by `broom` and
+  `broom.mixed`, whose column names they follow). `augment()` returns the
+  robustness weights next to the data: `.wt_e` per observation and `.wt_b`
+  for the random effect of its cluster. `glance()` counts the observations
+  and clusters downweighted below 0.5; it has no `logLik` / `AIC` / `BIC`
+  because the robust estimator is not based on a likelihood. They return a
+  tibble if `tibble` is installed. `generics` and `tibble` are in
+  `Suggests`; robustlmm now requires R >= 3.6.0 (as `lme4` does).
+
+- New `contrast_test()`: Wald test of user-specified linear contrasts of
+  the fixed effects, `L beta = rhs`. One contrast gives a t test, several a
+  joint F test, with the references of `summary()`, `anova()` and the
+  emmeans support: robust Satterthwaite degrees of freedom for the
+  model-based covariance, CR2 with Bell-McCaffrey / approximate-Hotelling
+  degrees of freedom for `vcov_type = "sandwich"`.
+
+- `residuals()` gains `type = "pearson"` (divided by sigma and whitened by
+  the prior weights; the "scaled residuals" of `summary()`) and
+  `type = "normalized"` (marginal residuals whitened by the Cholesky factor
+  of the fitted marginal covariance), for checking the fitted
+  within-cluster covariance structure.
+
+### Bug fixes
+
+- `anova(test = "boot")` and `anova(test = "score")` for models with prior
+  weights or an offset. The bootstrap samples were generated with a common
+  error variance and without the offset, so they did not come from the
+  fitted null model; they now use the error variance sigma^2 / w and add
+  the offset, as `simulate()` does. The refits also failed for such models
+  unless the weights variable happened to be visible outside the data (the
+  test then stopped with "only 0 of ... replicates succeeded"); the
+  bootstrap data now carries the variables of `weights` and `offset`.
+  Models without prior weights and offset are unaffected: their seeded
+  results are identical.
+
+- Documentation: the references to Mason, Cantoni and Ghisletta in
+  `?confint.rlmerMod` and the vignettes gave a wrong title for the 2024
+  paper and wrong end pages for the 2021 paper; corrected. The statement
+  that the parametric bootstrap "is exact under the fitted central model"
+  is replaced by "relies on the fitted central model".
+
+- `residuals(fit)` (`type = "response"`) of a fit with prior weights
+  returned the residuals multiplied by the square root of the weights. It
+  now returns `y - fitted(fit)`, as `lme4` does. Affected: prior-weighted
+  fits only, including `scaled = TRUE`; multiply
+  `residuals(fit, type = "pearson")` by `sigma(fit)` to get the old values.
+  `summary()`'s scaled residuals, the plots and all estimates are unchanged.
+
+- `rlmer(..., na.action = na.exclude)` failed with "length(v_e) == n is not
+  TRUE" when the data had missing values. It now fits, and `residuals()`
+  and `predict()` pad the excluded rows with `NA`.
+
+- `rlmer()` now reports convergence problems. The fit collected its own
+  warnings and never showed them, so a fit that stopped at `max.iter`, or
+  whose estimating equations were not satisfied at convergence, was
+  returned silently. These warnings are now raised once after the fit,
+  stored in `fit@optinfo$warnings`, and shown in a "Convergence code" block
+  by `print()` and `summary()`; `fit@optinfo$conv$opt` is 0 for a converged
+  fit. Warnings of the inner iterations are reported only when they concern
+  the returned estimate. A fit with `max.iter = 0` (the start itself) is
+  reported as not converged. Affected: any fit that did not converge now warns;
+  converged fits and all estimates are unchanged. Wrap the call in
+  `suppressWarnings()` to silence it; the bootstrap and RANSAC loops of the
+  package do so for their refits.
+
+- The effects solve (`fitEffects()`) failed with a singular LU
+  factorisation when, under redescending psi-functions, a random effect
+  and all of its observations had zero weight. A ridge of relative size
+  1e-10 on the random-effect block now sets such random effects to zero;
+  a fixed-effects design without information still errors.
+
+- `rlmer(..., subset = )` warned that `init` had been fitted on fewer
+  observations than `formula` and `data` give: the check meant for a
+  user-supplied `lmer()` fit also ran on the internal start.
+
+- `rlmer(init = list(...))` discarded the supplied fixed effects, and with
+  them the fixed effects of every RANSAC start (`init = "ransac"`,
+  `rlmer_ransac()`); this affects robustlmm 3.5.0-2 as released on
+  2026-07-30. The supplied values were applied, and `(beta, u)` re-solved
+  at the supplied `sigma` and `theta`, on the object coerced from the
+  internal `lmer()` start, before the fit's psi-functions were set; the
+  re-solve therefore used the classical psi and returned the GLS fit. The
+  values are now applied to the fully configured fit, so the re-solve uses
+  `rho.e` and `rho.b`. For monotone psi-functions (the default) the
+  converged fit does not depend on the start and is unchanged; for a
+  redescending `rho.e` (e.g. `bisquarePsi`) the start now selects the
+  solution, as documented. Re-runs of the affected RANSAC simulation
+  studies changed no conclusion. A supplied `u` now also updates the fitted
+  values (with `doFit = FALSE` the residuals were those of the internal
+  start's `u`).
+
+- `vcov_sandwich()` / `vcov(type = "sandwich")` and `caseweightIF()`
+  omitted the Mallows design weights (`design.weights`) from the
+  observations' score contributions, although the estimating equations
+  weight them (`sum_i eta_i x_i psi(r_i)`). For fits with design weights
+  below 1 the sandwich standard errors were too large, by nearly a factor
+  of two in an example checked against a leave-one-cluster-out jackknife.
+  Fits without design weights are unchanged.
+
+- `anova(test = "boot")` p-values were arbitrary when the observed
+  quasi-deviance difference sat at its atom at zero, that is when both
+  fits put the tested variance component on the boundary. The computed
+  difference is then rounding noise of either sign, and the p-value
+  compared that noise with the bootstrap replicates' noise; under a null
+  tested component this produced most of the test's rejections in a
+  simulation. Differences up to 0.01 (genuine positive values are of order
+  1) are now treated as exactly zero, so a statistic at its atom gets
+  p-value 1; so is the rare clearly negative difference (the larger robust
+  fit in a worse local solution), and the table notes either case. Near the
+  null the deviance bootstrap is therefore conservative; `test = "score"`
+  does not depend on the alternative fit.
+
+- `anova(test = "boot")` failed (no successful bootstrap replicate) when
+  the larger model used a variable that the smaller one does not, such as
+  the covariate of an added random slope `(0 + z | g)`: the bootstrap data
+  sets were built from the smaller model's frame only. They now include
+  every variable either model uses, also one that enters only transformed
+  (`(0 + log(z) | g)`: the model frame holds `log(z)`, not `z`), which is
+  taken from the fit's data.
+
+- `ransac_basin_radius()` now returns the *half-weight* radius
+  `r* = s_1/2 sigma / max_j ||x_j||`, where `s_1/2` is the residual
+  mean-shift (in error-scale units) at which the expected redescender
+  weight `m(s) = E psi'(Z + s)`, `Z ~ N(0, 1)`, has halved (`s_1/2 =
+  1.410` for the bisquare at `c = 4.685`), in place of the
+  support-preservation radius `c sigma / (2 max_j ||x_j||)` returned up
+  to 3.5.0-2. The old radius only kept every observation inside the
+  redescender's support; it did not keep the population Hessian away from
+  singularity, which is what the basin guarantee needs, whereas on the
+  new ball `-H(beta) >= -H_0 / 2 > 0` (the corrected Step 1 of the
+  RANSAC-RSE basin theorem). On `sleepstudy` the radius drops from 6.6 to
+  4.0, so the fixed-effect basin check of `rlmer_ransac()` fires more
+  often. With `rho` supplied the shift is computed from its `Dpsi` slot,
+  so lqq and the other redescenders get their own radius (lqq: `s_1/2 =
+  1.423`); the return value carries the new attributes `"s_half"` and
+  `"cc"`. Re-running `inst/simulationStudy/ransacBasin.R` with the new
+  gate (500 replicates x 6 generators) raises the pooled warning rates
+  from `P(warn | phony) = 0.23`, `P(warn | not phony) = 0.33` to `0.44`
+  and `0.56`: the smaller ball is left about twice as often, but the
+  check remains a non-discriminating detector of the phony random-effects
+  correlation (it is a fixed-effect Hessian condition; the phony failure
+  is caught by the separate `|rho-hat| -> 1` check), and the fits
+  themselves are unchanged (phony rates and slope RMSE identical).
+
+### Infrastructure
+
+- The GitHub Actions workflow gains a test-coverage job (report uploaded as
+  an artefact; 78% of the R and C++ code is covered by the test scripts), a
+  check that the help pages are up to date with roxygen2, a spell check
+  against `inst/WORDLIST` (seven typos in help pages and vignettes fixed),
+  and a weekly run against R-devel.
+
+- The scripts of the simulation studies for the methods new in 3.5.1 (the
+  small-sample and variance-component studies and the breakdown study of
+  `vignette("simulationStudies")`) are now shipped in the package, in
+  `system.file("simulationStudy", package = "robustlmm")`.
+
 ## robustlmm 3.5.0-2 (2026-07-30)
 
 ### Bug fixes
@@ -17,11 +331,19 @@
   the fixed point to be independent of the starting value.
 
 - **`init = "ransac"` estimated the model on the RANSAC subsample
+<<<<<<< HEAD
   instead of on your data, in 3.4-5 and 3.5.0-1.** If you have used
   `init = "ransac"`, `rlmer_ransac()` or
   `fitDatasets_rlmer_ransac`/`_ransac_bisq` with either version, refit:
   the returned object was an estimate on roughly half the observations.
   Nothing else is affected, and no other `init` form is affected.
+=======
+  instead of on your data, in 3.4-5 and 3.5.0-1 (3.5.0 itself was auto-rejected
+  and never reached CRAN).** If you have used `init = "ransac"`, 
+  `rlmer_ransac()` or `fitDatasets_rlmer_ransac`/`_ransac_bisq` with either
+  version, refit: the returned object was an estimate on roughly half the
+  observations. Nothing else is affected, and no other `init` form is affected.
+>>>>>>> master
 
   An `lmerMod` passed as `init` supplies the *model*, not only the
   starting values -- the working object is built from it, so `formula`
@@ -556,8 +878,8 @@ extends several of them (see above).
 - **`cooks.distance.rlmerMod`**. Per-observation joint
   Mahalanobis influence on $(\hat\beta, \hat\sigma, \hat\theta)$,
   computed from `implicitIF_full`. Backed by `numDeriv::jacobian`
-  (added to Imports). Top-flagged Penicillin observations match the
-  IF-thread1 prototype's documented set `{85, 86, 122, 123, 13}`.
+  (added to Imports). The most influential Penicillin observations are
+  85, 86, 122, 123 and 13.
 
 - **`influence.rlmerMod`**. Per-observation IF matrix wrapper
   around `implicitIF_full`.

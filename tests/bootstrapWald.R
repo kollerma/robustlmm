@@ -43,12 +43,32 @@ stopifnot(inherits(err, "error"))
 ## 2. method = "Wald" with vcov_type = "sandwich": uses the robust
 ##    cluster sandwich. Same closed form, different V.
 ## ----------------------------------------------------------------
+##    The default for the sandwich (df = "auto") is the CR2 sandwich with a
+##    Bell-McCaffrey t df per coefficient (theory-methods F3); df = "none"
+##    gives the G1 normal-quantile interval of robustlmm 3.5.0.
 ci_sw  <- confint(fit, vcov_type = "sandwich")
-V_sw   <- as.matrix(vcov(fit, type = "sandwich"))
-se_sw  <- sqrt(diag(V_sw))
-ref_sw <- cbind(beta - z95 * se_sw, beta + z95 * se_sw)
+V_cr2  <- vcov(fit, type = "sandwich", correction = "CR2")
+se_cr2 <- sqrt(diag(as.matrix(V_cr2)))
+df_bm  <- vapply(seq_along(beta), function(i) {
+    L <- matrix(0, 1L, length(beta)); L[1L, i] <- 1
+    robustlmm:::.cr2_df(V_cr2, L)
+}, numeric(1))
+ref_sw <- cbind(beta - qt(0.975, df_bm) * se_cr2,
+                beta + qt(0.975, df_bm) * se_cr2)
 stopifnot(max(abs(unname(ci_sw) - unname(ref_sw))) < 1e-10)
-stopifnot(attr(ci_sw, "vcov_type") == "sandwich")
+stopifnot(attr(ci_sw, "vcov_type") == "sandwich",
+          attr(ci_sw, "correction") == "CR2",
+          max(abs(attr(ci_sw, "df") - df_bm)) < 1e-12)
+## intercept-only balanced design: CR2 is close to G1 and the df to J - 1
+V_swr  <- suppressWarnings(vcov(fit, type = "sandwich"))
+J_sw   <- attr(V_swr, "n.clusters")
+se_sw  <- sqrt(diag(as.matrix(V_swr)))
+stopifnot(abs(se_cr2 / se_sw - 1) < 0.05, abs(df_bm - (J_sw - 1)) < 0.5)
+ci_swz  <- suppressWarnings(confint(fit, vcov_type = "sandwich", df = "none"))
+ref_swz <- cbind(beta - z95 * se_sw, beta + z95 * se_sw)
+stopifnot(max(abs(unname(ci_swz) - unname(ref_swz))) < 1e-10)
+ci_swc  <- confint(fit, vcov_type = "sandwich", df = "cluster")
+stopifnot(max(abs(unname(ci_swc) - unname(ci_sw))) < 1e-12)
 
 ## ----------------------------------------------------------------
 ## 3. method = "boot" / "BCa" delegate to confintROB. Skipped if
@@ -97,12 +117,13 @@ if (have_conf) {
     stopifnot(all(is.finite(ci_bca)))
     stopifnot(attr(ci_bca, "method") == "BCa")
 
-    ## vcov_type = "sandwich" with method = "boot" warns + still
-    ## returns a usable matrix (confintROB uses its own covariance).
+    ## vcov_type = "sandwich" cannot be combined with method = "boot"
+    ## (confintROB does not use a covariance of the fixed effects): an
+    ## error, where earlier versions warned and ignored vcov_type.
     w <- tryCatch(confint(fit, method = "boot", nsim = nsim_test,
                           seed = 20260602L, vcov_type = "sandwich"),
-                  warning = function(w) w)
-    stopifnot(inherits(w, "warning"))
+                  error = function(e) e)
+    stopifnot(inherits(w, "error"))
     stopifnot(grepl("vcov_type", conditionMessage(w)))
 } else {
     cat("confintROB not installed; boot / BCa tests skipped.\n")

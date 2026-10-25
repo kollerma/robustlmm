@@ -21,7 +21,7 @@ createRhoFunction(
 \item{tuningParameter}{argument passed on to
 \code{\link{extractTuningParameter}}. See its documentation for details.}
 
-\item{which}{string specifiying which tuning parameter should be extracted.}
+\item{which}{string specifying which tuning parameter should be extracted.}
 
 \item{rho.e}{\code{\link{PsiFunction}} to be used for \code{rho.e}.}
 

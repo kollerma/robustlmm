@@ -275,11 +275,12 @@ calcTau <- function(a, s, rho.e, rho.sigma.e, pp,
                 conv <- abs(tau[i] - tau0) < rel.tol * max(rel.tol, tau0)
             }
             if (it >= max.it) {
-                warning("calculation of tau[", i, "] reached max.it")
+                .innerWarning("calculation of tau[", i, "] reached max.it",
+                              convergence = TRUE)
             }
             if (tau[i] > 1) {
                 tau[i] <- 1
-                warning("tau[", i, "] > 1, setting it to 1")
+                .innerWarning("tau[", i, "] > 1, setting it to 1")
             }
         }
     }
@@ -416,7 +417,7 @@ calcTau <- function(a, s, rho.e, rho.sigma.e, pp,
             while (!conv && (iter <- iter + 1) < max.iter) {
                 lLTbk <- try(chol(lTbk), silent = TRUE)
                 if (is(lLTbk, "try-error")) {
-                    warning("chol(lTbk) failed: ", lLTbk, "\nlTbk was: ",
+                    .innerWarning("chol(lTbk) failed: ", lLTbk, "\nlTbk was: ",
                             paste(lTbk), "\nSetting it to Tb()\n")
                     conv <- TRUE
                     lTbk <- as.matrix(TkbsI[[ind[k]]])
@@ -427,7 +428,7 @@ calcTau <- function(a, s, rho.e, rho.sigma.e, pp,
                     a <- mean(wgtDelta(d2))
                     if (abs(a) < 1e-7) {
                         if (is.na(lasta)) {
-                            warning("MC DAS-tau: denominator E[w_delta] ",
+                            .innerWarning("MC DAS-tau: denominator E[w_delta] ",
                                     "degenerate at first iteration for block ",
                                     "type ", type, "; keeping warm start.")
                             conv <- TRUE
@@ -453,8 +454,9 @@ calcTau <- function(a, s, rho.e, rho.sigma.e, pp,
                 }
             }
             if (iter >= max.iter)
-                warning("MC DAS-tau fixed point for block type ", type,
-                        " did not converge in ", max.iter, " iterations.")
+                .innerWarning("MC DAS-tau fixed point for block type ", type,
+                              " did not converge in ", max.iter,
+                              " iterations.", convergence = TRUE)
             lastRet <- lTbk
         }
         ## add to result
@@ -530,7 +532,7 @@ calcTau.nondiag <- function(object, ghZ12, ghZ34, ghw, skbs, kappas, max.iter,
                     while (!conv && (iter <- iter + 1) < max.iter) {
                         lLTbk <- try(chol(lTbk), silent=TRUE)
                         if (is(lLTbk, "try-error")) {
-                            warning("chol(lTbk) failed: ", lLTbk, "\nlTbk was: ", paste(lTbk),
+                            .innerWarning("chol(lTbk) failed: ", lLTbk, "\nlTbk was: ", paste(lTbk),
                                     "\nSetting it to Tb()\n")
                             conv <- TRUE
                             lTbk <- TkbsI[[ind[k]]]
@@ -642,7 +644,8 @@ updateSigma <- function(object, max.iter = 100, rel.tol = 1e-6, fit.effects = TR
     }
 
     if (it >= max.iter)
-        warning("Sigma iterations did not converge. Returning unconverged estimates")
+        .innerWarning("Sigma iterations did not converge. Returning unconverged estimates",
+                      convergence = TRUE)
 
     ## cat("sigma:", scale, "\n")
     setSigma(object, scale)
@@ -723,7 +726,8 @@ updateThetaTau <- function(object, max.iter = 100, rel.tol = 1e-6, verbose = 0) 
                 }
 
                 if (it >= max.iter)
-                    warning("theta iterations did not converge. Returning unconverged estimates")
+                    .innerWarning("theta iterations did not converge. Returning unconverged estimates",
+                                  convergence = TRUE)
             }
             if (verbose > 4) cat("delta: ", delta, "\n")
             deltatheta[idxTheta] <- delta

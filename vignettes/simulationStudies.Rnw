@@ -43,11 +43,6 @@
 %\usepackage{Sweave}
 
 \newcommand{\script}[1]{\href{https://github.com/kollerma/robustlmm/blob/master/inst/simulationStudy/#1}{\code{#1}}}
-% Same as \script but without the GitHub hyperlink, for scripts that
-% ship in the package but are not yet on the public repository's master
-% branch (a linked URL would 404). Switch back to \script once the file
-% is published on https://github.com/kollerma/robustlmm.
-\newcommand{\scriptpending}[1]{\code{#1}}
 
 \begin{document}
 \SweaveOpts{concordance=TRUE,echo=FALSE}
@@ -66,7 +61,14 @@ theme_set(theme)
 ## vignettes/precompute-3.5.0.R) and pulled in with \Sexpr{}, so they
 ## always match the studies and are never hand-typed.
 nums <- readRDS("robustlmm-3.5.0-numbers.rds")
+## The same for the studies of Section "Studies for the small-sample and
+## variance-component methods" (by vignettes/precompute-methods-studies.R).
+mnums <- readRDS("methods-studies-numbers.rds")
+## ... and for Section "Studies for the high-breakdown configuration" (by
+## vignettes/precompute-high-breakdown.R).
+hnums <- readRDS("high-breakdown-numbers.rds")
 fmt <- function(x, digits = 2) formatC(x, format = "f", digits = digits)
+pct <- function(x, digits = 0) formatC(100 * x, format = "f", digits = digits)
 @
 
 \baselineskip 15pt
@@ -173,6 +175,16 @@ The following simulation studies are provided:
         (Section~\ref{sec:ransacStudies}), and
         \script{structuredCovariances.R}
         (Section~\ref{sec:structuredCovariances}).
+    \item Section~\ref{sec:newMethods}: the studies behind the
+        small-sample reference of the cluster sandwich, the bootstrap
+        test's treatment of near-zero nuisance variance components, the
+        joint score test for several variance components and the
+        ranking of \textsc{ransac} candidates. Their scripts are named
+        in that section.
+    \item Section~\ref{sec:highBreakdown}: the breakdown study behind
+        \code{setting = "RSEhb"}, the S-type scale \code{sScalePsi} and
+        the start \code{init = "robust"}. Its scripts are named in that
+        section.
 \end{itemize}
 
 \script{consistencyAndEfficiencyBlockDiagonal.R},
@@ -308,8 +320,8 @@ The results are stored in a list with several matrices. Using
 
 If the full results are not permanently stored and only the minimal
 results are kept (see last paragraph in previous section), this step will
-have to include some code to load the aggreated data from disk and verify
-that the data before aggreation hasn't changed. It is good practice to
+have to include some code to load the aggregated data from disk and verify
+that the data before aggregation hasn't changed. It is good practice to
 keep running the aggregation code on the partial results anyway. While
 this does not protect against all possible problems, this at least will
 make sure that the aggregation code is valid code and can be run.
@@ -1042,11 +1054,15 @@ then evaluates the multi-start consensus (\code{rlmer_ransac(n_starts =
 \emph{Conclusions.} The basin radius is genuinely a fixed-effect
 property and the phony-correlation failure is a separate random-effects
 phenomenon, so the two are reported by separate diagnostics. Running
-\code{rlmer} from the several best distinct \textsc{ransac} starts and
-keeping the interior, lowest-residual-scale fit markedly reduces the
-rate of phony $|\hat\rho| \to 1$ solutions relative to a single start,
-at essentially unchanged slope accuracy --- recovering the good
-solution when the single best start falls into the phony attractor.
+\code{rlmer} from the $\Sexpr{nums$ransacConsensus$nStarts}$ best
+distinct \textsc{ransac} starts and keeping the interior,
+lowest-residual-scale fit reduces the rate of phony $|\hat\rho| \to 1$
+solutions relative to a single start, from
+$\Sexpr{fmt(nums$ransacConsensus$phonySingle, 3)}$ to
+$\Sexpr{fmt(nums$ransacConsensus$phonyConsensus, 3)}$ pooled over the
+$\Sexpr{nums$ransacConsensus$nGenerators}$ generators, at essentially
+unchanged slope accuracy: it recovers the good solution in the
+replicates where the single best start falls into the phony attractor.
 
 \subsection{Structured random-effect covariances}
 \label{sec:structuredCovariances}
@@ -1072,6 +1088,370 @@ stays near the truth (correlation
 $\Sexpr{fmt(nums$structured$cs$contRlmer)}$ and
 $\Sexpr{fmt(nums$structured$ar1$contRlmer)}$). The \code{cs}/\code{ar1}
 fitting is experimental (see \code{vignette("robustlmm-3.5.0")}).
+
+\clearpage
+\section{Studies for the small-sample and variance-component methods}
+\label{sec:newMethods}
+
+Version 3.5.1 makes the bias-reduced (CR2) cluster
+sandwich with small-sample degrees of freedom the default reference of
+\code{anova} and \code{confint} for \code{vcov\_type = "sandwich"}, sets
+near-zero nuisance variance components to zero when generating the
+bootstrap variance-component test, tests several added variance
+components jointly with the robust score test, and ranks \textsc{ransac}
+candidates by a centred residual scale. This section describes the
+simulation studies behind these changes. Their scripts ship with the
+package (in \code{system.file("simulationStudy", package =
+"robustlmm")}); the numbers below are read from the results of runs with
+the development version of \pkg{robustlmm} 3.5.1. A decision rule was
+fixed before each study was run.
+
+\subsection{Small-sample references for the cluster sandwich}
+\label{sec:smallJSandwich}
+
+Three designs, each with 10 observations per cluster unless stated
+otherwise and 1000 replicates per setting. (i) A design like
+\code{sleepstudy} (random intercept and slope), $J \in \{8, 12, 18,
+30\}$, for the coverage of the $95\%$ intervals of the intercept and the
+within-cluster slope (\script{t5\_smallJ\_sim.R}). (ii) Design A
+adds three null terms to it: a between-cluster covariate, a
+between-cluster factor with three levels and a within-cluster covariate,
+$J \in \{8, 12, 18, 30\}$. (iii) Design B has unbalanced clusters of 4 to
+16 observations, $t_4$ errors, a binary and a log-normal between-cluster
+covariate, a within-cluster covariate and a joint test of the two
+between-cluster covariates, $J \in \{10, 20, 40\}$. Designs A and B were
+each run twice with independent seeds; Table~\ref{tab:smallJ} shows the
+second run, which goes through \code{anova} and \code{confint}
+(\script{f3d\_replication\_sim.R}; the first runs are
+\script{f3b\_cr2\_sim.R} and \script{f3c\_confirm\_sim.R}).
+
+\emph{Conclusions.} In design (i) the reference quantile is the main
+problem: the G1 sandwich with normal quantiles covered the intercept in
+$\Sexpr{fmt(mnums$sandwichWithin$covG1z[1, "int"], 3)}$ of the
+replicates at $J = 8$, with $t_{J-1}$ quantiles in
+$\Sexpr{fmt(mnums$sandwichWithin$covG1t[1, "int"], 3)}$. With
+between-cluster terms the G1 sandwich itself is biased down and has far
+fewer effective degrees of freedom than $J - 1$: the $\chi^2$ table
+rejected between $\Sexpr{fmt(mnums$sandwichBetween$oldRange[1])}$ and
+$\Sexpr{fmt(mnums$sandwichBetween$oldRange[2])}$ of the true null
+hypotheses, and even with $t_{J-1}$ quantiles the intercept interval
+covered only $\Sexpr{fmt(mnums$sandwichBetween$firstG1tIntMin)}$ to
+$\Sexpr{fmt(mnums$sandwichBetween$firstG1tIntMax)}$ in design A. The CR2
+sandwich \citep{bell2002bias} with approximate-Hotelling degrees of
+freedom \citep{pustejovsky2018small} is much closer to the nominal
+level: at $J \ge 20$ its size was
+$\Sexpr{fmt(mnums$sandwichBetween$newRangeJ20[1])}$ to
+$\Sexpr{fmt(mnums$sandwichBetween$newRangeJ20[2])}$
+($\Sexpr{fmt(mnums$sandwichBetween$firstNewRangeJ20[1])}$ to
+$\Sexpr{fmt(mnums$sandwichBetween$firstNewRangeJ20[2])}$ in the first
+runs) and its intervals covered
+$\Sexpr{fmt(mnums$sandwichBetween$covRangeJ20[1])}$ to
+$\Sexpr{fmt(mnums$sandwichBetween$covRangeJ20[2])}$. It is not exact:
+for between-cluster terms the size can stay somewhat above $5\%$ (up to
+$\Sexpr{fmt(mnums$sandwichBetween$newMax)}$ for the binary covariate at
+$J = 10$). The acceptance band fixed before the first run ($[0.025,
+0.065]$ from $J = 12$) was met by no candidate; CR2 became the default
+because it was the closest to the nominal level in every setting and
+stayed within $[0.02, 0.08]$ at $J \ge 20$ in both runs.
+
+<<smallJ-table, results=tex, echo=FALSE>>=
+tb <- mnums$sandwichBetween$table
+cell <- function(d, J, t, col) {
+    v <- tb[tb$design == d & tb$J == J & tb$term == t, col]
+    if (length(v)) fmt(v) else ""
+}
+rowsFor <- function(d, terms) {
+    Js <- sort(unique(tb$J[tb$design == d]))
+    for (J in Js) {
+        sizes <- unlist(lapply(terms, function(t)
+            c(cell(d, J, t, "old"), cell(d, J, t, "new"))))
+        cov <- c(cell(d, J, terms[1], "cov_int"),
+                 cell(d, J, terms[1], "cov_slope"))
+        cat(paste(c(J, sizes, cov), collapse = " & "), "\\\\\n")
+    }
+}
+cat("\\begin{table}[t!]\n\\centering\\small\n")
+cat("\\begin{tabular}{r*{6}{c}cc}\n\\toprule\n")
+cat("& \\multicolumn{2}{c}{between covariate} & \\multicolumn{2}{c}{between factor}",
+    "& \\multicolumn{2}{c}{within covariate} & \\multicolumn{2}{c}{coverage} \\\\\n")
+cat("$J$ & $\\chi^2$ & CR2 & $\\chi^2$ & CR2 & $\\chi^2$ & CR2 & int. & slope \\\\\n\\midrule\n")
+cat("\\multicolumn{9}{l}{\\emph{Design A}} \\\\\n")
+rowsFor("A", c("w", "f", "x"))
+cat("\\bottomrule\n\\end{tabular}\n\n\\medskip\n")
+cat("\\begin{tabular}{r*{8}{c}cc}\n\\toprule\n")
+cat("& \\multicolumn{2}{c}{binary} & \\multicolumn{2}{c}{log-normal}",
+    "& \\multicolumn{2}{c}{within} & \\multicolumn{2}{c}{joint (2 df)}",
+    "& \\multicolumn{2}{c}{coverage} \\\\\n")
+cat("$J$ & $\\chi^2$ & CR2 & $\\chi^2$ & CR2 & $\\chi^2$ & CR2 & $\\chi^2$ & CR2 & int. & slope \\\\\n\\midrule\n")
+cat("\\multicolumn{11}{l}{\\emph{Design B}} \\\\\n")
+rowsFor("B", c("z", "u", "v", "zu"))
+cat("\\bottomrule\n\\end{tabular}\n")
+cat("\\caption{Size at the nominal $5\\%$ level of the robust Wald tests with",
+    "the G1 sandwich and the $\\chi^2$ table ($\\chi^2$) and with the CR2",
+    "sandwich and approximate-Hotelling degrees of freedom (CR2), and",
+    "coverage of the $95\\%$ CR2 intervals for the intercept and slope;",
+    mnums$sandwichBetween$nreps, "replicates per row.}\n")
+cat("\\label{tab:smallJ}\n\\end{table}\n")
+@
+
+\subsection{Near-zero nuisance variance components in the bootstrap test}
+\label{sec:bootThreshold}
+
+\code{anova(fit0, fit1, test = "boot")} tests an added random slope
+when \code{fit0} has a random intercept and a nuisance random slope
+whose standard deviation is $0$ (on the boundary) or $0.5$; $J \in \{18,
+50\}$, 8 observations per group,
+$\Sexpr{mnums$bootThreshold$table$n[1]}$ replicates per setting with one
+bootstrap draw from each generator, \code{fit0}'s raw estimates and the
+thresholded ones (\script{t2\_threshold\_sim.R},
+\script{t2\_recount.R}).
+
+\emph{Conclusions.} Under the null the robust fit set the tested
+variance to exactly zero in $\Sexpr{pct(mnums$bootThreshold$atomRange[1])}$
+to $\Sexpr{pct(mnums$bootThreshold$atomRange[2], 1)}\%$ of the samples.
+The quasi-deviance difference then sits at its atom and its p-value is 1
+whichever generator is used: the test is conservative near the null
+(size $\Sexpr{fmt(mnums$bootThreshold$sizeJ50[1], 3)}$ to
+$\Sexpr{fmt(mnums$bootThreshold$sizeJ50[2], 4)}$ at $J = 50$), and the
+two generators gave the same size in
+$\Sexpr{mnums$bootThreshold$nIdenticalTied}$ of the
+$\Sexpr{mnums$bootThreshold$nCells}$ settings. The simulation therefore
+cannot show a finite-sample benefit of the threshold. It is the default
+because generating from a small positive estimate makes the bootstrap
+inconsistent when the nuisance component is zero \citep{guedon2024}.
+Rarely ($\Sexpr{mnums$bootThreshold$nNegative}$ of
+$\Sexpr{format(mnums$bootThreshold$nValues, big.mark = ",")}$ statistics)
+the larger robust fit ends in a worse local solution and the difference
+is clearly negative; this counts as no evidence against the null.
+\code{test = "score"} uses only the null fit and has no such atom.
+
+\subsection{Several added variance components}
+\label{sec:scoreMulti}
+
+\code{anova(fit0, fit1, test = "score")} with two added random slopes and
+a random intercept under the null; $J \in \{18, 50\}$, 8 observations
+per group, $\Sexpr{mnums$scoreMulti$nreps}$ replicates per setting with
+one bootstrap draw each (\script{t1\_score\_multi\_sim.R}). The
+settings are the clean null, the null with 2 of 18 or 5 of 50 groups
+shifted by 5 standard deviations (outside the tested directions), and an
+alternative with slope standard deviations $0.5$.
+
+\emph{Conclusions.} The size at $5\%$ was
+$\Sexpr{fmt(mnums$scoreMulti$sizeClean[1], 3)}$ and
+$\Sexpr{fmt(mnums$scoreMulti$sizeClean[2], 3)}$ on clean data and
+$\Sexpr{fmt(mnums$scoreMulti$sizeContam[1], 3)}$ and
+$\Sexpr{fmt(mnums$scoreMulti$sizeContam[2], 3)}$ with contaminated
+groups ($J = 18$ and $50$), and the power
+$\Sexpr{fmt(mnums$scoreMulti$power[1])}$ and
+$\Sexpr{fmt(mnums$scoreMulti$power[2], 3)}$.
+
+\subsection{Ranking RANSAC candidates}
+\label{sec:ransacRanking}
+
+(i) A random-intercept model with $J = 20$ groups of 10 observations and
+$20\%$ of the observations shifted by 8 error standard deviations,
+$\Sexpr{mnums$ransac$nreps}$ replicates: \code{ransac\_lme4} ranking by
+the centred bisquare M-scale against \code{Qn}
+(\script{t4\_centred\_scale\_sim.R}). (ii) The same design and one
+with $10\%$ bad leverage points ($\Sexpr{mnums$ransac$nInvar}$
+replicates each), and the six phony-correlation generators of
+\script{ransacConsensus.R} ($\Sexpr{mnums$ransac$nBasin}$ replicates in
+total), with five ranking criteria and a bisquare \code{rho.e}; the final
+\code{rlmer} fit from each start is compared
+(\script{f2\_rerun\_sim.R}). (iii) A balanced two-level
+between-cluster factor with three of ten clusters of one arm shifted by
+8, $\Sexpr{mnums$ransac$f1Nreps}$ replicates: the ranking scale's
+constant $b = 1/2$ against the design-adaptive $b = 1/4$ reported by
+\code{design\_breakdown} (\script{f1\_adaptive\_b\_sim.R}).
+
+\emph{Conclusions.} The centred scale gives better starts: the median
+intercept error of the start fell from
+$\Sexpr{fmt(mnums$ransac$startIntMedQn)}$ to
+$\Sexpr{fmt(mnums$ransac$startIntMedCentred)}$ (on clean data its RMSE
+was $\Sexpr{pct(mnums$ransac$cleanRmseRatio - 1)}\%$ larger), at the
+price of a larger slope error of the start (RMSE
+$\Sexpr{fmt(mnums$ransac$startSlopeRmseCentred)}$ against
+$\Sexpr{fmt(mnums$ransac$startSlopeRmseQn)}$). The start did not change
+the final fit: from every criterion's start the final fit equalled the
+fit from \code{rlmer}'s default start in
+$\Sexpr{pct(mnums$ransac$sameAsDefault[1])}$ to
+$\Sexpr{pct(mnums$ransac$sameAsDefault[2])}\%$ of the replicates with
+outliers or leverage points. These runs use the residual-scale function
+of \code{setting = "RSEa"}, whose scale equation breaks down there, so a
+redescending \code{rho.e} accepts the outliers from any start. The rate
+of phony $|\hat\rho| \to 1$ fits was
+$\Sexpr{fmt(mnums$ransac$phonyRange[1], 3)}$ to
+$\Sexpr{fmt(mnums$ransac$phonyRange[2], 3)}$ for every criterion. The
+design-adaptive constant made the start worse (RMSE of the factor
+coefficient $\Sexpr{fmt(mnums$ransac$f1StartB25)}$ against
+$\Sexpr{fmt(mnums$ransac$f1StartB50)}$), so \code{ransac\_lme4} keeps
+$b = 1/2$. Scoring the candidates on marginal instead of conditional
+residuals gave $\Sexpr{fmt(mnums$ransac$f1StartMarg)}$: with conditional
+residuals a contaminated cluster inside the subsample is absorbed by its
+own random effect. This is not yet used by \code{ransac\_lme4}.
+
+\clearpage
+\section{Studies for the high-breakdown configuration}
+\label{sec:highBreakdown}
+
+Version 3.5.1 adds an S-type scale function
+(\code{makeSScalePsi}, \code{sScalePsi}), a high-breakdown start
+(\code{init = "robust"}) and the configuration \code{setting = "RSEhb"}
+that combines them with redescending $\psi$-functions. This section
+describes the breakdown study behind them. Its scripts ship with the
+package (in \code{system.file("simulationStudy", package =
+"robustlmm")}); the numbers below are read from the results of runs with
+the development version of \pkg{robustlmm} 3.5.1. All studies use $J = 20$ groups of 10 observations (unless stated
+otherwise), $y = 2 + x + b_j + e$ with standard normal $x$, $b_j$ and $e$,
+and four kinds of contamination: vertical outliers (a fraction of the
+observations shifted by 8), outlying clusters (a fraction of the groups
+shifted by 8), and bad leverage points near ($x \approx 4$) or far ($x
+\approx 8$) from the data with $y \approx 0$. A fit is counted as broken
+down when its intercept error (vertical outliers, clusters) or slope
+error (leverage points) exceeds $0.5$.
+
+\subsection{Breakdown of the default settings}
+\label{sec:bdDefault}
+
+The residual scale is estimated from $\sum_i \eta_i \tau_i^2 w(t_i)(t_i^2
+- \kappa) = 0$. For the \code{psi2propII} weights of the default
+settings $w(t)(t^2 - \kappa)$ increases to a finite limit $\chi(\infty)$,
+and the equation breaks down at the fraction $\kappa/(\kappa +
+\chi(\infty))$ of outliers: $\Sexpr{fmt(hnums$bp[["RSEn"]], 3)}$ for
+\code{setting = "RSEn"} and $\Sexpr{fmt(hnums$bp[["RSEa"]], 3)}$ for
+\code{"RSEa"}. \script{bd2\_sigma\_theory.R} solves the equation
+with the location known, and \script{bd23\_map\_sim.R} maps the
+breakdown of the current settings and of candidate fixes
+($\Sexpr{hnums$map$nreps}$ samples per setting).
+
+\emph{Conclusions.} The scale is inflated long before the equation breaks
+down: with $20\%$ of the observations shifted by 8 the equation alone
+gives $\Sexpr{fmt(hnums$map$sigmaKnownLoc[["RSEn"]], 1)}$ times the true
+scale for \code{"RSEn"} and $\Sexpr{fmt(hnums$map$sigmaKnownLoc[["RSEa"]], 1)}$
+for \code{"RSEa"} (beyond its breakdown point), and the fitted models had
+a median residual-scale estimate of
+$\Sexpr{fmt(hnums$map$medSigmaRSEn[1], 1)}$ to
+$\Sexpr{fmt(hnums$map$medSigmaRSEn[2], 1)}$ and
+$\Sexpr{fmt(hnums$map$medSigmaRSEa[1], 1)}$, respectively. A
+redescending \code{rho.e} then no longer rejects the outliers, whatever
+the start. The simple variance components obey the same equation at the
+level of the random effects: outlying clusters are absorbed as large
+random effects, and at $20\%$ vertical contamination the random-effect
+standard deviation was estimated as exactly zero in
+$\Sexpr{pct(hnums$map$sdbZero[1])}$ to $\Sexpr{pct(hnums$map$sdbZero[2])}\%$
+of the robust fits ($\Sexpr{pct(hnums$map$sdbZeroLmer)}\%$ for
+\code{lmer}).
+
+\subsection{Starting values}
+\label{sec:bdStarts}
+
+\script{bd5\_starts\_sim.R} compares starts for the fully
+redescending fit (bisquare \code{rho.e} and \code{rho.b} with $c =
+4.685$, S-type scales): the default \code{lmer} start, the
+\code{ransac\_lme4} start, the screen of \code{init = "robust"} (the
+observations an S-estimate of the fixed-effects part keeps, then
+\code{lmer} on them), the same screen with an MM-estimate, and a start
+from a robust decomposition of the S-residuals into within- and
+between-group parts.
+
+\emph{Conclusions.} Over the contaminated settings with at most $30\%$
+contamination the final fit broke down in
+$\Sexpr{pct(hnums$starts[["s_scr"]])}\%$ of the samples from the
+S-screen, against $\Sexpr{pct(hnums$starts[["lmer"]])}\%$ from the
+default start and $\Sexpr{pct(hnums$starts[["ransac"]])}\%$ from the
+\textsc{ransac} start, whose half-sample candidates are all contaminated;
+the MM-screen was worse ($\Sexpr{pct(hnums$starts[["mm_scr"]])}\%$). The
+decomposition start ($\Sexpr{pct(hnums$starts[["s_dec"]])}\%$) only
+works for a random intercept, so the S-screen became \code{init =
+"robust"}.
+
+\subsection[The configuration setting = "RSEhb"]{The configuration \texorpdfstring{\code{setting = "RSEhb"}}{setting = "RSEhb"}}
+\label{sec:bdRSEhb}
+
+\code{setting = "RSEhb"} uses \code{sScalePsi} for the residual scale
+and simple variance components, a bisquare \code{rho.b} for simple
+random effects, the start \code{init = "robust"}, and a bisquare
+\code{rho.e} with $c = 3.444$ ($85\%$ efficiency). Its breakdown was
+mapped against the default setting with fresh seeds, both with the
+default \code{method = "DAStau"} (Table~\ref{tab:rsehb}; script
+\script{bd6b\_confirm\_sim.R}, re-run on the final code by
+\script{bd6b2\_rerun\_sim.R}). Efficiency and inference were studied with 20
+and 50 groups on clean data ($\Sexpr{hnums$inference$nrepsClean}$
+samples) and with 50 groups under $10\%$ vertical outliers or outlying
+clusters ($\Sexpr{hnums$inference$nrepsCont}$ samples;
+\script{bd6c\_dastau\_sim.R}).
+
+\emph{Conclusions.} Over the settings with at most $30\%$ contamination
+the fixed effects broke down in
+$\Sexpr{pct(hnums$config$meanBroken[["RSEhb"]])}\%$ of the samples,
+against $\Sexpr{pct(hnums$config$meanBroken[["RSEn"]])}\%$ for the
+default ($\Sexpr{pct(hnums$config$cleanBroken[1])}\%$ of clean samples
+cross the same threshold). Beyond that ($40\%$ vertical outliers or
+outlying clusters, $20\%$ leverage points) it breaks down like the
+default. At the central model the fixed effects keep
+$\Sexpr{pct(hnums$inference$effHB50[["int"]])}\%$ (intercept) and
+$\Sexpr{pct(hnums$inference$effHB50[["slope"]])}\%$ (slope) of the
+efficiency of \code{lmer} with 50 groups and
+$\Sexpr{pct(hnums$inference$effHB20[["int"]])}\%$ and
+$\Sexpr{pct(hnums$inference$effHB20[["slope"]])}\%$ with 20 (the default
+setting: $\Sexpr{pct(hnums$inference$effRSEnInt[1])}$ to
+$\Sexpr{pct(hnums$inference$effRSEnInt[2])}\%$ and
+$\Sexpr{pct(hnums$inference$effRSEnSlope[1])}$ to
+$\Sexpr{pct(hnums$inference$effRSEnSlope[2])}\%$). The CR2 sandwich
+intervals (\code{confint(fit, vcov\_type = "sandwich")}) covered
+$\Sexpr{fmt(hnums$inference$covCR2[1])}$ to
+$\Sexpr{fmt(hnums$inference$covCR2[2])}$ in every setting, whereas the
+model-based Satterthwaite interval of the intercept covered only
+$\Sexpr{fmt(hnums$inference$covSattIntC8)}$ with outlying clusters. With
+\code{method = "DASvar"} the residual scale was
+$\Sexpr{pct(hnums$inference$dasvarSigmaLow, 1)}\%$ smaller than with
+\code{"DAStau"}.
+
+The limits: the variance components are biased under contamination
+(mean residual scale $\Sexpr{fmt(hnums$inference$meanSigmaC8)}$ and
+random-effect standard deviation
+$\Sexpr{fmt(hnums$inference$meanSdbC8)}$ with outlying clusters,
+residual scale $\Sexpr{fmt(hnums$inference$meanSigmaV8)}$ with vertical
+outliers; truth 1). At $20$ to $30\%$ contamination the random-effect
+standard deviation was estimated as zero in up to
+$\Sexpr{pct(hnums$config$sdbZeroMax)}\%$ of the samples; with $30\%$
+vertical outliers these fits broke down more often
+($\Sexpr{hnums$config$zeroV30[["broken"]]}$ of
+$\Sexpr{hnums$config$zeroV30[["n"]]}$ against
+$\Sexpr{hnums$config$zeroV30[["brokenOther"]]}$ of
+$\Sexpr{hnums$config$zeroV30[["nOther"]]}$), with $30\%$ outlying
+clusters less often ($\Sexpr{hnums$config$zeroC30[["broken"]]}$ of
+$\Sexpr{hnums$config$zeroC30[["n"]]}$ against
+$\Sexpr{hnums$config$zeroC30[["brokenOther"]]}$ of
+$\Sexpr{hnums$config$zeroC30[["nOther"]]}$). All of this evidence comes
+from random-intercept models with one covariate; blocks of correlated
+random effects keep the monotone multivariate \code{rho.b} and get no
+protection against outlying clusters.
+
+<<rsehb-table, results=tex, echo=FALSE>>=
+tb <- hnums$config$table
+lab <- c(V8 = "vertical outliers", C8 = "outlying clusters",
+         L4 = "near leverage points", L8 = "far leverage points")
+cat("\\begin{table}[t!]\n\\centering\\small\n")
+cat("\\begin{tabular}{lrccc}\n\\toprule \n")
+cat("contamination & fraction & default & \\code{RSEhb} &",
+    "\\code{RSEhb}, $\\hat\\sigma_b = 0$ \\\\\n\\midrule \n")
+for (ty in c("V8", "C8", "L4", "L8")) {
+    for (e in sort(unique(tb$eps[tb$type == ty]))) {
+        d <- tb[tb$type == ty & tb$eps == e & tb$est == "RSEn", ]
+        h <- tb[tb$type == ty & tb$eps == e & tb$est == "RSEhb", ]
+        cat(paste(c(if (e == min(tb$eps[tb$type == ty])) lab[[ty]] else "",
+                    paste0(pct(e), "\\%"), fmt(d$broken), fmt(h$broken),
+                    fmt(h$sdbZero)), collapse = " & "), "\\\\\n")
+    }
+}
+cat("\\bottomrule \n\\end{tabular}\n")
+cat("\\caption{Fraction of fits whose fixed effects broke down, for the",
+    "default setting and for \\code{setting = \"RSEhb\"}, and the fraction",
+    "of \\code{RSEhb} fits with the random-effect standard deviation",
+    "estimated as zero;", hnums$config$nreps, "samples per row.}\n")
+cat("\\label{tab:rsehb}\n\\end{table}\n")
+@
 
 \clearpage
 \section{Session Info}

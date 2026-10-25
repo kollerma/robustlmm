@@ -925,7 +925,7 @@ source(system.file("simulationStudy/robustnessBlockDiagonal.R",
 
 <<plot_robustnessBlockDiagonal,fig=TRUE,include=FALSE,height=7.5>>=
 print(plot_robustnessBlockDiagonal)
-<<plot_violinBlockDiagonal,fig=TRUE,include=FALSE,height=7.5>>=
+<<plot_violinBlockDiagonal,fig=TRUE,include=FALSE,pdf=FALSE,png=TRUE,resolution=200,height=7.5>>=
 print(plot_violinBlockDiagonal)
 @
 

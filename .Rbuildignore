@@ -4,7 +4,11 @@ inst/xtraR/effect\.R
 inst/xtraR/benchmarkingCImplementation\.R
 vignettes/simulationStudies-.*
 vignettes/simulationStudies\.log
-vignettes/simulationStudies\.pdf
+vignettes/simulationStudies\.Rnw
+vignettes/simulationStudies\.bib
+vignettes/make-simulationStudies\.R
+vignettes/methods-studies-numbers\.rds
+vignettes/high-breakdown-numbers\.rds
 vignettes/simulationStudies\.synctex\.gz
 vignettes/simulationStudies\.tex
 vignettes/text-350-.*
@@ -46,3 +50,4 @@ inst/simulationStudy/robustnessBlockDiagonalExtendedRansacRefit\.R
 vignettes/precompute-methods-studies\.R
 vignettes/precompute-high-breakdown\.R
 vignettes/precompute-mmrm\.R
+vignettes/precompute-chunks\.R

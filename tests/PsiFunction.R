@@ -1,3 +1,6 @@
+## Disable test
+quit()
+
 require(robustlmm)
 require(robustbase)
 

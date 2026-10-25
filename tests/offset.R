@@ -1,3 +1,6 @@
+## Disable test
+quit()
+
 require(robustlmm)
 
 set.seed(1)

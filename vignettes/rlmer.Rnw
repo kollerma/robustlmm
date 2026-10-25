@@ -478,7 +478,7 @@ print(ggplot(melt(data, 1), aes(x, value, color = variable,
 
 \begin{table}[htbp]
 \centering
-\input{tuning-constants-table}
+\input{tables/tuning-constants-table}
 \caption{Tuning parameters $k$ for scale estimates such that they reach the
   same asymptotic efficiency as the location estimate. For the Huber
   $\psi$-function.}
@@ -487,11 +487,11 @@ print(ggplot(melt(data, 1), aes(x, value, color = variable,
 
 
 
-\input{efficiency-table-B-optimal}
+\input{tables/efficiency-table-B-optimal}
 
-\input{efficiency-table-lqq-locationScale}
+\input{tables/efficiency-table-lqq-locationScale}
 
-\input{efficiency-table-lqq}
+\input{tables/efficiency-table-lqq}
 
 \section{Robust estimating equations}
 

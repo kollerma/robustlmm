@@ -314,6 +314,11 @@
   `vignette("simulationStudies")`) are now shipped in the package, in
   `system.file("simulationStudy", package = "robustlmm")`.
 
+- `vignette("simulationStudies")` is shipped as a pre-built PDF (engine
+  `R.rsp::asis`, `R.rsp` added to Suggests) and the slowest chunks of
+  `vignette("robustlmm-3.5.0")` show precomputed output, to keep the
+  check time within the CRAN limit.
+
 ## robustlmm 3.5.0-2 (2026-07-30)
 
 ### Bug fixes

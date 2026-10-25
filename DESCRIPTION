@@ -1,7 +1,7 @@
 Package: robustlmm
 Type: Package
 Title: Robust Linear Mixed Effects Models
-Version: 3.5.1
+Version: 3.5.1-1
 Date: 2026-10-25
 Author: Manuel Koller [aut, cre]
 Authors@R: person(given = "Manuel", family = "Koller", role = c("aut", "cre"), email = "kollerma@proton.me")
@@ -34,7 +34,9 @@ Suggests:
     robustvarComp,
     confintROB,
     generics,
-    tibble
+    tibble,
+    R.rsp
+VignetteBuilder: R.rsp
 Imports:
     lattice,
     nlme,

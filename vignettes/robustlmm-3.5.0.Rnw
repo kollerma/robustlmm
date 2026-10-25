@@ -69,6 +69,38 @@ nums <- readRDS("robustlmm-3.5.0-numbers.rds")
 ## numbers of the MMRM section, written by vignettes/precompute-mmrm.R
 mm <- readRDS("mmrm-sensitivity-numbers.rds")
 fmt <- function(x, digits = 2) formatC(x, format = "f", digits = digits)
+## The slowest chunks are not evaluated (eval=FALSE, echo=FALSE); their
+## output is precomputed by vignettes/precompute-chunks.R (to keep the
+## check time down) and showChunk() writes code and output as Sweave
+## would. It stops if a chunk's code no longer matches the code the
+## output was computed from.
+chunkOutput <- if (file.exists("robustlmm-3.5.0-chunks.rds"))
+    readRDS("robustlmm-3.5.0-chunks.rds")
+showChunk <- function(label) {
+    src <- readLines("robustlmm-3.5.0.Rnw")
+    s <- grep(paste0("^<<", label, "[,>]"), src)
+    e <- s + match(TRUE, grepl("^@", src[-seq_len(s)]))
+    x <- chunkOutput[[label]]
+    if (!identical(src[(s + 1):(e - 1)], x$code))
+        stop("the stored output of chunk '", label, "' is out of date; ",
+             "re-run vignettes/precompute-chunks.R")
+    out <- "\\begin{Schunk}"
+    input <- FALSE
+    for (st in x$steps) {
+        if (!input) out <- c(out, "\\begin{Sinput}")
+        out <- c(out, paste0(c(getOption("prompt"),
+                               rep(getOption("continue"),
+                                   length(st$src) - 1L)), st$src))
+        input <- TRUE
+        if (length(st$output)) {
+            out <- c(out, "\\end{Sinput}", "\\begin{Soutput}", st$output,
+                     "\\end{Soutput}")
+            input <- FALSE
+        }
+    }
+    if (input) out <- c(out, "\\end{Sinput}")
+    writeLines(c(out, "\\end{Schunk}"))
+}
 ## Sweave does not echo R warnings into the vignette the way an
 ## interactive session does; this helper prints them next to the call
 ## that triggers them.
@@ -199,8 +231,11 @@ are in \code{attr(., "df")}). Passing
 $t$-quantile (Section~\ref{sec:df}), which widens the interval at small
 $J$:
 
-<<confint-df>>=
+<<confint-df, eval=FALSE, echo=FALSE>>=
 confint(fm, method = "Wald", df = "satterthwaite")
+@
+<<confint-df-output, echo=FALSE, results=tex, strip.white=false>>=
+showChunk("confint-df")
 @
 
 When the asymptotic $\chi^2_p$ limit is suspect---typically at small
@@ -411,11 +446,14 @@ observation on $(\hat\beta, \hat\sigma, \hat\theta)$, computed from the
 full influence function \citep{cook1982residuals}. We illustrate on the
 \code{Penicillin} data (a crossed design):
 
-<<cooks-obs>>=
+<<cooks-obs, eval=FALSE, echo=FALSE>>=
 fpen <- rlmer(diameter ~ (1 | plate) + (1 | sample), Penicillin,
               method = "DASvar")
 cd <- cooks.distance(fpen)
 sort(cd, decreasing = TRUE)[1:5]
+@
+<<cooks-obs-output, echo=FALSE, results=tex, strip.white=false>>=
+showChunk("cooks-obs")
 @
 
 \code{influence(fit)} returns the full per-observation influence matrix
@@ -491,10 +529,13 @@ and nonsingular subsampling, and multi-start consensus described below.
 The string form \code{init = "ransac"} plugs it straight into
 \code{rlmer}:
 
-<<ransac-init>>=
+<<ransac-init, eval=FALSE, echo=FALSE>>=
 fr <- rlmer(Reaction ~ Days + (Days | Subject), sleepstudy,
             method = "DASvar", init = "ransac")
 fixef(fr)
+@
+<<ransac-init-output, echo=FALSE, results=tex, strip.white=false>>=
+showChunk("ransac-init")
 @
 
 \code{ransac\_lme4} exposes the start directly and returns the fitted
@@ -551,10 +592,13 @@ interior, recovering the good solution when the single best start falls
 into the phony-correlation attractor (per-start summary in
 \code{attr(fit, "consensus")}):
 
-<<ransac-consensus>>=
+<<ransac-consensus, eval=FALSE, echo=FALSE>>=
 fc <- rlmer_ransac(Reaction ~ Days + (Days | Subject), sleepstudy,
                    K = 20L, n_starts = 3L, seed = 20260601)
 attr(fc, "consensus")
+@
+<<ransac-consensus-output, echo=FALSE, results=tex, strip.white=false>>=
+showChunk("ransac-consensus")
 @
 
 The per-start summary reports each start's largest absolute random-effect
@@ -678,11 +722,14 @@ unstructured fit estimates all $\binom{4}{2} = 6$ correlations, the
 $\mathrm{Cor}(i, j) = \rho^{|i - j|}$. \code{VarCorr} annotates the
 structure it enforced:
 
-<<structured-fits>>=
+<<structured-fits, eval=FALSE, echo=FALSE>>=
 rcs  <- rlmer(y ~ 1 + cs(0 + visit | subject),  d, method = "DASvar")
 rar1 <- rlmer(y ~ 1 + ar1(0 + visit | subject), d, method = "DASvar")
 VarCorr(rcs)
 VarCorr(rar1)
+@
+<<structured-fits-output, echo=FALSE, results=tex, strip.white=false>>=
+showChunk("structured-fits")
 @
 
 Because the projection keeps the marginal variances and only constrains
